@@ -34,7 +34,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1">PASSWORD</label>
-                    <input type="password" id="login-pw" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="1234">
+                    <input type="password" id="login-pw" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="비밀번호를 입력하십시오.">
                 </div>
                 <div id="login-error" class="text-xs text-rose-500 font-bold hidden text-center"><i class="fa-solid fa-triangle-exclamation"></i> ID와 PW를 확인하십시오.</div>
                 <button onclick="handleLogin()" class="w-full navy-bg text-white font-bold py-2.5 rounded-lg text-sm shadow hover:bg-slate-800 transition-all">
@@ -247,6 +247,12 @@
             "cadet05": { role: "student", name: "정현무 훈련생" }
         };
 
+        // IMPORTANT: Change ONLY the value below before deployment.
+        // This is a temporary client-side password check for a GitHub Pages prototype.
+        // It is not secure against someone who can inspect the published source code.
+        const ADMIN_PASSWORD = "alfdldTndjq1!";
+        const CADET_PASSWORD = "1234";
+
         let currentUser = null;
         let currentUserId = "";
         let selectedScenarioCode = "OPORD-01";
@@ -255,7 +261,11 @@
             const id = document.getElementById('login-id').value.trim();
             const pw = document.getElementById('login-pw').value.trim();
 
-            if (userDatabase[id] && pw === "1234") {
+            const passwordIsValid =
+                (id === "admin" && pw === ADMIN_PASSWORD) ||
+                (id !== "admin" && pw === CADET_PASSWORD);
+
+            if (userDatabase[id] && passwordIsValid) {
                 currentUser = userDatabase[id];
                 currentUserId = id;
                 document.getElementById('login-error').classList.add('hidden');
@@ -525,7 +535,7 @@
         function dragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
         function handleDrop(e, fullId) {
             e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-            const blockId = e.dataTransfer.setData("text/plain"); const dragged = document.getElementById(blockId);
+            const blockId = e.dataTransfer.getData("text/plain"); const dragged = document.getElementById(blockId);
             if (dragged) {
                 if (e.currentTarget.innerText.includes('드롭존')) { e.currentTarget.innerHTML = ''; } 
                 else {
