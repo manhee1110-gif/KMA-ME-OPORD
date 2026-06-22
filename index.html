@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OPORD Learning Loop - Deploy Ready System</title>
+    <title>OPORD Learning Loop - Shared Peer Hub System</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -21,29 +21,28 @@
         <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md space-y-6 border border-slate-100">
             <div class="text-center space-y-2">
                 <div class="inline-flex p-3 bg-indigo-50 text-indigo-600 rounded-xl text-2xl mb-1">
-                    <i class="fa-solid fa-shield-halved"></i>
+                    <i class="fa-solid fa-users-gear"></i>
                 </div>
-                <h2 class="text-xl font-black text-slate-800 tracking-tight">작전명령서(OPORD) 훈련 통제소</h2>
-                <p class="text-xs text-slate-400">배정받은 군번(ID)과 비밀번호를 입력하십시오.</p>
+                <h2 class="text-xl font-black text-slate-800 tracking-tight">OPORD 상호 공유 및 누적 통제소</h2>
+                <p class="text-xs text-slate-400">배정받은 ID와 비밀번호를 입력하십시오.</p>
             </div>
             
             <div class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">USER ID (군번/식별자)</label>
-                    <input type="text" id="login-id" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="교관: admin / 학생: cadet01">
+                    <label class="block text-xs font-bold text-slate-500 mb-1">USER ID</label>
+                    <input type="text" id="login-id" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="교관: admin / 학생: cadet01 ~ cadet05">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1">PASSWORD (비밀번호)</label>
-                    <input type="password" id="login-pw" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="••••••••">
+                    <label class="block text-xs font-bold text-slate-500 mb-1">PASSWORD</label>
+                    <input type="password" id="login-pw" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" value="1234">
                 </div>
-                <div id="login-error" class="text-xs text-rose-500 font-bold hidden text-center"><i class="fa-solid fa-triangle-exclamation"></i> 인증에 실패했습니다. ID와 PW를 확인하십시오.</div>
+                <div id="login-error" class="text-xs text-rose-500 font-bold hidden text-center"><i class="fa-solid fa-triangle-exclamation"></i> ID와 PW를 확인하십시오.</div>
                 <button onclick="handleLogin()" class="w-full navy-bg text-white font-bold py-2.5 rounded-lg text-sm shadow hover:bg-slate-800 transition-all">
-                    보안 세션 수립 (Log In)
+                    시스템 접속
                 </button>
             </div>
             <div class="bg-slate-50 p-3 rounded-lg text-[11px] text-slate-400 border border-slate-100">
-                💡 <strong>교관 계정 데모:</strong> admin / 1234<br>
-                💡 <strong>학생 계정 데모:</strong> cadet01 / 1234
+                💡 <strong>안내:</strong> 공유 허브를 통해 전 분대원의 학습 상태와 결과물(Artifact)이 상호 공개됩니다.
             </div>
         </div>
     </div>
@@ -52,17 +51,20 @@
         <nav class="navy-bg text-white px-8 py-3 flex justify-between items-center shadow-md text-sm">
             <div class="flex items-center space-x-6">
                 <span class="font-bold text-lg tracking-wide flex items-center gap-2">
-                    🪖 OPORD <span class="text-emerald-400 font-medium">Learning Loop</span>
+                    🪖 OPORD <span class="text-indigo-400 font-medium">Shared Loop</span>
                 </span>
-                <div class="flex space-x-2" id="nav-buttons-group">
+                <div class="flex space-x-1.5">
                     <button onclick="showScreen('dashboard')" id="nav-dashboard" class="bg-indigo-600 text-white px-3 py-1.5 rounded-md font-medium text-xs transition-all flex items-center gap-1.5">
-                        <i class="fa-solid fa-house"></i> Student Home
+                        <i class="fa-solid fa-house"></i> 내 대시보드
+                    </button>
+                    <button onclick="showScreen('hub')" id="nav-hub" class="bg-slate-800 text-slate-300 hover:text-white px-3 py-1.5 rounded-md font-medium text-xs transition-all flex items-center gap-1.5">
+                        <i class="fa-solid fa-hubspot text-emerald-400"></i> 전원 공유 허브 (Peer-Review)
                     </button>
                     <button onclick="showScreen('workshop')" id="nav-workshop" class="bg-slate-800 text-slate-300 hover:text-white px-3 py-1.5 rounded-md font-medium text-xs transition-all flex items-center gap-1.5">
-                        <i class="fa-solid fa-puzzle-piece"></i> Assignment Base
+                        <i class="fa-solid fa-puzzle-piece"></i> 훈련 실습실
                     </button>
                     <button onclick="showScreen('teacher')" id="nav-teacher" class="hidden bg-slate-800 text-amber-400 hover:text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all flex items-center gap-1.5">
-                        <i class="fa-solid fa-user-shield"></i> 👨‍🏫 Instructor Control
+                        <i class="fa-solid fa-user-shield"></i> 교관 통제탑
                     </button>
                 </div>
             </div>
@@ -75,170 +77,140 @@
         <main class="max-w-7xl mx-auto p-6 space-y-6">
 
             <div id="screen-teacher" class="space-y-6 hidden">
-                <div class="bg-gradient-to-r from-amber-900 to-slate-900 text-white p-5 rounded-xl shadow-lg flex justify-between items-center">
-                    <div class="space-y-1">
-                        <h1 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-tower-observation text-amber-400"></i> Tactical Instructor Command Center</h1>
-                        <p class="text-slate-300 text-xs">전체 분대원들의 진도를 통제하고, 실전 군 예문을 제작하여 주입 배포하십시오.</p>
-                    </div>
-                    <span class="bg-amber-500/20 text-amber-300 border border-amber-400 text-[11px] font-bold px-3 py-1 rounded">최고 통제관 권한</span>
+                <div class="bg-gradient-to-r from-amber-900 to-slate-900 text-white p-5 rounded-xl shadow-lg">
+                    <h1 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-tower-observation text-amber-400"></i> Tactical Command Center</h1>
+                    <p class="text-slate-300 text-xs mt-1">홈워크 과제를 추가 출제하고 전체 분대원들의 시나리오별 최종 결과물을 한눈에 추적 관리하세요.</p>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 lg:col-span-1 space-y-4">
-                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
-                            <i class="fa-solid fa-users text-indigo-500"></i> 분대원 실시간 진도 현황 (DB 연동 대기)
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b pb-2">
+                            <i class="fa-solid fa-plus-circle text-amber-500"></i> 새 시나리오 배포 (출제)
                         </h3>
-                        <div class="space-y-4" id="teacher-student-list"></div>
+                        <div class="space-y-3 text-xs">
+                            <div>
+                                <label class="block font-bold text-slate-600 mb-1">시나리오 코드명 (대문자)</label>
+                                <input type="text" id="new-sci-code" class="w-full border rounded p-2" placeholder="예: OPORD-03">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-600 mb-1">시나리오 제목 및 상황 설명</label>
+                                <input type="text" id="new-sci-title" class="w-full border rounded p-2" placeholder="예: 화랑고지 야간 기습 작전">
+                            </div>
+                            <div class="p-2 bg-slate-50 rounded space-y-2 border">
+                                <span class="font-bold text-indigo-600 block text-[11px]">임무(Mission) 정답 블록 구성 세팅</span>
+                                <input type="text" id="new-sci-m1" class="w-full border rounded p-1.5 text-[11px]" placeholder="1번 블록: 1st Platoon, NLT 0400,">
+                                <input type="text" id="new-sci-m2" class="w-full border rounded p-1.5 text-[11px]" placeholder="2번 블록: attacks Enemy Outpost">
+                                <input type="text" id="new-sci-m3" class="w-full border rounded p-1.5 text-[11px]" placeholder="3번 블록: in order to isolate the main objective.">
+                            </div>
+                            <button onclick="createNewScenario()" class="w-full bg-amber-600 text-white font-bold py-2 rounded shadow hover:bg-amber-700">
+                                신규 시나리오 전체 배포
+                            </button>
+                        </div>
                     </div>
 
                     <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 lg:col-span-2 space-y-4">
-                        <div class="border-b border-slate-100 pb-2 flex justify-between items-center">
-                            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                                <i class="fa-solid fa-pen-to-square text-amber-500"></i> Real Military Sentence Feed (2nd Tree Injector)
-                            </h3>
-                            <select id="feed-target-tab" onchange="loadCurrentFeedTexts()" class="text-xs bg-slate-50 border border-slate-200 rounded px-2 py-1 text-slate-700 font-medium">
-                                <option value="1">1. Situation (상황)</option>
-                                <option value="2" selected>2. Mission (임무)</option>
-                                <option value="3">3. Execution (실시)</option>
-                                <option value="4">4. Sustainment (지속지원)</option>
-                                <option value="5">5. Command & Signal (지휘통신)</option>
-                            </select>
-                        </div>
-
-                        <div class="space-y-3">
-                            <div class="text-xs">
-                                <label class="block text-slate-400 font-bold mb-1">[개념 예시 시나리오 제목]</label>
-                                <input type="text" id="feed-scenario-title" class="w-full border border-slate-200 rounded px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500" value="">
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div class="text-xs space-y-1">
-                                    <span class="text-amber-700 font-bold" id="feed-label-1">문장 블록 1</span>
-                                    <textarea id="feed-txt-1" rows="3" class="w-full border border-slate-200 rounded p-2 text-xs font-mono"></textarea>
-                                </div>
-                                <div class="text-xs space-y-1">
-                                    <span class="text-amber-700 font-bold" id="feed-label-2">문장 블록 2</span>
-                                    <textarea id="feed-txt-2" rows="3" class="w-full border border-slate-200 rounded p-2 text-xs font-mono"></textarea>
-                                </div>
-                                <div class="text-xs space-y-1">
-                                    <span class="text-amber-700 font-bold" id="feed-label-3">문장 블록 3</span>
-                                    <textarea id="feed-txt-3" rows="3" class="w-full border border-slate-200 rounded p-2 text-xs font-mono"></textarea>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center pt-2">
-                                <p class="text-[10px] text-slate-400"><i class="fa-solid fa-circle-info"></i> 주입 완료 즉시 모든 학생의 실습 템플릿(2nd Tree) 문장이 정통 군 교리 예문으로 대체됩니다.</p>
-                                <button onclick="injectCustomFeed()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-1.5 px-4 rounded text-xs shadow transition-all">
-                                    <i class="fa-solid fa-paper-plane"></i> 전술 시나리오 배포 (Feed)
-                                </button>
-                            </div>
+                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b pb-2">
+                            <i class="fa-solid fa-list-check text-indigo-500"></i> 📊 교관용 과제 제출 현황 트래커
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
+                                        <th class="p-2.5">훈련생</th>
+                                        <th class="p-2.5">시나리오</th>
+                                        <th class="p-2.5">상태</th>
+                                        <th class="p-2.5">제출된 조립 산출물 (Artifact)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teacher-tracker-rows" class="divide-y divide-slate-100"></tbody>
+                            </table>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div id="screen-hub" class="space-y-6 hidden">
+                <div class="bg-gradient-to-r from-slate-800 to-indigo-950 text-white p-5 rounded-xl shadow-lg">
+                    <h1 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-hubspot text-emerald-400"></i> Shared Peer-Review Hub</h1>
+                    <p class="text-slate-300 text-xs mt-1">우리 분대원들이 조립 완료한 과제물 목록입니다. 친구들의 문장 구조와 나만의 표현 방식을 비교하며 동료 평가를 진행하세요.</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100 space-y-4">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="text-sm font-bold text-slate-800"><i class="fa-solid fa-globe text-slate-400 mr-1"></i> 전 실습생 실시간 빌드 상황판</h3>
+                        <span class="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-medium">Assessment as Learning</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="shared-hub-grid">
+                        </div>
                 </div>
             </div>
 
             <div id="screen-dashboard" class="space-y-6">
-                <div class="navy-bg text-white p-5 rounded-xl shadow-lg flex justify-between items-center relative overflow-hidden">
-                    <div class="space-y-1 z-10">
-                        <h1 class="text-2xl font-bold flex items-center gap-2" id="dash-banner-title">🎖️ Welcome to your Operation Loop!</h1>
-                        <p class="text-slate-300 text-sm" id="dash-banner-desc">배정된 5대 작전명령 단락 수립 훈련에 임하십시오.</p>
+                <div class="navy-bg text-white p-5 rounded-xl shadow-lg flex justify-between items-center">
+                    <div>
+                        <h1 class="text-xl font-bold flex items-center gap-2">🎖️ OPORD 영문 작성 학습 루프</h1>
+                        <p class="text-slate-300 text-xs mt-1">배정된 전술 과제를 선택하여 실습을 완료하십시오. 데이터는 자동 누적됩니다.</p>
                     </div>
-                    <div id="dash-pass-badge" class="text-slate-500 text-4xl font-black border-4 border-slate-600 p-2 rounded-xl transform rotate-12 opacity-30 select-none">READY</div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 flex flex-col justify-between">
-                        <div>
-                            <span class="text-xs font-bold text-slate-400 uppercase block mb-1">My Performance Score</span>
-                            <span class="text-4xl font-black text-slate-800" id="dash-score">0 / 100</span>
-                            <p class="text-xs text-slate-500 mt-2" id="dash-progress-txt">📊 실습실 입장 후 미션을 시작하세요.</p>
-                        </div>
-                        <div class="w-full bg-slate-100 rounded-full h-2 mt-4">
-                            <div id="dash-progress-bar" class="bg-indigo-500 h-2 rounded-full transition-all" style="width: 0%"></div>
-                        </div>
+                    <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 md:col-span-1 space-y-3">
+                        <span class="text-xs font-bold text-slate-400 uppercase block">1. 훈련 시나리오 선택</span>
+                        <div class="space-y-2" id="dash-scenario-list"></div>
                     </div>
 
-                    <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 md:col-span-2 flex flex-col justify-between">
-                        <div>
-                            <span class="text-xs font-bold text-slate-400 uppercase block mb-1">Instructor Review & Endorsement</span>
-                            <div id="dash-feedback" class="mt-2 text-xs text-slate-500 italic bg-slate-50 p-3 rounded-lg border border-slate-100">
-                                "훈련을 시작하면 교관의 통제 가이드 및 상태 피드백이 연동됩니다."
-                            </div>
-                        </div>
-                        <div class="pt-2 flex justify-end">
-                            <button onclick="showScreen('workshop')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-1.5 px-4 rounded text-xs shadow transition-all">
-                                워크숍 실습실 입장 <i class="fa-solid fa-arrow-right ml-1"></i>
-                            </button>
-                        </div>
+                    <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 md:col-span-2 space-y-3">
+                        <span class="text-xs font-bold text-slate-400 uppercase block">2. 내 과제 산출물 보관소 (Artifact Pile-up)</span>
+                        <div class="space-y-2" id="student-artifact-history"></div>
                     </div>
-                </div>
-
-                <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100 space-y-4">
-                    <div class="flex flex-col md:flex-row md:justify-between md:items-center border-b border-slate-100 pb-3 gap-3">
-                        <div>
-                            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                                <i class="fa-solid fa-globe text-indigo-500"></i> Classroom Peer Shared Space (Gallery)
-                            </h3>
-                            <p class="text-[11px] text-slate-400 mt-0.5">통과한 동료 분대원들의 데이터라인이 실시간 동기화되어 출력됩니다.</p>
-                        </div>
-                        <div class="flex bg-slate-100 p-1 rounded-lg text-[11px] font-medium text-slate-600 self-start">
-                            <button onclick="filterGallery(1)" id="gal-tab-1" class="gal-tab-btn px-2.5 py-1 bg-white rounded shadow text-indigo-700 font-bold">1. Sit</button>
-                            <button onclick="filterGallery(2)" id="gal-tab-2" class="gal-tab-btn px-2.5 py-1 rounded">2. Mis</button>
-                            <button onclick="filterGallery(3)" id="gal-tab-3" class="gal-tab-btn px-2.5 py-1 rounded">3. Exe</button>
-                            <button onclick="filterGallery(4)" id="gal-tab-4" class="gal-tab-btn px-2.5 py-1 rounded">4. Sus</button>
-                            <button onclick="filterGallery(5)" id="gal-tab-5" class="gal-tab-btn px-2.5 py-1 rounded">5. C&S</button>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="gallery-card-grid"></div>
                 </div>
             </div>
 
             <div id="screen-workshop" class="space-y-6 hidden">
-                <div class="navy-bg text-white p-4 rounded-xl shadow-lg flex justify-between items-center">
+                <div class="bg-indigo-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center">
                     <div>
-                        <h2 class="text-lg font-bold">OPORD 2-Step Framework Workshop</h2>
-                        <p class="text-xs text-slate-400">규범 뼈대 매칭 후, 교관이 하달한 실전 군 전술 블록을 마저 조립하십시오.</p>
+                        <span class="bg-indigo-700 text-emerald-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded" id="work-active-code">OPORD-01</span>
+                        <h2 class="text-base font-bold mt-1" id="work-active-title">시나리오 로딩 중</h2>
                     </div>
-                    <span id="workshop-progress-badge" class="bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold px-3 py-1 rounded-full">진행도: 0 / 5</span>
-                </div>
-
-                <div class="grid grid-cols-5 gap-1.5" id="workshop-tabs">
-                    <button onclick="switchParagraph(1)" id="tab-1" class="tab-btn p-2.5 rounded-lg font-bold text-xs text-center border bg-indigo-600 text-white border-indigo-600">1. Situation</button>
-                    <button onclick="switchParagraph(2)" id="tab-2" class="tab-btn p-2.5 rounded-lg font-bold text-xs text-center border bg-white text-slate-600 border-slate-200">2. Mission</button>
-                    <button onclick="switchParagraph(3)" id="tab-3" class="tab-btn p-2.5 rounded-lg font-bold text-xs text-center border bg-white text-slate-600 border-slate-200">3. Execution</button>
-                    <button onclick="switchParagraph(4)" id="tab-4" class="tab-btn p-2.5 rounded-lg font-bold text-xs text-center border bg-white text-slate-600 border-slate-200">4. Sustainment</button>
-                    <button onclick="switchParagraph(5)" id="tab-5" class="tab-btn p-2.5 rounded-lg font-bold text-xs text-center border bg-white text-slate-600 border-slate-200">5. Command</button>
+                    <button onclick="showScreen('dashboard')" class="bg-indigo-800 text-xs px-3 py-1 rounded font-bold hover:bg-indigo-700">과제 목록으로 탈출</button>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100 lg:col-span-2 space-y-5">
                         <div>
-                            <h3 class="font-bold text-slate-800 text-base" id="work-title">Loading...</h3>
-                            <p class="text-xs text-slate-400" id="work-desc">Loading...</p>
+                            <h3 class="font-bold text-slate-800 text-base">2. Mission (임무 단락) 구조 및 전술 조립</h3>
+                            <p class="text-xs text-slate-400">5W 원칙에 의거하여 핵심 기동 전술문을 순서대로 결합하세요.</p>
                         </div>
+                        
                         <div class="space-y-2 bg-slate-50/70 p-4 rounded-xl border border-slate-100">
                             <span class="text-[11px] font-bold text-indigo-600 block">Step 1: 구조 구성 요소 뼈대 (Sub-elements)</span>
                             <div id="step1-slots" class="space-y-2"></div>
                         </div>
+                        
                         <div class="space-y-2 bg-amber-50/20 p-4 rounded-xl border border-amber-100/60">
-                            <div class="flex justify-between items-center">
-                                <span class="text-[11px] font-bold text-amber-700 block">Step 2: 현장 실전 전술 작전 구문 (Sentence Blocks)</span>
-                                <span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-medium" id="work-scenario">교사 피딩 데이터 로드 중</span>
-                            </div>
+                            <span class="text-[11px] font-bold text-amber-700 block">Step 2: 현장 실전 전술 작전 구문 (Sentence Blocks)</span>
                             <div id="step2-slots" class="space-y-2"></div>
                         </div>
-                        <div id="hint-box" class="bg-rose-50 border border-rose-200 rounded-lg p-3 text-xs text-rose-800 hidden"></div>
+
+                        <div id="hint-box" class="bg-rose-50 border border-rose-200 rounded-lg p-3 text-xs text-rose-800 hidden">
+                            💡 Who & When 문구가 최선두에 서고, 전술 과업 동사인 What Task, 최종 작전 목적지인 Where & Why 순서대로 결합해야 합니다.
+                        </div>
+
                         <div class="flex justify-between items-center pt-3 border-t border-slate-100">
                             <div id="feedback-message" class="text-xs font-semibold text-slate-400">블록 배치를 마무리하고 검증을 진행하십시오.</div>
                             <button onclick="verifyCurrentParagraph()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-xs shadow transition-all">
-                                <i class="fa-solid fa-circle-check"></i> 미션 단락 검증
+                                <i class="fa-solid fa-circle-check"></i> 전술문 제출 및 공유
                             </button>
                         </div>
                     </div>
+
                     <div class="bg-slate-900 text-white p-4 rounded-xl shadow-inner flex flex-col justify-between space-y-3">
                         <div>
                             <h4 class="font-bold text-xs tracking-wider text-amber-400 mb-1 flex items-center gap-1">
                                 <i class="fa-solid fa-cubes"></i> Tactical Element Pool
                             </h4>
-                            <p class="text-[10px] text-slate-400 mb-3">끌어다 놓으세요. 지우려면 블록을 <strong>[더블클릭]</strong> 하십시오.</p>
+                            <p class="text-[10px] text-slate-400 mb-3">드래그하여 배치하고, 지우려면 블록을 <strong>[더블클릭]</strong> 하십시오.</p>
                             <div id="block-pool" class="space-y-2 max-h-[440px] overflow-y-auto pr-1"></div>
                         </div>
                     </div>
@@ -248,80 +220,54 @@
     </div>
 
     <script>
-        // 데모용 로컬 모의 DB 데이터베이스 (배포 시 실제 DB서버 API 통신으로 동적 확장 변경 가능)
+        const defaultScenarios = {
+            "OPORD-01": {
+                code: "OPORD-01",
+                title: "기본 훈련: 화랑 목표 확보 강습 작전",
+                slots1: [{ id: "m1", label: "Who & When (수행 부대 및 시간)" }, { id: "m2", label: "What Task (전술 과업 동사)" }, { id: "m3", label: "Where & Why (지역 및 목적)" }],
+                slots2: [{ id: "s1", label: "2nd Platoon, NLT 2000," }, { id: "s2", label: "seizes OBJ HWARANG" }, { id: "s3", label: "in order to support the company's main effort." }]
+            },
+            "OPORD-02": {
+                code: "OPORD-02",
+                title: "응용 훈련: 독수리 캠프 야간 방어 작전",
+                slots1: [{ id: "m1", label: "Who & When (수행 부대 및 시간)" }, { id: "m2", label: "What Task (전술 과업 동사)" }, { id: "m3", label: "Where & Why (지역 및 목적)" }],
+                slots2: [{ id: "s1", label: "3rd Platoon, NLT 2300," }, { id: "s2", label: "defends Outpost EAGLE" }, { id: "s3", label: "in order to prevent enemy infiltration." }]
+            }
+        };
+
+        if(!localStorage.getItem('OPORD_SCENARIOS')) localStorage.setItem('OPORD_SCENARIOS', JSON.stringify(defaultScenarios));
+        if(!localStorage.getItem('OPORD_ARTIFACTS')) localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify([]));
+
         const userDatabase = {
             "admin": { role: "teacher", name: "최고 통제관 교관" },
-            "cadet01": { role: "student", name: "훈련생 01번", passed: [1, 2] },
-            "cadet02": { role: "student", name: "훈련생 02번", passed: [1, 2, 3, 4, 5] },
-            "cadet03": { role: "student", name: "훈련생 03번", passed: [1] }
+            "cadet01": { role: "student", name: "김독수리 훈련생" },
+            "cadet02": { role: "student", name: "이호랑이 훈련생" },
+            "cadet03": { role: "student", name: "박백호 훈련생" },
+            "cadet04": { role: "student", name: "최청룡 훈련생" },
+            "cadet05": { role: "student", name: "정현무 훈련생" }
         };
 
         let currentUser = null;
         let currentUserId = "";
-        let passedParagraphs = new Set();
-        let currentTab = 2;
-        let activeGalleryFilter = 1;
+        let selectedScenarioCode = "OPORD-01";
 
-        // 원본 마스터 프레임워크 텍스트 허브
-        const masterData = {
-            1: {
-                title: "1. Situation (상황 단락)", desc: "피아 식별 상태 및 전장 기상/환경 분석 구조 단계입니다.",
-                scenario: "📋 외계 침공 시나리오: 과학실 주변 적 로봇 순찰 상황",
-                hint: "💡 Enemy, Friendly, Terrain 순서대로 기둥을 세우고 알맞은 영문을 드롭하세요.",
-                slots1: [{ id: "e1", label: "Enemy Forces (적군 상황 뼈대)" }, { id: "e2", label: "Friendly Forces (우군 상황 뼈대)" }, { id: "e3", label: "Terrain & Weather (지형/기상 뼈대)" }],
-                slots2: [{ id: "s1-1", label: "Enemy alien robots are patrolling the science hall." }, { id: "s1-2", label: "3rd Platoon creates a diversion on the main playground." }, { id: "s1-3", label: "The floor of the science room is wet and slippery." }]
-            },
-            2: {
-                title: "2. Mission (임무 단락)", desc: "5W 원칙 핵심 기동 전술문을 정밀 타격하여 순서대로 완성하세요.",
-                scenario: "📋 교관 실전 주입문: 2소대, 20시 전 화랑목표 강습 확보",
-                hint: "💡 Who & When 문구가 최선두에 서고, 전술 과업 동사인 What Task, 최종 작전 목적지인 Where & Why 순서대로 결합해야 합니다.",
-                slots1: [{ id: "m1", label: "Who & When (수행 부대/시간)" }, { id: "m2", label: "What Task (전술 과업 동사)" }, { id: "m3", label: "Where & Why (지역 및 작전 목적)" }],
-                slots2: [{ id: "s2-1", label: "2nd Platoon, NLT 2000," }, { id: "s2-2", label: "seizes OBJ HWARANG" }, { id: "s2-3", label: "in order to support the company's mission." }]
-            },
-            3: {
-                title: "3. Execution (실시 단락)", desc: "지휘관 의도와 부대 통제 기동 방침을 연착륙시키는 마스터 단계입니다.",
-                scenario: "📋 외계 침공 시나리오: 에너지 코어 최종 확보 상태 지향",
-                hint: "💡 Commander's Intent, Concept of Operations, Coordinating Instructions를 순서대로 조립하세요.",
-                slots1: [{ id: "x1", label: "Commander's Intent (지휘관 의도)" }, { id: "x2", label: "Concept of Operations (작전 개념)" }, { id: "x3", label: "Coordinating Instructions (협조 지시)" }],
-                slots2: [{ id: "s3-1", label: "The end state is securing the energy core safely." }, { id: "s3-2", label: "Alpha team infiltrates via back door, Bravo team provides support." }, { id: "s3-3", label: "All teams must assemble at the shelter immediately after capture." }]
-            },
-            4: {
-                title: "4. Sustainment (지속지원 단락)", desc: "전투 중 군수 보급과 부상병 구호 가이드라인 조립 부문입니다.",
-                scenario: "📋 외계 침공 시나리오: 사물함 간이 보급고 운영 및 부상 시 보건실 후송 계획",
-                hint: "💡 Logistics & Supply 계획과 Medical Evacuation 요소를 짝지어야 부대가 지속 기동할 수 있습니다.",
-                slots1: [{ id: "s1", label: "Logistics & Supply (보급 계획)" }, { id: "s2", label: "Medical Evacuation (의무 후송 계획)" }],
-                slots2: [{ id: "s4-1", label: "Resupply ammunition at the central locker space." }, { id: "s4-2", label: "Evacuate wounded cadets to the nurse's office immediately." }]
-            },
-            5: {
-                title: "5. Command & Signal (지휘 및 통신)", desc: "리더 유고 시 지휘 계통과 통신 규정, 피아식별 암구호를 결합합니다.",
-                scenario: "📋 외계 침공 시나리오: 소대장 유고 시 1분대장 승계, 무전 채널 5",
-                hint: "💡 Command & Succession, Signal, Challenge 요소를 정렬하세요.",
-                slots1: [{ id: "c1", label: "Command & Succession (지휘권 승계)" }, { id: "c2", label: "Signal & Frequencies (통신 규정)" }, { id: "c3", label: "Recognition & Challenge (암구호)" }],
-                slots2: [{ id: "s5-1", label: "If the commander is down, 1st squad leader takes command." }, { id: "s5-2", label: "Maintain main radio frequency at Channel 5." }, { id: "s5-3", label: "Challenge: TIGER / Password: CLAW." }]
-            }
-        };
-
-        // 로그인 인증 핸들러
         function handleLogin() {
             const id = document.getElementById('login-id').value.trim();
             const pw = document.getElementById('login-pw').value.trim();
 
-            if (userDatabase[id] && pw === "1234") { // 데모용 패스워드 일괄 고정
+            if (userDatabase[id] && pw === "1234") {
                 currentUser = userDatabase[id];
                 currentUserId = id;
                 document.getElementById('login-error').classList.add('hidden');
                 document.getElementById('screen-login').classList.add('hidden');
                 document.getElementById('main-application').classList.remove('hidden');
-                
-                // 유저 바벨 세팅
-                document.getElementById('user-badge-id').innerText = `접속자: ${currentUser.name} (${id})`;
+                document.getElementById('user-badge-id').innerText = `${currentUser.name}(${id})`;
 
                 if (currentUser.role === 'teacher') {
                     document.getElementById('nav-teacher').classList.remove('hidden');
                     showScreen('teacher');
                 } else {
                     document.getElementById('nav-teacher').classList.add('hidden');
-                    passedParagraphs = new Set(currentUser.passed || []);
                     showScreen('dashboard');
                 }
             } else {
@@ -330,225 +276,216 @@
         }
 
         function handleLogout() {
-            currentUser = null;
-            currentUserId = "";
-            passedParagraphs.clear();
+            currentUser = null; currentUserId = "";
             document.getElementById('main-application').classList.add('hidden');
             document.getElementById('screen-login').classList.remove('hidden');
-            document.getElementById('login-id').value = "";
-            document.getElementById('login-pw').value = "";
         }
 
-        // 🔐 [보안 패치 완료] 화면 네비게이션 제어 및 권한 검증 라우터 가드
-        function showScreen(screenType) {
-            // 비정상적 비로그인 접근 차단
-            if (!currentUser) {
-                handleLogout();
-                return;
+        // 교관 전용 화면/기능 접근을 한곳에서 확인합니다.
+        function requireTeacherAccess(showMessage = true) {
+            const isTeacher = currentUser && currentUser.role === 'teacher';
+            if (!isTeacher && showMessage) {
+                alert("접근 권한이 없습니다. 교관 계정으로 로그인하십시오.");
             }
+            return isTeacher;
+        }
 
-            // 🚫 [핵심 통제 가드] 학생 계정이 교관 대시보드 진입을 시도할 경우 강제 차단 및 추방
-            if (screenType === 'teacher' && currentUser.role !== 'teacher') {
-                alert("🚨 [보안 위반 통제] 해당 통제탑(Instructor Control)은 교관 전용 구역입니다. 학생의 접근 권한이 제한됩니다.");
-                showScreen('dashboard'); 
-                return;
+        function showScreen(screenType) {
+            if (!currentUser) return;
+
+            // URL/개발자도구/직접 함수 호출로 teacher 화면을 열려 해도 차단합니다.
+            if (screenType === 'teacher' && !requireTeacherAccess()) {
+                screenType = 'dashboard';
             }
 
             const dash = document.getElementById('screen-dashboard');
             const work = document.getElementById('screen-workshop');
             const teach = document.getElementById('screen-teacher');
+            const hub = document.getElementById('screen-hub');
             
-            const navDash = document.getElementById('nav-dashboard');
-            const navWork = document.getElementById('nav-workshop');
-            const navTeach = document.getElementById('nav-teacher');
+            // 네비게이션 버튼 UI 하이라이트 제어
+            const btnDash = document.getElementById('nav-dashboard');
+            const btnHub = document.getElementById('nav-hub');
+            const btnWork = document.getElementById('nav-workshop');
+            const btnTeach = document.getElementById('nav-teacher');
 
-            dash.classList.add('hidden'); work.classList.add('hidden'); teach.classList.add('hidden');
-            navDash.className = "bg-slate-800 text-slate-300 hover:text-white px-3 py-1.5 rounded-md font-medium text-xs transition-all flex items-center gap-1.5";
-            navWork.className = "bg-slate-800 text-slate-300 hover:text-white px-3 py-1.5 rounded-md font-medium text-xs transition-all flex items-center gap-1.5";
-            navTeach.className = "bg-slate-800 text-amber-400 hover:text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all flex items-center gap-1.5";
+            dash.classList.add('hidden'); work.classList.add('hidden'); teach.classList.add('hidden'); hub.classList.add('hidden');
+            btnDash.className = btnHub.className = btnWork.className = btnTeach.className = "bg-slate-800 text-slate-300 text-xs px-3 py-1.5 rounded font-medium flex items-center gap-1.5 hover:text-white";
 
             if (screenType === 'dashboard') {
-                dash.classList.remove('hidden');
-                navDash.className = "bg-indigo-600 text-white px-3 py-1.5 rounded-md font-medium text-xs transition-all flex items-center gap-1.5";
-                updateDashboardStats();
-                filterGallery(activeGalleryFilter);
+                dash.classList.remove('hidden'); btnDash.className = "bg-indigo-600 text-white text-xs px-3 py-1.5 rounded font-medium flex items-center gap-1.5 shadow";
+                renderStudentDashboard();
+            } else if (screenType === 'hub') {
+                hub.classList.remove('hidden'); btnHub.className = "bg-emerald-600 text-white text-xs px-3 py-1.5 rounded font-medium flex items-center gap-1.5 shadow";
+                renderSharedHub();
             } else if (screenType === 'workshop') {
-                work.classList.remove('hidden');
-                navWork.className = "bg-indigo-600 text-white px-3 py-1.5 rounded-md font-medium text-xs transition-all flex items-center gap-1.5";
-                switchParagraph(currentTab);
+                work.classList.remove('hidden'); btnWork.className = "bg-indigo-600 text-white text-xs px-3 py-1.5 rounded font-medium flex items-center gap-1.5 shadow";
+                loadWorkshop();
             } else if (screenType === 'teacher') {
-                teach.classList.remove('hidden');
-                navTeach.className = "bg-amber-600 text-white px-3 py-1.5 rounded-md font-bold text-xs transition-all flex items-center gap-1.5";
-                loadCurrentFeedTexts();
-                updateTeacherDashboard();
+                teach.classList.remove('hidden'); btnTeach.className = "bg-amber-600 text-white text-xs px-3 py-1.5 rounded font-bold flex items-center gap-1.5 shadow";
+                renderTeacherDashboard();
             }
         }
 
-        // 학생 대시보드 스코어 처리
-        function updateDashboardStats() {
-            const count = passedParagraphs.size;
-            const score = count * 20;
-            document.getElementById('dash-score').innerText = `${score} / 100`;
-            document.getElementById('dash-progress-bar').style.width = `${score}%`;
-            
-            const txt = document.getElementById('dash-progress-txt');
-            const badge = document.getElementById('dash-pass-badge');
+        function createNewScenario() {
+            // 버튼을 숨겨도 개발자도구에서 직접 호출할 수 있으므로 함수 자체도 보호합니다.
+            if (!requireTeacherAccess()) return;
 
-            if (count === 5) {
-                badge.innerText = "PASS";
-                badge.className = "text-emerald-400 text-5xl font-black border-4 border-emerald-400 p-2 rounded-xl transform rotate-12 opacity-100 animate-bounce";
-                txt.innerHTML = "✓ 작전 교리 이수 완료";
-            } else {
-                badge.innerText = "READY";
-                badge.className = "text-slate-500 text-4xl font-black border-4 border-slate-600 p-2 rounded-xl transform rotate-12 opacity-30 select-none";
-                txt.innerText = `현재 진행도: 5개 단락 중 ${count}개 통과 (${score}%)`;
-            }
-            document.getElementById('workshop-progress-badge').innerText = `진행도: ${count} / 5`;
+            const code = document.getElementById('new-sci-code').value.trim().toUpperCase();
+            const title = document.getElementById('new-sci-title').value.trim();
+            const m1 = document.getElementById('new-sci-m1').value.trim();
+            const m2 = document.getElementById('new-sci-m2').value.trim();
+            const m3 = document.getElementById('new-sci-m3').value.trim();
+
+            if(!code || !title || !m1 || !m2 || !m3) { alert("빈칸을 채워주십시오."); return; }
+
+            let scenarios = JSON.parse(localStorage.getItem('OPORD_SCENARIOS'));
+            scenarios[code] = {
+                code: code, title: `과제: ${title}`,
+                slots1: [{ id: "m1", label: "Who & When (수행 부대 및 시간)" }, { id: "m2", label: "What Task (전술 과업 동사)" }, { id: "m3", label: "Where & Why (지역 및 목적)" }],
+                slots2: [{ id: "s1", label: m1 }, { id: "s2", label: m2 }, { id: "s3", label: m3 }]
+            };
+
+            localStorage.setItem('OPORD_SCENARIOS', JSON.stringify(scenarios));
+            alert(`🎯 [출제 완료] [${code}] 새로운 전술 임무 과제가 공유 허브 전원에 동시 하달되었습니다.`);
             
-            if (userDatabase[currentUserId]) {
-                userDatabase[currentUserId].passed = Array.from(passedParagraphs);
-            }
+            document.getElementById('new-sci-code').value = ''; document.getElementById('new-sci-title').value = '';
+            document.getElementById('new-sci-m1').value = ''; document.getElementById('new-sci-m2').value = ''; document.getElementById('new-sci-m3').value = '';
+            renderTeacherDashboard();
         }
 
-        // 교관 모니터링 대시보드 갱신
-        function updateTeacherDashboard() {
-            const listContainer = document.getElementById('teacher-student-list');
-            listContainer.innerHTML = '';
+        function renderTeacherDashboard() {
+            // 교관이 아닌 사용자는 교관용 제출 현황을 렌더링할 수 없습니다.
+            if (!requireTeacherAccess(false)) {
+                document.getElementById('screen-teacher').classList.add('hidden');
+                return;
+            }
 
-            Object.keys(userDatabase).forEach(id => {
-                if(userDatabase[id].role === 'teacher') return;
-                const student = userDatabase[id];
-                const count = student.passed ? student.passed.length : 0;
-                const pct = count * 20;
+            const rows = document.getElementById('teacher-tracker-rows'); rows.innerHTML = '';
+            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS'));
 
-                listContainer.innerHTML += `
-                    <div class="space-y-1 text-xs">
-                        <div class="flex justify-between font-medium">
-                            <span class="text-slate-800 font-bold">${student.name} (${id})</span>
-                            <span class="text-indigo-600 font-bold">${pct} / 100</span>
+            if(artifacts.length === 0) {
+                rows.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">아직 학생들이 제출한 과제가 없습니다.</td></tr>`;
+                return;
+            }
+            artifacts.forEach(art => {
+                const sName = userDatabase[art.studentId] ? userDatabase[art.studentId].name : art.studentId;
+                rows.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-all text-xs">
+                        <td class="p-2.5 font-bold text-slate-800">${sName}</td>
+                        <td class="p-2.5 font-mono text-indigo-600 font-bold">${art.scenarioCode}</td>
+                        <td class="p-2.5"><span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">✓ PASS</span></td>
+                        <td class="p-2.5 font-mono text-slate-600 bg-slate-50/50">${art.text}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // [공유 허브(Shared Peer-Hub) 렌더링 엔진]
+        function renderSharedHub() {
+            const hubGrid = document.getElementById('shared-hub-grid');
+            hubGrid.innerHTML = '';
+            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS'));
+
+            if(artifacts.length === 0) {
+                hubGrid.innerHTML = `<div class="col-span-2 text-center py-12 text-slate-400 italic text-xs border border-dashed rounded-xl">현재 공유 허브 플랫폼에 등록된 동료의 전술 산출물이 존재하지 않습니다. 먼저 첫 과제를 해결해 보십시오!</div>`;
+                return;
+            }
+
+            // 가장 최신 제출물이 맨 위로 오도록 정렬
+            const sortedArtifacts = [...artifacts].sort((a,b) => b.timestamp - a.timestamp);
+
+            sortedArtifacts.forEach(art => {
+                const sName = userDatabase[art.studentId] ? userDatabase[art.studentId].name : art.studentId;
+                const isMe = art.studentId === currentUserId;
+                const dateText = new Date(art.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                hubGrid.innerHTML += `
+                    <div class="p-4 border ${isMe ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-100 bg-slate-50/40'} rounded-xl shadow-sm flex flex-col justify-between space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-slate-800 text-xs flex items-center gap-1">
+                                <i class="fa-solid ${isMe ? 'fa-user-circle text-indigo-500':'fa-user-astronaut text-emerald-500'}"></i>
+                                ${sName} ${isMe ? '<span class="text-[10px] bg-indigo-100 text-indigo-700 px-1 rounded font-normal">나의 빌드</span>' : ''}
+                            </span>
+                            <span class="text-[10px] font-mono text-indigo-600 font-bold bg-white border px-2 py-0.5 rounded shadow-2xs">${art.scenarioCode}</span>
                         </div>
-                        <div class="w-full bg-slate-100 rounded-full h-1.5">
-                            <div class="bg-indigo-600 h-1.5 rounded-full transition-all" style="width: ${pct}%"></div>
+                        <div class="p-2.5 bg-white border border-slate-100 rounded-lg text-xs font-mono text-slate-700 leading-relaxed shadow-3xs select-all">
+                            "${art.text}"
+                        </div>
+                        <div class="flex justify-between items-center text-[10px] text-slate-400 pt-1">
+                            <span>Status: <strong class="text-emerald-600">Verified Artifact</strong></span>
+                            <span>전송 시간: ${dateText}</span>
                         </div>
                     </div>
                 `;
             });
         }
 
-        // 교관 텍스트 인젝터 로드
-        function loadCurrentFeedTexts() {
-            const targetNum = document.getElementById('feed-target-tab').value;
-            const data = masterData[targetNum];
+        function renderStudentDashboard() {
+            const listContainer = document.getElementById('dash-scenario-list');
+            const historyContainer = document.getElementById('student-artifact-history');
+            listContainer.innerHTML = ''; historyContainer.innerHTML = '';
 
-            document.getElementById('feed-scenario-title').value = data.scenario;
-            document.getElementById('feed-label-1').innerText = `[1번 블록] ${data.slots1[0].label.split(' (')[0]}`;
-            document.getElementById('feed-label-2').innerText = `[2번 블록] ${data.slots1[1].label.split(' (')[0]}`;
-            
-            if(data.slots1[2]) {
-                document.getElementById('feed-txt-3').style.display = 'block';
-                document.getElementById('feed-label-3').style.display = 'block';
-                document.getElementById('feed-label-3').innerText = `[3번 블록] ${data.slots1[2].label.split(' (')[0]}`;
-                document.getElementById('feed-txt-3').value = data.slots2[2].label;
+            const scenarios = JSON.parse(localStorage.getItem('OPORD_SCENARIOS'));
+            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS'));
+            const myPasses = artifacts.filter(a => a.studentId === currentUserId).map(a => a.scenarioCode);
+
+            Object.keys(scenarios).forEach(key => {
+                const sci = scenarios[key]; const isPassed = myPasses.includes(sci.code);
+                listContainer.innerHTML += `
+                    <div class="p-3 border rounded-lg flex justify-between items-center bg-slate-50 hover:border-indigo-300 transition-all">
+                        <div class="space-y-0.5">
+                            <span class="text-[10px] font-mono font-bold ${isPassed ? 'text-emerald-600':'text-indigo-600'}">${sci.code}</span>
+                            <h4 class="text-xs font-bold text-slate-800">${sci.title}</h4>
+                        </div>
+                        <button onclick="startTraining('${sci.code}')" class="px-2.5 py-1 text-[11px] font-bold text-white rounded shadow ${isPassed ? 'bg-emerald-600 hover:bg-emerald-700':'navy-bg hover:bg-slate-800'}">
+                            ${isPassed ? '복습하기' : '도전'}
+                        </button>
+                    </div>
+                `;
+            });
+
+            const myArtifacts = artifacts.filter(a => a.studentId === currentUserId);
+            if(myArtifacts.length === 0) {
+                historyContainer.innerHTML = `<div class="text-xs text-slate-400 italic p-6 border border-dashed rounded-lg text-center">보관된 개인 산출물이 없습니다. 미션에 진입하십시오.</div>`;
             } else {
-                document.getElementById('feed-txt-3').style.display = 'none';
-                document.getElementById('feed-label-3').style.display = 'none';
-            }
-            document.getElementById('feed-txt-1').value = data.slots2[0].label;
-            document.getElementById('feed-txt-2').value = data.slots2[1].label;
-        }
-
-        // 교관 강제 전술예문 주입(Feed) 기능
-        function injectCustomFeed() {
-            if (!currentUser || currentUser.role !== 'teacher') {
-                alert("권한이 없습니다.");
-                return;
-            }
-            const targetNum = document.getElementById('feed-target-tab').value;
-            
-            masterData[targetNum].scenario = document.getElementById('feed-scenario-title').value;
-            masterData[targetNum].slots2[0].label = document.getElementById('feed-txt-1').value;
-            masterData[targetNum].slots2[1].label = document.getElementById('feed-txt-2').value;
-            if(masterData[targetNum].slots2[2]) {
-                masterData[targetNum].slots2[2].label = document.getElementById('feed-txt-3').value;
-            }
-
-            alert(`🚨 [전술 통제 명령] ${targetNum}번 단락의 훈련 텍스트 블록이 교관 예문으로 즉시 패치되었습니다.`);
-        }
-
-        // 갤러리 공유 게시판 필터링
-        function filterGallery(paragraphNum) {
-            activeGalleryFilter = paragraphNum;
-            document.querySelectorAll('.gal-tab-btn').forEach(btn => {
-                btn.className = "gal-tab-btn px-2.5 py-1 rounded transition-all";
-            });
-            document.getElementById(`gal-tab-${paragraphNum}`).className = "gal-tab-btn px-2.5 py-1 bg-indigo-600 text-white font-bold rounded shadow";
-
-            const grid = document.getElementById('gallery-card-grid');
-            grid.innerHTML = '';
-
-            Object.keys(userDatabase).forEach(id => {
-                if(userDatabase[id].role === 'teacher') return;
-                const student = userDatabase[id];
-                const hasPassed = student.passed && student.passed.includes(paragraphNum);
-
-                if (hasPassed) {
-                    const textOutput = masterData[paragraphNum].slots2.map(s => s.label).join(' ');
-                    const isMe = (id === currentUserId);
-                    
-                    grid.innerHTML += `
-                        <div class="${isMe ? 'bg-indigo-900 text-indigo-100 border-indigo-700' : 'bg-slate-50 text-slate-700 border-slate-200'} p-4 rounded-lg border text-xs space-y-2 card-shadow">
-                            <div class="flex justify-between font-bold">
-                                <span>${student.name} (${id})</span>
-                                <span class="${isMe ? 'text-emerald-300' : 'text-emerald-600'}">✓ 이수완료</span>
+                myArtifacts.forEach(art => {
+                    historyContainer.innerHTML += `
+                        <div class="p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg text-xs space-y-1">
+                            <div class="flex justify-between font-bold text-indigo-900">
+                                <span>시나리오: ${art.scenarioCode}</span>
+                                <span class="text-emerald-600"><i class="fa-solid fa-cloud-arrow-up"></i> 저장 및 공유 허브 동기화됨</span>
                             </div>
-                            <p class="italic leading-relaxed">"${textOutput}"</p>
+                            <p class="font-mono text-slate-700 bg-white p-2 rounded border border-indigo-200/40">"${art.text}"</p>
                         </div>
                     `;
-                } else {
-                    grid.innerHTML += `
-                        <div class="bg-slate-100 p-4 rounded-lg border border-dashed border-slate-300 text-xs flex flex-col items-center justify-center text-slate-400 py-6">
-                            <i class="fa-solid fa-lock text-slate-300 text-sm mb-1"></i><span>미완성 단락</span>
-                        </div>
-                    `;
-                }
-            });
+                });
+            }
         }
 
-        // 워크숍 단락 스위치 및 그리기
-        function switchParagraph(num) {
-            currentTab = num;
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.className = "tab-btn p-2.5 rounded-lg font-bold text-xs text-center border bg-white text-slate-600 border-slate-200 transition-all";
-                const tNum = parseInt(btn.id.replace('tab-', ''));
-                if (passedParagraphs.has(tNum)) { btn.classList.add('bg-emerald-50', 'border-emerald-400', 'text-emerald-700'); }
-            });
-            document.getElementById(`tab-${num}`).className = "tab-btn p-2.5 rounded-lg font-bold text-xs text-center border bg-indigo-600 text-white border-indigo-600 transition-all";
+        function startTraining(code) { selectedScenarioCode = code; showScreen('workshop'); }
 
-            const data = masterData[num];
-            document.getElementById('work-title').innerText = data.title;
-            document.getElementById('work-desc').innerText = data.desc;
-            document.getElementById('work-scenario').innerText = data.scenario;
+        function loadWorkshop() {
+            const scenarios = JSON.parse(localStorage.getItem('OPORD_SCENARIOS'));
+            const data = scenarios[selectedScenarioCode];
+
+            document.getElementById('work-active-code').innerText = data.code;
+            document.getElementById('work-active-title').innerText = data.title;
             document.getElementById('hint-box').classList.add('hidden');
             document.getElementById('feedback-message').className = "text-xs font-semibold text-slate-400";
-            document.getElementById('feedback-message').innerText = "블록 배치를 마무리하고 검증을 진행하십시오.";
+            document.getElementById('feedback-message').innerText = "전술 요소를 결합하고 검증을 요청하십시오.";
 
-            renderWorkspace();
-        }
-
-        function renderWorkspace() {
             const s1Box = document.getElementById('step1-slots');
             const s2Box = document.getElementById('step2-slots');
             const pool = document.getElementById('block-pool');
             s1Box.innerHTML = ''; s2Box.innerHTML = ''; pool.innerHTML = '';
-
-            const data = masterData[currentTab];
 
             data.slots1.forEach((slot, idx) => {
                 s1Box.innerHTML += `
                     <div class="flex items-center gap-3">
                         <span class="text-[10px] font-mono font-bold text-indigo-500 bg-indigo-50/50 w-12 py-1 rounded text-center border border-indigo-100">구조-${idx+1}</span>
                         <div id="target-s1-${slot.id}" class="drop-zone flex-1 min-h-[42px] px-2 py-1 border border-dashed border-slate-300 rounded bg-white flex items-center justify-center text-[11px] text-slate-400 italic"
-                             ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event, 's1-${slot.id}')">구조 블록 드롭존</div>
+                             ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event, 's1-${slot.id}')">구조 뼈대 드롭존</div>
                     </div>
                 `;
             });
@@ -558,7 +495,7 @@
                     <div class="flex items-center gap-3">
                         <span class="text-[10px] font-mono font-bold text-amber-600 bg-amber-50/50 w-12 py-1 rounded text-center border border-amber-100">문장-${idx+1}</span>
                         <div id="target-s2-${slot.id}" class="drop-zone flex-1 min-h-[42px] px-2 py-1 border border-dashed border-amber-300 rounded bg-white flex items-center justify-center text-[11px] text-amber-600/50 italic"
-                             ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event, 's2-${slot.id}')">실전 작전 문장 드롭존</div>
+                             ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event, 's2-${slot.id}')">실전 문장 드롭존</div>
                     </div>
                 `;
             });
@@ -569,15 +506,13 @@
             poolItems.sort(() => Math.random() - 0.5);
 
             poolItems.forEach(b => {
-                const el = document.createElement('div');
-                el.id = `block-${b.id}`; el.draggable = true;
+                const el = document.createElement('div'); el.id = `block-${b.id}`; el.draggable = true;
                 el.className = b.type === 's1' ? "drag-block bg-slate-800 hover:bg-slate-700 text-slate-200 p-2 rounded border border-slate-700 text-[11px]" : "drag-block bg-slate-800 hover:bg-slate-700 text-amber-300 p-2 rounded border border-slate-700 text-[11px] font-mono";
                 el.innerHTML = `<i class="fa-solid fa-grip-lines-vertical text-slate-600 mr-1.5"></i>${b.label}`;
                 el.ondragstart = (e) => e.dataTransfer.setData("text/plain", e.target.id);
                 el.ondblclick = () => {
                     if (el.parentElement && el.parentElement.classList.contains('drop-zone')) {
-                        const zone = el.parentElement;
-                        zone.innerHTML = zone.id.includes('target-s1') ? '구조 블록 드롭존' : '실전 작전 문장 드롭존';
+                        const zone = el.parentElement; zone.innerHTML = zone.id.includes('target-s1') ? '구조 뼈대 드롭존' : '실전 문장 드롭존';
                         el.className = b.type === 's1' ? "drag-block bg-slate-800 hover:bg-slate-700 text-slate-200 p-2 rounded border border-slate-700 text-[11px]" : "drag-block bg-slate-800 hover:bg-slate-700 text-amber-300 p-2 rounded border border-slate-700 text-[11px] font-mono";
                         document.getElementById('block-pool').appendChild(el);
                     }
@@ -590,8 +525,7 @@
         function dragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
         function handleDrop(e, fullId) {
             e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-            const blockId = e.dataTransfer.getData("text/plain");
-            const dragged = document.getElementById(blockId);
+            const blockId = e.dataTransfer.setData("text/plain"); const dragged = document.getElementById(blockId);
             if (dragged) {
                 if (e.currentTarget.innerText.includes('드롭존')) { e.currentTarget.innerHTML = ''; } 
                 else {
@@ -605,24 +539,37 @@
         }
 
         function verifyCurrentParagraph() {
-            const data = masterData[currentTab];
+            const scenarios = JSON.parse(localStorage.getItem('OPORD_SCENARIOS'));
+            const data = scenarios[selectedScenarioCode];
+            
             let perfect = true;
             data.slots1.forEach(s => { const z = document.getElementById(`target-s1-${s.id}`); if (!z.firstElementChild || z.firstElementChild.id !== `block-s1-${s.id}`) { perfect = false; } });
             data.slots2.forEach(s => { const z = document.getElementById(`target-s2-${s.id}`); if (!z.firstElementChild || z.firstElementChild.id !== `block-s2-${s.id}`) { perfect = false; } });
 
-            const fbm = document.getElementById('feedback-message');
-            const hintBox = document.getElementById('hint-box');
+            const fbm = document.getElementById('feedback-message'); const hintBox = document.getElementById('hint-box');
 
             if (perfect) {
-                passedParagraphs.add(currentTab);
+                const compiledText = data.slots2.map(s => s.label).join(' ');
+                let artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS'));
+                
+                // 학생이 동일 시나리오를 다시 통과하면 최신화(기존 값 업데이트)
+                const existingIdx = artifacts.findIndex(a => a.studentId === currentUserId && a.scenarioCode === selectedScenarioCode);
+                const record = { studentId: currentUserId, scenarioCode: selectedScenarioCode, text: compiledText, timestamp: Date.now() };
+                
+                if(existingIdx > -1) artifacts[existingIdx] = record;
+                else artifacts.push(record);
+
+                localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify(artifacts));
+
                 fbm.className = "text-xs font-bold text-emerald-600";
-                fbm.innerHTML = "✓ 검증을 통과했습니다! 대시보드에 기록이 실시간으로 갱신됩니다.";
+                fbm.innerHTML = "🎉 통과! 당신의 작전명령서 산출물이 동료 공유 허브 및 교관 탑에 실시간 동기화되었습니다.";
                 hintBox.classList.add('hidden');
-                updateDashboardStats();
+                
+                setTimeout(() => { showScreen('hub'); }, 1500); // 통과 즉시 친구들의 창으로 바로 연결
             } else {
                 fbm.className = "text-xs font-bold text-rose-500";
-                fbm.innerHTML = "⚠️ 구조 배치가 잘못되었거나 오차가 식별되었습니다.";
-                hintBox.innerHTML = data.hint; hintBox.classList.remove('hidden');
+                fbm.innerHTML = "⚠️ 구조적 오류: 나열 방식이 연합군 육군 교리 절차와 맞지 않습니다.";
+                hintBox.classList.remove('hidden');
             }
         }
     </script>
