@@ -13,6 +13,20 @@
         .drag-block { cursor: grab; transition: all 0.2s; }
         .drag-block:active { cursor: grabbing; }
         .drop-zone.drag-over { background-color: #e0e7ff; border-color: #4f46e5; }
+        .opord-shell details { border: 1px solid #e2e8f0; border-radius: 0.75rem; background: #ffffff; }
+        .opord-shell summary { cursor: pointer; list-style: none; }
+        .opord-shell summary::-webkit-details-marker { display: none; }
+        .opord-shell details[open] { border-color: #c7d2fe; background: #f8faff; }
+        .shell-active { border-left: 4px solid #4f46e5; background: #eef2ff; }
+        .shell-reference { border-left: 4px solid #cbd5e1; }
+        .paragraph-card { min-height: 126px; border: 2px solid #dbeafe; background: #ffffff; transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+        .paragraph-card:hover { transform: translateY(-2px); border-color: #818cf8; box-shadow: 0 10px 18px -12px rgba(30, 41, 59, 0.45); }
+        .paragraph-card.active { border-color: #4f46e5; background: #eef2ff; box-shadow: 0 10px 18px -12px rgba(79, 70, 229, 0.5); }
+        .paragraph-card.completed { border-color: #86efac; }
+        .step-locked { opacity: 0.58; }
+        .step-locked .drop-zone, .step-locked button { pointer-events: none; }
+        .shell-slot { min-height: 42px; }
+        .workspace-step-heading { letter-spacing: 0.01em; }
     </style>
 </head>
 <body>
@@ -30,7 +44,7 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1">USER ID</label>
-                    <input type="text" id="login-id" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="교관: admin / 학생: cadet01 ~ cadet05">
+                    <input type="text" id="login-id" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="교관: admin / 학생: cadet01 ~ cadet20">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1">PASSWORD</label>
@@ -85,29 +99,93 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 lg:col-span-1 space-y-4">
                         <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b pb-2">
-                            <i class="fa-solid fa-plus-circle text-amber-500"></i> 새 시나리오 배포 (출제)
+                            <i class="fa-solid fa-pen-ruler text-amber-500"></i> 시나리오 편집기 (출제 · 수정)
                         </h3>
+
+                        <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3 space-y-2">
+                            <div class="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                    <p id="scenario-editor-mode" class="text-[11px] font-black text-amber-800">새 시나리오 작성 모드</p>
+                                    <p class="mt-0.5 text-[10px] leading-relaxed text-slate-500">기존 활동을 불러와 다섯 paragraph의 reference cards·phrase bank와 활동 유형(Lecture / Code Your Way)을 수정할 수 있습니다.</p>
+                                </div>
+                                <button type="button" onclick="resetScenarioEditor()" class="rounded border border-amber-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100"><i class="fa-solid fa-file-circle-plus mr-1"></i>새 활동</button>
+                            </div>
+                            <div id="teacher-scenario-library" class="max-h-40 space-y-1.5 overflow-y-auto pr-1"></div>
+                        </div>
+
                         <div class="space-y-3 text-xs">
                             <div>
                                 <label class="block font-bold text-slate-600 mb-1">시나리오 코드명 (대문자)</label>
                                 <input type="text" id="new-sci-code" class="w-full border rounded p-2" placeholder="예: OPORD-03">
+                                <p id="scenario-code-note" class="mt-1 text-[10px] text-slate-400">새 활동은 코드명을 지정하고, 기존 활동은 코드가 고정됩니다.</p>
                             </div>
                             <div>
                                 <label class="block font-bold text-slate-600 mb-1">시나리오 제목 및 상황 설명</label>
                                 <input type="text" id="new-sci-title" class="w-full border rounded p-2" placeholder="예: 화랑고지 야간 기습 작전">
                             </div>
-                            <div class="p-2 bg-slate-50 rounded space-y-2 border">
-                                <span class="font-bold text-indigo-600 block text-[11px]">임무(Mission) 정답 블록 구성 세팅</span>
-                                <input type="text" id="new-sci-m1" class="w-full border rounded p-1.5 text-[11px]" placeholder="1번 블록: 1st Platoon, NLT 0400,">
-                                <input type="text" id="new-sci-m2" class="w-full border rounded p-1.5 text-[11px]" placeholder="2번 블록: attacks Enemy Outpost">
-                                <input type="text" id="new-sci-m3" class="w-full border rounded p-1.5 text-[11px]" placeholder="3번 블록: in order to isolate the main objective.">
+                            <div>
+                                <label class="block font-bold text-slate-600 mb-1">활동 유형</label>
+                                <select id="new-sci-activity-type" class="w-full border rounded p-2 text-xs">
+                                    <option value="lecture">Lecture-In-Class Activity — 강의 직후 구조 확인·수정 작성</option>
+                                    <option value="code">Code Your Way Activity — 팀 기반 본격 OPORD 작성</option>
+                                </select>
+                                <p class="mt-1 text-[10px] leading-relaxed text-slate-400">Lecture 모드는 Step 2에서 하나의 open-ended revision draft를 작성합니다. Code Your Way 모드는 paragraph별 scaffolded team writing을 사용하며, 다음 단계에서 Captain Manhee sidekick을 붙일 자리입니다.</p>
                             </div>
-                            <button onclick="createNewScenario()" class="w-full bg-amber-600 text-white font-bold py-2 rounded shadow hover:bg-amber-700">
-                                신규 시나리오 전체 배포
-                            </button>
+                            <div class="rounded-lg border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
+                                <div>
+                                    <span class="font-bold text-indigo-700 block text-[11px]">Full OPORD Teacher Feed</span>
+                                    <p class="mt-1 text-[10px] leading-relaxed text-slate-500">각 paragraph의 <strong>reference는 한 줄이 하나의 scenario card</strong>, <strong>phrase bank도 한 줄이 하나의 phrase chip</strong>이 됩니다. Step 1은 OPORD shell을 공통으로 연습하고, Step 2에서는 학생들이 아래 reference와 phrase bank를 바탕으로 자기 팀의 문단을 직접 작성합니다.</p>
+                                </div>
+
+                                <details open class="rounded border border-slate-200 bg-white p-2">
+                                    <summary class="cursor-pointer text-[11px] font-bold text-slate-700">1. Situation — one line = one reference card</summary>
+                                    <textarea id="new-sci-situation" rows="5" class="mt-2 w-full rounded border border-slate-200 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Area of Interest: ...&#10;Area of Operations: ...&#10;Terrain: ...&#10;Weather: ...&#10;Enemy Forces: ...&#10;Friendly Forces: ...&#10;Attachments and Detachments: ..."></textarea>
+                                    <div class="mt-2 border-t border-indigo-100 pt-2">
+                                        <label class="block text-[10px] font-bold text-indigo-700">Teacher Phrase Bank <span class="font-normal text-slate-400">(optional · one phrase per line)</span></label>
+                                        <textarea id="new-sci-phrases-situation" rows="3" class="mt-1 w-full rounded border border-indigo-100 bg-indigo-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="limited visibility&#10;provides observation&#10;likely avenue of approach"></textarea>
+                                    </div>
+                                </details>
+                                <details class="rounded border border-slate-200 bg-white p-2">
+                                    <summary class="cursor-pointer text-[11px] font-bold text-slate-700">2. Mission — one line = one reference card</summary>
+                                    <textarea id="new-sci-mission" rows="3" class="mt-2 w-full rounded border border-slate-200 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Who: ...&#10;What: ...&#10;When: ...&#10;Where: ...&#10;Why: ..."></textarea>
+                                    <div class="mt-2 border-t border-indigo-100 pt-2">
+                                        <label class="block text-[10px] font-bold text-indigo-700">Teacher Phrase Bank <span class="font-normal text-slate-400">(optional · one phrase per line)</span></label>
+                                        <textarea id="new-sci-phrases-mission" rows="3" class="mt-1 w-full rounded border border-indigo-100 bg-indigo-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="at / NLT / on order&#10;seize OBJ&#10;in order to ..."></textarea>
+                                    </div>
+                                </details>
+                                <details class="rounded border border-slate-200 bg-white p-2">
+                                    <summary class="cursor-pointer text-[11px] font-bold text-slate-700">3. Execution — one line = one reference card</summary>
+                                    <textarea id="new-sci-execution" rows="7" class="mt-2 w-full rounded border border-slate-200 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Commander’s Intent: ...&#10;Concept of Operations: ...&#10;Scheme of Movement and Maneuver: ...&#10;Tasks to Subordinate Units: ...&#10;Coordinating Instructions: ..."></textarea>
+                                    <div class="mt-2 border-t border-indigo-100 pt-2">
+                                        <label class="block text-[10px] font-bold text-indigo-700">Teacher Phrase Bank <span class="font-normal text-slate-400">(optional · one phrase per line)</span></label>
+                                        <textarea id="new-sci-phrases-execution" rows="4" class="mt-1 w-full rounded border border-indigo-100 bg-indigo-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="support by fire&#10;be prepared to&#10;report when crossing&#10;do not advance beyond"></textarea>
+                                    </div>
+                                </details>
+                                <details class="rounded border border-slate-200 bg-white p-2">
+                                    <summary class="cursor-pointer text-[11px] font-bold text-slate-700">4. Sustainment — one line = one reference card</summary>
+                                    <textarea id="new-sci-sustainment" rows="4" class="mt-2 w-full rounded border border-slate-200 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Logistic: ...&#10;Personnel Services Support: ...&#10;Tactical Combat Casualty Care: ..."></textarea>
+                                    <div class="mt-2 border-t border-indigo-100 pt-2">
+                                        <label class="block text-[10px] font-bold text-indigo-700">Teacher Phrase Bank <span class="font-normal text-slate-400">(optional · one phrase per line)</span></label>
+                                        <textarea id="new-sci-phrases-sustainment" rows="3" class="mt-1 w-full rounded border border-indigo-100 bg-indigo-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Class V resupply&#10;LOGPAC&#10;CCP&#10;CASEVAC"></textarea>
+                                    </div>
+                                </details>
+                                <details class="rounded border border-slate-200 bg-white p-2">
+                                    <summary class="cursor-pointer text-[11px] font-bold text-slate-700">5. Command and Signal — one line = one reference card</summary>
+                                    <textarea id="new-sci-commandSignal" rows="5" class="mt-2 w-full rounded border border-slate-200 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Command (Location of Leaders): ...&#10;Control (Command Post Location): ...&#10;Signal: ..."></textarea>
+                                    <div class="mt-2 border-t border-indigo-100 pt-2">
+                                        <label class="block text-[10px] font-bold text-indigo-700">Teacher Phrase Bank <span class="font-normal text-slate-400">(optional · one phrase per line)</span></label>
+                                        <textarea id="new-sci-phrases-commandSignal" rows="3" class="mt-1 w-full rounded border border-indigo-100 bg-indigo-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="assumes command&#10;SITREP&#10;primary / alternate / contingency / emergency"></textarea>
+                                    </div>
+                                </details>
+                            </div>
+                            <div class="flex gap-2">
+                                <button id="scenario-save-btn" onclick="saveScenarioEditor()" class="flex-1 bg-amber-600 text-white font-bold py-2 rounded shadow hover:bg-amber-700">
+                                    신규 시나리오 전체 배포
+                                </button>
+                                <button type="button" onclick="resetScenarioEditor()" class="border border-slate-200 bg-white px-3 py-2 rounded text-xs font-bold text-slate-600 hover:bg-slate-50">초기화</button>
+                            </div>
                         </div>
                     </div>
-
                     <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 lg:col-span-2 space-y-4">
                         <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b pb-2">
                             <i class="fa-solid fa-list-check text-indigo-500"></i> 📊 교관용 과제 제출 현황 트래커
@@ -118,8 +196,10 @@
                                     <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
                                         <th class="p-2.5">훈련생</th>
                                         <th class="p-2.5">시나리오</th>
+                                        <th class="p-2.5">Paragraph</th>
                                         <th class="p-2.5">상태</th>
-                                        <th class="p-2.5">제출된 조립 산출물 (Artifact)</th>
+                                        <th class="p-2.5">동료 피드백</th>
+                                        <th class="p-2.5">제출된 작성 산출물 (Artifact)</th>
                                     </tr>
                                 </thead>
                                 <tbody id="teacher-tracker-rows" class="divide-y divide-slate-100"></tbody>
@@ -132,12 +212,12 @@
             <div id="screen-hub" class="space-y-6 hidden">
                 <div class="bg-gradient-to-r from-slate-800 to-indigo-950 text-white p-5 rounded-xl shadow-lg">
                     <h1 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-hubspot text-emerald-400"></i> Shared Peer-Review Hub</h1>
-                    <p class="text-slate-300 text-xs mt-1">우리 분대원들이 조립 완료한 과제물 목록입니다. 친구들의 문장 구조와 나만의 표현 방식을 비교하며 동료 평가를 진행하세요.</p>
+                    <p class="text-slate-300 text-xs mt-1">훈련생별 OPORD 묶음을 클릭해 1–5 paragraph를 순서대로 확인하고, paragraph별 동료 피드백을 남기세요.</p>
                 </div>
 
                 <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100 space-y-4">
                     <div class="flex justify-between items-center border-b pb-3">
-                        <h3 class="text-sm font-bold text-slate-800"><i class="fa-solid fa-globe text-slate-400 mr-1"></i> 전 실습생 실시간 빌드 상황판</h3>
+                        <h3 class="text-sm font-bold text-slate-800"><i class="fa-solid fa-globe text-slate-400 mr-1"></i> 전 실습생 작성 산출물 상황판</h3>
                         <span class="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-medium">Assessment as Learning</span>
                     </div>
                     
@@ -161,7 +241,7 @@
                     </div>
 
                     <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 md:col-span-2 space-y-3">
-                        <span class="text-xs font-bold text-slate-400 uppercase block">2. 내 과제 산출물 보관소 (Artifact Pile-up)</span>
+                        <span class="text-xs font-bold text-slate-400 uppercase block">2. 내 OPORD 활동 묶음 (Activity Package)</span>
                         <div class="space-y-2" id="student-artifact-history"></div>
                     </div>
                 </div>
@@ -176,44 +256,62 @@
                     <button onclick="showScreen('dashboard')" class="bg-indigo-800 text-xs px-3 py-1 rounded font-bold hover:bg-indigo-700">과제 목록으로 탈출</button>
                 </div>
 
+                <section class="bg-white p-5 rounded-xl card-shadow border border-slate-100 space-y-4">
+                    <div class="flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                            <h3 class="font-black text-slate-800 text-base flex items-center gap-2"><i class="fa-solid fa-layer-group text-indigo-600"></i> OPORD Paragraph Workshops</h3>
+                            <p class="text-xs text-slate-500 mt-1">아래의 다섯 paragraph 중 하나를 선택하여, <strong>Step 1: OPORD shell</strong>과 <strong>Step 2: guided team writing</strong>을 순서대로 실습합니다.</p>
+                        </div>
+                        <span class="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-1 rounded-full">Choose one paragraph at a time</span>
+                    </div>
+                    <div id="paragraph-selector" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"></div>
+                </section>
+
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100 lg:col-span-2 space-y-5">
-                        <div>
-                            <h3 class="font-bold text-slate-800 text-base">2. Mission (임무 단락) 구조 및 전술 조립</h3>
-                            <p class="text-xs text-slate-400">5W 원칙에 의거하여 핵심 기동 전술문을 순서대로 결합하세요.</p>
-                        </div>
-                        
-                        <div class="space-y-2 bg-slate-50/70 p-4 rounded-xl border border-slate-100">
-                            <span class="text-[11px] font-bold text-indigo-600 block">Step 1: 구조 구성 요소 뼈대 (Sub-elements)</span>
-                            <div id="step1-slots" class="space-y-2"></div>
-                        </div>
-                        
-                        <div class="space-y-2 bg-amber-50/20 p-4 rounded-xl border border-amber-100/60">
-                            <span class="text-[11px] font-bold text-amber-700 block">Step 2: 현장 실전 전술 작전 구문 (Sentence Blocks)</span>
+                        <div id="active-paragraph-intro" class="rounded-xl bg-slate-50 border border-slate-100 px-4 py-3"></div>
+
+                        <section class="space-y-3 bg-slate-50/70 p-4 rounded-xl border border-slate-100">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <span class="workspace-step-heading text-[11px] font-bold text-indigo-700 block"><i class="fa-solid fa-puzzle-piece mr-1"></i>Step 1: OPORD Format Builder</span>
+                                    <p id="step1-instruction" class="text-[11px] text-slate-500 mt-1">OPORD format 순서에 맞게 shell blocks를 끌어다 놓으십시오.</p>
+                                </div>
+                                <span id="step1-status" class="text-[10px] rounded bg-indigo-100 px-2 py-1 font-bold text-indigo-700">OPORD shell drill</span>
+                            </div>
+                            <div id="step1-slots" class="space-y-2 max-h-[430px] overflow-y-auto pr-1"></div>
+                            <div class="flex flex-wrap justify-between gap-2 pt-2 border-t border-slate-100">
+                                <button id="step1-reset-btn" onclick="resetActiveParagraphStep(1)" class="hidden border border-slate-200 bg-white text-slate-600 font-bold py-2 px-3 rounded-lg text-xs hover:bg-slate-50">Step 1 다시 조립</button>
+                                <button id="step1-verify-btn" onclick="verifyStep1()" class="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-xs shadow transition-all"><i class="fa-solid fa-circle-check"></i> Step 1 검증</button>
+                            </div>
+                        </section>
+
+                        <section id="step2-panel" class="space-y-3 bg-amber-50/20 p-4 rounded-xl border border-amber-100/60">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <span id="step2-heading" class="workspace-step-heading text-[11px] font-bold text-amber-700 block"><i class="fa-solid fa-pen-to-square mr-1"></i>Step 2: Guided Paragraph Writing</span>
+                                    <p id="step2-instruction" class="text-[11px] text-slate-500 mt-1">Step 1을 통과하면 팀별 guided writing workspace가 열립니다.</p>
+                                </div>
+                                <span id="step2-status" class="text-[10px] rounded bg-amber-100 px-2 py-1 font-bold text-amber-800">Locked until Step 1</span>
+                            </div>
                             <div id="step2-slots" class="space-y-2"></div>
-                        </div>
+                            <div class="flex flex-wrap justify-between gap-2 pt-2 border-t border-amber-100/70">
+                                <button id="step2-reset-btn" onclick="resetActiveParagraphStep(2)" class="hidden border border-amber-200 bg-white text-amber-700 font-bold py-2 px-3 rounded-lg text-xs hover:bg-amber-50">Step 2 수정 · 재작성</button>
+                                <button id="step2-verify-btn" onclick="verifyStep2()" class="ml-auto bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg text-xs shadow transition-all"><i class="fa-solid fa-cloud-arrow-up"></i> Team Writing 제출 및 공유</button>
+                            </div>
+                        </section>
 
-                        <div id="hint-box" class="bg-rose-50 border border-rose-200 rounded-lg p-3 text-xs text-rose-800 hidden">
-                            💡 Who & When 문구가 최선두에 서고, 전술 과업 동사인 What Task, 최종 작전 목적지인 Where & Why 순서대로 결합해야 합니다.
-                        </div>
-
-                        <div class="flex justify-between items-center pt-3 border-t border-slate-100">
-                            <div id="feedback-message" class="text-xs font-semibold text-slate-400">블록 배치를 마무리하고 검증을 진행하십시오.</div>
-                            <button onclick="verifyCurrentParagraph()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-xs shadow transition-all">
-                                <i class="fa-solid fa-circle-check"></i> 전술문 제출 및 공유
-                            </button>
-                        </div>
+                        <div id="hint-box" class="bg-rose-50 border border-rose-200 rounded-lg p-3 text-xs text-rose-800 hidden"></div>
+                        <div id="feedback-message" class="text-xs font-semibold text-slate-400">Paragraph를 선택한 뒤 Step 1부터 시작하십시오.</div>
                     </div>
 
-                    <div class="bg-slate-900 text-white p-4 rounded-xl shadow-inner flex flex-col justify-between space-y-3">
+                    <aside class="bg-slate-900 text-white p-4 rounded-xl shadow-inner flex flex-col justify-between space-y-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
                         <div>
-                            <h4 class="font-bold text-xs tracking-wider text-amber-400 mb-1 flex items-center gap-1">
-                                <i class="fa-solid fa-cubes"></i> Tactical Element Pool
-                            </h4>
-                            <p class="text-[10px] text-slate-400 mb-3">드래그하여 배치하고, 지우려면 블록을 <strong>[더블클릭]</strong> 하십시오.</p>
-                            <div id="block-pool" class="space-y-2 max-h-[440px] overflow-y-auto pr-1"></div>
+                            <h4 id="pool-title" class="font-bold text-xs tracking-wider text-amber-400 mb-1 flex items-center gap-1"><i class="fa-solid fa-cubes"></i> Block Pool</h4>
+                            <p id="pool-note" class="text-[10px] text-slate-400 mb-3">블록을 드래그해 빈 슬롯에 놓고, 되돌리려면 더블클릭하십시오.</p>
+                            <div id="block-pool" class="space-y-2 max-h-[620px] overflow-y-auto pr-1"></div>
                         </div>
-                    </div>
+                    </aside>
                 </div>
             </div>
         </main>
@@ -223,34 +321,152 @@
         const defaultScenarios = {
             "OPORD-01": {
                 code: "OPORD-01",
-                title: "기본 훈련: 화랑 목표 확보 강습 작전",
+                title: "강의 동시 활동: OPORD Video Dictation Workshop",
+                activityType: "lecture",
                 slots1: [{ id: "m1", label: "Who & When (수행 부대 및 시간)" }, { id: "m2", label: "What Task (전술 과업 동사)" }, { id: "m3", label: "Where & Why (지역 및 목적)" }],
                 slots2: [{ id: "s1", label: "2nd Platoon, NLT 2000," }, { id: "s2", label: "seizes OBJ HWARANG" }, { id: "s3", label: "in order to support the company's main effort." }]
             },
             "OPORD-02": {
                 code: "OPORD-02",
                 title: "응용 훈련: 독수리 캠프 야간 방어 작전",
+                activityType: "code",
                 slots1: [{ id: "m1", label: "Who & When (수행 부대 및 시간)" }, { id: "m2", label: "What Task (전술 과업 동사)" }, { id: "m3", label: "Where & Why (지역 및 목적)" }],
                 slots2: [{ id: "s1", label: "3rd Platoon, NLT 2300," }, { id: "s2", label: "defends Outpost EAGLE" }, { id: "s3", label: "in order to prevent enemy infiltration." }]
             }
         };
 
+        // ATP 3-21.10 (June 2026), Figure B-6 is used as the structural source for Step 1.
+        // Each paragraph has its own workshop so learners can build one section at a time.
+        const PARAGRAPH_DRILLS = {
+            situation: {
+                number: '1', icon: 'fa-binoculars', title: 'Situation',
+                subtitle: 'Operational context: terrain, weather, enemy, friendly forces, and operating conditions.',
+                shellItems: [
+                    { label: 'AREA OF INTEREST', level: 0 },
+                    { label: 'AREA OF OPERATIONS', level: 0 },
+                    { label: 'TERRAIN', level: 1 },
+                    { label: 'WEATHER', level: 1 },
+                    { label: 'ENEMY FORCES (LATEST INTELLIGENCE)', level: 0 },
+                    { label: 'FRIENDLY FORCES', level: 0 },
+                    { label: 'TWO LEVELS UP', level: 1 },
+                    { label: 'ONE LEVEL UP', level: 1 },
+                    { label: 'ADJACENT UNITS', level: 1 },
+                    { label: 'ATTACHMENTS AND DETACHMENTS', level: 0 }
+                ],
+                step2Title: 'Structured Situation Entries',
+                step2Prompt: 'Use short, operationally useful entries to describe the situation.',
+                step2Blocks: [
+                    'Area of Operation: OBJ HWARANG and ROUTE BLUE.',
+                    'Terrain and Weather: Hill 402 dominates the route; visibility is limited before BMNT.',
+                    'Enemy Forces: A squad-sized element occupies OBJ HWARANG.',
+                    'Friendly Forces: 1st Platoon attacks west to fix enemy forces.',
+                    'Attachments and Detachments: One engineer breach team is attached to 2nd Platoon.'
+                ]
+            },
+            mission: {
+                number: '2', icon: 'fa-bullseye', title: 'Mission',
+                subtitle: 'The concise mission statement that tells the unit what it must do and why.',
+                shellItems: [
+                    { label: 'WHO', level: 0 },
+                    { label: 'WHAT', level: 0 },
+                    { label: 'WHEN', level: 0 },
+                    { label: 'WHERE', level: 0 },
+                    { label: 'WHY', level: 0 }
+                ],
+                step2Title: 'Guided Mission Statement',
+                step2Prompt: 'Build one concise 5W mission statement and check the live preview.',
+                step2Blocks: [
+                    '2nd Platoon, NLT 2000,',
+                    'seizes OBJ HWARANG',
+                    "in order to support the company’s main effort."
+                ]
+            },
+            execution: {
+                number: '3', icon: 'fa-person-rifle', title: 'Execution',
+                subtitle: 'How the mission will be accomplished: intent, concept, tasks, and coordinating instructions.',
+                shellItems: [
+                    { label: 'COMMANDER’S INTENT', level: 0 },
+                    { label: 'CONCEPT OF OPERATIONS', level: 0 },
+                    { label: 'SCHEME OF MOVEMENT AND MANEUVER', level: 0 },
+                    { label: 'TASKS TO SUBORDINATE UNITS', level: 0 },
+                    { label: 'COORDINATING INSTRUCTIONS', level: 0 }
+                ],
+                step2Title: 'Team Execution Plan',
+                step2Prompt: 'Divide planning roles, then write the team’s original execution plan.',
+                step2Blocks: [
+                    'Commander’s Intent: Deny enemy observation of ROUTE BLUE.',
+                    'Concept of Operation: Conduct a two-phase attack to seize OBJ HWARANG.',
+                    '2nd Platoon: Seize OBJ HWARANG in order to support the company’s main effort.',
+                    'Weapons Squad: Occupy SBF 1 and suppress enemy positions.',
+                    'Coordinating Instructions: Report when crossing PL BLUE; do not advance beyond LOA GREEN.'
+                ]
+            },
+            sustainment: {
+                number: '4', icon: 'fa-truck-medical', title: 'Sustainment',
+                subtitle: 'Support that keeps the unit operating: logistics, personnel, and health service support.',
+                shellItems: [
+                    { label: 'LOGISTIC', level: 0 },
+                    { label: 'SUPPLY AND FIELD SERVICES', level: 1 },
+                    { label: 'DISTRIBUTION AND RESUPPLY OPERATIONS', level: 1 },
+                    { label: 'MAINTENANCE', level: 1 },
+                    { label: 'TRANSPORTATION (WHEN REQUIRED)', level: 1 },
+                    { label: 'PERSONNEL SERVICES SUPPORT', level: 0 },
+                    { label: 'TACTICAL COMBAT CASUALTY CARE', level: 0 },
+                    { label: 'CARE UNDER FIRE', level: 1 },
+                    { label: 'TACTICAL FIELD CARE', level: 1 },
+                    { label: 'TACTICAL EVACUATION', level: 1 }
+                ],
+                step2Title: 'Sustainment Checklist and Plan',
+                step2Prompt: 'Select planning areas, then write concise sustainment support instructions.',
+                step2Blocks: [
+                    'Logistics: Class V resupply is available at LOGPAC 1 on order.',
+                    'Personnel: Maintain accountability and report personnel status.',
+                    'Health Service Support: CCP 1 is at CHECKPOINT 2; evacuate casualties via ROUTE BLUE.'
+                ]
+            },
+            commandSignal: {
+                number: '5', icon: 'fa-tower-broadcast', title: 'Command and Signal',
+                subtitle: 'Command relationships, control, reporting, and communications.',
+                shellItems: [
+                    { label: 'COMMAND (LOCATION OF LEADERS)', level: 0 },
+                    { label: 'CONTROL (COMMAND POST LOCATION)', level: 0 },
+                    { label: 'SIGNAL', level: 0 },
+                    { label: 'RADIO FREQUENCIES', level: 1 },
+                    { label: 'PASSWORDS / RUNNING PASSWORDS', level: 1 },
+                    { label: 'PYROTECHNIC SIGNALS', level: 1 }
+                ],
+                step2Title: 'Command and Signal Form',
+                step2Prompt: 'Complete command, control, and PACE communication fields for the team.',
+                step2Blocks: [
+                    'Command: The commander moves with 2nd Platoon.',
+                    'Succession of Command: The XO assumes command if the commander becomes a casualty.',
+                    'Control: Company CP is located at AA EAGLE; report as directed.',
+                    'Signal: Use the company command net as directed in the SOI.'
+                ]
+            }
+        };
+
         if(!localStorage.getItem('OPORD_SCENARIOS')) localStorage.setItem('OPORD_SCENARIOS', JSON.stringify(defaultScenarios));
         if(!localStorage.getItem('OPORD_ARTIFACTS')) localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify([]));
+        if(!localStorage.getItem('OPORD_COMMENTS')) localStorage.setItem('OPORD_COMMENTS', JSON.stringify([]));
 
+        // Prototype classroom accounts: cadet01 through cadet20.
+        // Display names intentionally match the login IDs so roster, dashboard,
+        // artifact history, and peer-review cards remain unambiguous.
         const userDatabase = {
-            "admin": { role: "teacher", name: "최고 통제관 교관" },
-            "cadet01": { role: "student", name: "김독수리 훈련생" },
-            "cadet02": { role: "student", name: "이호랑이 훈련생" },
-            "cadet03": { role: "student", name: "박백호 훈련생" },
-            "cadet04": { role: "student", name: "최청룡 훈련생" },
-            "cadet05": { role: "student", name: "정현무 훈련생" }
+            "admin": { role: "teacher", name: "admin" },
+            ...Object.fromEntries(
+                Array.from({ length: 20 }, (_, index) => {
+                    const cadetId = `cadet${String(index + 1).padStart(2, '0')}`;
+                    return [cadetId, { role: "student", name: cadetId }];
+                })
+            )
         };
 
         // IMPORTANT: Change ONLY the value below before deployment.
         // This is a temporary client-side password check for a GitHub Pages prototype.
         // It is not secure against someone who can inspect the published source code.
-        const ADMIN_PASSWORD = "alfdldTndjq1!";
+        const ADMIN_PASSWORD = "CHANGE_THIS_ADMIN_PASSWORD";
         const CADET_PASSWORD = "1234";
 
         let currentUser = null;
@@ -271,7 +487,7 @@
                 document.getElementById('login-error').classList.add('hidden');
                 document.getElementById('screen-login').classList.add('hidden');
                 document.getElementById('main-application').classList.remove('hidden');
-                document.getElementById('user-badge-id').innerText = `${currentUser.name}(${id})`;
+                document.getElementById('user-badge-id').innerText = currentUser.name;
 
                 if (currentUser.role === 'teacher') {
                     document.getElementById('nav-teacher').classList.remove('hidden');
@@ -337,96 +553,755 @@
             }
         }
 
-        function createNewScenario() {
-            // 버튼을 숨겨도 개발자도구에서 직접 호출할 수 있으므로 함수 자체도 보호합니다.
-            if (!requireTeacherAccess()) return;
+        const TEACHER_PARAGRAPH_IDS = ['situation', 'mission', 'execution', 'sustainment', 'commandSignal'];
 
-            const code = document.getElementById('new-sci-code').value.trim().toUpperCase();
-            const title = document.getElementById('new-sci-title').value.trim();
-            const m1 = document.getElementById('new-sci-m1').value.trim();
-            const m2 = document.getElementById('new-sci-m2').value.trim();
-            const m3 = document.getElementById('new-sci-m3').value.trim();
+        // Default language support for legacy scenarios. New or edited scenarios can override
+        // these through the teacher editor; one line becomes one student-facing phrase chip.
+        // Generic fallback language support for newly created scenarios.
+        // OPORD-01 below overrides this with the instructor's video-dictation materials.
+        const DEFAULT_PHRASE_BANKS = {
+            situation: ['vicinity', 'dominates', 'provides observation', 'limited visibility', 'assessed', 'attached', 'likely avenue of approach'],
+            mission: ['at / NLT / on order', 'attacks', 'seizes', 'secures', 'clears', 'OBJ', 'in order to ...'],
+            execution: ['purpose', 'key tasks', 'end state', 'Phase I / Phase II', 'support by fire', 'be prepared to', 'report when', 'do not advance beyond'],
+            sustainment: ['Class I', 'Class V', 'Class VIII', 'LOGPAC', 'maintenance', 'accountability', 'CCP', 'CASEVAC'],
+            commandSignal: ['moves with', 'assumes command', 'command post', 'SITREP', 'primary', 'alternate', 'contingency', 'emergency']
+        };
 
-            if(!code || !title || !m1 || !m2 || !m3) { alert("빈칸을 채워주십시오."); return; }
+        // OPORD-01: instructor-provided video-dictation reference cards.
+        // One array item becomes one card in the student-facing reference panel.
+        // Sustainment uses a clearly labeled sample script because this lesson contains no video clip for that paragraph.
+        const BUILT_IN_SCENARIO_STEP2_BLOCKS = {
+            'OPORD-01': {
+                situation: [
+                    "Today's high is expected to be 85 degrees Fahrenheit. Expect temperatures in the upper 30s tomorrow, with Shamal winds moving in and gusting up to 70 mph.",
+                    'Downtown Baghdad; Saffron Hill; the entire AO; 3rd Infantry to the east; 1st Marine Division (us); Iraqi forces to the north; and the Euphrates Bridge—our objective.'
+                ],
+                mission: [
+                    'Godfather says it’s time for us to be more aggressive.',
+                    'Suggest you send foot patrols out into the neighborhoods.'
+                ],
+                execution: [
+                    'Major Strahm wants us to take them out.',
+                    'We’ll establish a base of fire and move under it hard and fast with two squads of three.',
+                    'We’ll take some TNT along with us to spike the guns.',
+                    'Lieutenant, it’s your responsibility.',
+                    'Liebgott, you take the first machine gun with Petty, the A-gunner.',
+                    'Pletcher and Hendricks, you take the other.',
+                    'Compton, Malarkey, Toye, and Garnier, we’ll be making the main assault.',
+                    'Lipton, when you see we captured the first gun, I want you and your TNT as fast as possible.',
+                    'Just weapons and ammo. Drop everything else. Got any spare ammo in a pack or musette bag? Bring it along.'
+                ],
+                sustainment: [
+                    'Logistics: Class V resupply is available at LOGPAC 1 on order.',
+                    'Personnel: Maintain accountability and report personnel status.',
+                    'Health Service Support: CCP 1 is at CHECKPOINT 2; evacuate casualties via ROUTE BLUE.'
+                ],
+                commandSignal: [
+                    'The AO in this region is very steep, so expect typical comms problems.',
+                    'We’re going to be on two-hour comms windows. If we miss two windows, wake somebody up. If not, don’t sweat it.',
+                    'Waypoint 1 is Budweiser; Waypoint 2 is Miller; 3 is Corona; 4 is Heineken.',
+                    'For OP 1, it’s Schlitz Malt Liquor. If we ID Shaw, pass Rick James.'
+                ]
+            },
+            'OPORD-02': {
+                situation: [
+                    'Area of Interest: The eastern approaches to Outpost EAGLE and ROUTE FALCON.',
+                    'Area of Operation: The company defensive sector around Outpost EAGLE.',
+                    'Terrain and Weather: Draws east of the outpost provide covered approaches; fog is expected after 2200.',
+                    'Enemy Forces: A platoon-sized enemy element is assessed to infiltrate from the east.',
+                    'Friendly Forces: 1st Platoon establishes the company security area north of the outpost.',
+                    'Attachments and Detachments: One medic team is attached to 3rd Platoon.'
+                ],
+                mission: [
+                    '3rd Platoon, NLT 2300,',
+                    'defends Outpost EAGLE',
+                    'in order to prevent enemy infiltration.'
+                ],
+                execution: [
+                    'Commander’s Intent: Prevent enemy penetration of the company defensive sector.',
+                    'Concept of Operation: Establish a defense in depth and defeat the enemy in EA FALCON.',
+                    '1st Platoon: Screen the northern approach and report enemy movement.',
+                    '3rd Platoon: Occupy BP 3 and block the eastern avenue of approach.',
+                    'Weapons Squad: Establish FPLs covering EA FALCON.',
+                    'Coordinating Instructions: Initiate fires when enemy crosses TRIGGER LINE ORANGE.'
+                ],
+                sustainment: [
+                    'Logistics: Water and Class V resupply are available at the company trains on order.',
+                    'Personnel: Conduct continuous accountability and report casualties immediately.',
+                    'Health Service Support: CCP 2 is located at the company CP; use ROUTE FALCON for evacuation.'
+                ],
+                commandSignal: [
+                    'Command: The platoon leader remains at BP 3 during the engagement.',
+                    'Succession of Command: The platoon sergeant assumes command if the platoon leader becomes a casualty.',
+                    'Control: The company CP is located at Outpost EAGLE; submit SITREPs every 30 minutes.',
+                    'Signal: Use platoon internal net as primary and messenger as contingency.'
+                ]
+            }
+        };
 
-            let scenarios = JSON.parse(localStorage.getItem('OPORD_SCENARIOS'));
-            scenarios[code] = {
-                code: code, title: `과제: ${title}`,
-                slots1: [{ id: "m1", label: "Who & When (수행 부대 및 시간)" }, { id: "m2", label: "What Task (전술 과업 동사)" }, { id: "m3", label: "Where & Why (지역 및 목적)" }],
-                slots2: [{ id: "s1", label: m1 }, { id: "s2", label: m2 }, { id: "s3", label: m3 }]
+        // Scenario-specific phrase banks. These override the generic fallback above only for OPORD-01.
+        const BUILT_IN_SCENARIO_PHRASE_BANKS = {
+            'OPORD-01': {
+                situation: [
+                    'Observation and fields of fire',
+                    'Avenues of approach',
+                    'Key terrain',
+                    'Obstacles',
+                    'Cover and concealment',
+                    'visibility',
+                    'winds',
+                    'precipitation',
+                    'cloud cover',
+                    'temperature',
+                    'humidity',
+                    'atmospheric pressure',
+                    'composition and strength',
+                    'capabilities',
+                    'location',
+                    'most likely COA',
+                    'DRAW-D: defend, reinforce, attack, withdraw, delay'
+                ],
+                mission: [
+                    'who',
+                    'what',
+                    'when',
+                    'where',
+                    'why'
+                ],
+                execution: [
+                    'purpose',
+                    'key tasks',
+                    'end state',
+                    'decisive operations',
+                    'shaping operations',
+                    'sustaining operations',
+                    'deep',
+                    'close',
+                    'rear',
+                    'support area',
+                    'phased operations',
+                    'operational timeline',
+                    'CCIR',
+                    'PIR',
+                    'FFIR',
+                    'EEFI',
+                    'ROE',
+                    'Risk Reduction Control Measures',
+                    'load carriage'
+                ],
+                sustainment: [
+                    'water',
+                    'food / ration',
+                    'ammunition',
+                    'fuel',
+                    'battery',
+                    'airdrop',
+                    'drone delivery',
+                    'foot delivery',
+                    'on-site exploitation',
+                    'EPW',
+                    'tourniquet',
+                    'CASEVAC',
+                    'MEDEVAC',
+                    'CCP',
+                    'HLZ / LZ'
+                ],
+                commandSignal: [
+                    'location of leaders',
+                    'succession of command',
+                    'command post location',
+                    'CEOI',
+                    'PACE',
+                    'Primary',
+                    'Alternate',
+                    'Contingency',
+                    'Emergency',
+                    'number combinations',
+                    'challenge passwords',
+                    'running passwords',
+                    'pyrotechnic signals'
+                ]
+            }
+        };
+
+        // One-time course-content refresh. It updates only OPORD-01 in a browser that
+        // previously stored an older prototype, while leaving OPORD-02 and custom activities intact.
+        // Version v3 also adds a clearly labeled non-video sample script for Sustainment.
+        const VIDEO_DICTATION_CONTENT_VERSION = 'opord-video-dictation-v3';
+
+        function applyVideoDictationContentRefresh() {
+            if (localStorage.getItem('OPORD_VIDEO_DICTATION_CONTENT_VERSION') === VIDEO_DICTATION_CONTENT_VERSION) return;
+
+            let storedScenarios = {};
+            try {
+                storedScenarios = JSON.parse(localStorage.getItem('OPORD_SCENARIOS')) || {};
+            } catch (error) {
+                storedScenarios = {};
+            }
+
+            const prior = storedScenarios['OPORD-01'] || {};
+            const refreshed = {
+                ...prior,
+                ...defaultScenarios['OPORD-01'],
+                code: 'OPORD-01',
+                title: '강의 동시 활동: OPORD Video Dictation Workshop',
+                activityType: 'lecture',
+                courseContentVersion: VIDEO_DICTATION_CONTENT_VERSION
             };
+            // Force getScenarioStore() to use the new built-in cards and phrase bank.
+            delete refreshed.step2Blocks;
+            delete refreshed.phraseBanks;
+            delete refreshed.slots1;
+            delete refreshed.slots2;
+            storedScenarios['OPORD-01'] = refreshed;
+            localStorage.setItem('OPORD_SCENARIOS', JSON.stringify(storedScenarios));
+            localStorage.setItem('OPORD_VIDEO_DICTATION_CONTENT_VERSION', VIDEO_DICTATION_CONTENT_VERSION);
 
+            // Start OPORD-01 cleanly after the course materials change. Other activities and users remain untouched.
+            const pruneObjectByScenario = (key) => {
+                try {
+                    const raw = JSON.parse(localStorage.getItem(key)) || {};
+                    Object.keys(raw).forEach(itemKey => {
+                        if (itemKey.includes('::OPORD-01::')) delete raw[itemKey];
+                    });
+                    localStorage.setItem(key, JSON.stringify(raw));
+                } catch (error) {
+                    // Ignore malformed prototype cache; the app will recreate it as needed.
+                }
+            };
+            pruneObjectByScenario('OPORD_WORKSHOP_PROGRESS');
+            pruneObjectByScenario('OPORD_STEP2_GUIDED_DRAFTS');
+
+            try {
+                const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+                localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify(artifacts.filter(artifact => artifact.scenarioCode !== 'OPORD-01')));
+            } catch (error) {
+                // Ignore malformed prototype cache.
+            }
+        }
+
+        applyVideoDictationContentRefresh();
+
+        let editingScenarioCode = null;
+
+        function cloneBlockList(list) {
+            return Array.isArray(list) ? list.map(item => String(item)) : [];
+        }
+
+        function getScenarioStore() {
+            let rawStore = {};
+            try {
+                rawStore = JSON.parse(localStorage.getItem('OPORD_SCENARIOS')) || {};
+            } catch (error) {
+                rawStore = {};
+            }
+            if (!Object.keys(rawStore).length) rawStore = JSON.parse(JSON.stringify(defaultScenarios));
+
+            const normalized = {};
+            Object.keys(rawStore).forEach(code => {
+                const raw = rawStore[code] || {};
+                const existingBlocks = raw.step2Blocks && typeof raw.step2Blocks === 'object' ? raw.step2Blocks : {};
+                const existingPhraseBanks = raw.phraseBanks && typeof raw.phraseBanks === 'object' ? raw.phraseBanks : {};
+                const builtIn = BUILT_IN_SCENARIO_STEP2_BLOCKS[code] || {};
+                const builtInPhraseBanks = BUILT_IN_SCENARIO_PHRASE_BANKS[code] || {};
+                const step2Blocks = {};
+                const phraseBanks = {};
+
+                TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
+                    const hasTeacherReference = Object.prototype.hasOwnProperty.call(existingBlocks, paragraphId);
+                    const hasBuiltInReference = Object.prototype.hasOwnProperty.call(builtIn, paragraphId);
+                    const supplied = cloneBlockList(existingBlocks[paragraphId]).filter(Boolean);
+                    const legacyMission = paragraphId === 'mission' && Array.isArray(raw.slots2)
+                        ? raw.slots2.map(item => item && item.label).filter(Boolean)
+                        : [];
+                    const fallback = hasBuiltInReference
+                        ? cloneBlockList(builtIn[paragraphId]).filter(Boolean)
+                        : cloneBlockList(PARAGRAPH_DRILLS[paragraphId].step2Blocks);
+                    // A defined empty array (e.g., Sustainment in OPORD-01) means no video reference is intentional.
+                    step2Blocks[paragraphId] = hasTeacherReference ? supplied : (legacyMission.length ? legacyMission : fallback);
+
+                    const hasTeacherPhraseBank = Object.prototype.hasOwnProperty.call(existingPhraseBanks, paragraphId);
+                    const hasBuiltInPhraseBank = Object.prototype.hasOwnProperty.call(builtInPhraseBanks, paragraphId);
+                    phraseBanks[paragraphId] = hasTeacherPhraseBank
+                        ? cloneBlockList(existingPhraseBanks[paragraphId]).filter(Boolean)
+                        : (hasBuiltInPhraseBank
+                            ? cloneBlockList(builtInPhraseBanks[paragraphId]).filter(Boolean)
+                            : cloneBlockList(DEFAULT_PHRASE_BANKS[paragraphId]).filter(Boolean));
+                });
+
+                normalized[code] = {
+                    ...raw,
+                    code: raw.code || code,
+                    title: raw.title || `${code} 훈련 시나리오`,
+                    step2Blocks,
+                    phraseBanks,
+                    activityType: normalizeActivityType(raw.activityType || (code === 'OPORD-02' ? 'code' : 'lecture')),
+                    scenarioVersion: 'lecture-code-v1'
+                };
+            });
+
+            const serialized = JSON.stringify(normalized);
+            if (localStorage.getItem('OPORD_SCENARIOS') !== serialized) {
+                localStorage.setItem('OPORD_SCENARIOS', serialized);
+            }
+            return normalized;
+        }
+
+        function saveScenarioStore(scenarios) {
             localStorage.setItem('OPORD_SCENARIOS', JSON.stringify(scenarios));
-            alert(`🎯 [출제 완료] [${code}] 새로운 전술 임무 과제가 공유 허브 전원에 동시 하달되었습니다.`);
-            
-            document.getElementById('new-sci-code').value = ''; document.getElementById('new-sci-title').value = '';
-            document.getElementById('new-sci-m1').value = ''; document.getElementById('new-sci-m2').value = ''; document.getElementById('new-sci-m3').value = '';
+        }
+
+        function resetScenarioStep2Progress(code) {
+            const progress = getProgressStore();
+            let changed = false;
+            Object.keys(progress).forEach(key => {
+                if (key.includes(`::${code}::`) && key.endsWith('::step2')) {
+                    delete progress[key];
+                    changed = true;
+                }
+            });
+            if (changed) saveProgressStore(progress);
+
+            // Scenario reference cards changed: clear local guided-writing drafts so
+            // students begin the revised activity from the new teacher-provided cues.
+            const drafts = getStep2DraftStore();
+            let draftChanged = false;
+            Object.keys(drafts).forEach(key => {
+                if (key.includes(`::${code}::`)) {
+                    delete drafts[key];
+                    draftChanged = true;
+                }
+            });
+            if (draftChanged) saveStep2DraftStore(drafts);
+        }
+
+        function scenarioTitleForEditor(title) {
+            return String(title || '').replace(/^과제:\s*/u, '');
+        }
+
+        const ACTIVITY_META = {
+            lecture: {
+                label: 'Lecture-In-Class',
+                korean: '강의 동시 활동',
+                icon: 'fa-chalkboard-user',
+                badge: 'bg-violet-50 text-violet-700 border-violet-100',
+                panel: 'border-violet-100 bg-violet-50/50'
+            },
+            code: {
+                label: 'Code Your Way',
+                korean: '팀 OPORD 작성 활동',
+                icon: 'fa-code',
+                badge: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+                panel: 'border-emerald-100 bg-emerald-50/50'
+            }
+        };
+
+        function normalizeActivityType(activityType) {
+            return activityType === 'code' ? 'code' : 'lecture';
+        }
+
+        function getScenarioActivityType(scenario) {
+            return normalizeActivityType(scenario?.activityType);
+        }
+
+        function getActivityMeta(activityType) {
+            return ACTIVITY_META[normalizeActivityType(activityType)];
+        }
+
+        function renderScenarioEditorLibrary() {
+            const library = document.getElementById('teacher-scenario-library');
+            if (!library) return;
+            const scenarios = getScenarioStore();
+            const entries = Object.values(scenarios).sort((a, b) => a.code.localeCompare(b.code));
+            if (!entries.length) {
+                library.innerHTML = '<div class="rounded border border-dashed border-amber-200 bg-white/70 px-2 py-2 text-[10px] italic text-slate-400">저장된 활동이 없습니다.</div>';
+                return;
+            }
+            library.innerHTML = entries.map(scenario => {
+                const blockCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + (scenario.step2Blocks?.[id]?.length || 0), 0);
+                const phraseCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + (scenario.phraseBanks?.[id]?.length || 0), 0);
+                const activity = getActivityMeta(getScenarioActivityType(scenario));
+                return `<div class="flex items-center justify-between gap-2 rounded border ${editingScenarioCode === scenario.code ? 'border-amber-400 bg-white' : 'border-amber-100 bg-white/70'} px-2 py-1.5"><div class="min-w-0"><p class="font-mono text-[10px] font-black text-indigo-700">${escapeHtml(scenario.code)}</p><p class="truncate text-[10px] text-slate-600">${escapeHtml(scenario.title)}</p><p class="mt-0.5"><span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></p><p class="mt-1 text-[9px] text-slate-400">${blockCount} reference cards · ${phraseCount} phrase cues</p></div><button type="button" onclick='loadScenarioForEdit(${JSON.stringify(scenario.code)})' class="shrink-0 rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-200"><i class="fa-solid fa-pen mr-1"></i>수정</button></div>`;
+            }).join('');
+        }
+
+        function resetScenarioEditor() {
+            editingScenarioCode = null;
+            const codeInput = document.getElementById('new-sci-code');
+            const titleInput = document.getElementById('new-sci-title');
+            if (!codeInput || !titleInput) return;
+            codeInput.value = '';
+            codeInput.readOnly = false;
+            codeInput.classList.remove('bg-slate-100', 'text-slate-500');
+            titleInput.value = '';
+            const activityTypeInput = document.getElementById('new-sci-activity-type');
+            if (activityTypeInput) activityTypeInput.value = 'lecture';
+            TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
+                const field = document.getElementById(`new-sci-${paragraphId}`);
+                const phraseField = document.getElementById(`new-sci-phrases-${paragraphId}`);
+                if (field) field.value = '';
+                if (phraseField) phraseField.value = '';
+            });
+            const mode = document.getElementById('scenario-editor-mode');
+            const note = document.getElementById('scenario-code-note');
+            const saveBtn = document.getElementById('scenario-save-btn');
+            if (mode) mode.innerText = '새 시나리오 작성 모드';
+            if (note) note.innerText = '새 활동은 코드명을 지정하고, 기존 활동은 코드가 고정됩니다.';
+            if (saveBtn) saveBtn.innerHTML = '신규 시나리오 전체 배포';
+            renderScenarioEditorLibrary();
+        }
+
+        function loadScenarioForEdit(code) {
+            if (!requireTeacherAccess()) return;
+            const scenarios = getScenarioStore();
+            const scenario = scenarios[code];
+            if (!scenario) {
+                alert('선택한 시나리오를 찾을 수 없습니다.');
+                return;
+            }
+            editingScenarioCode = code;
+            const codeInput = document.getElementById('new-sci-code');
+            const titleInput = document.getElementById('new-sci-title');
+            codeInput.value = scenario.code;
+            codeInput.readOnly = true;
+            codeInput.classList.add('bg-slate-100', 'text-slate-500');
+            titleInput.value = scenarioTitleForEditor(scenario.title);
+            const activityTypeInput = document.getElementById('new-sci-activity-type');
+            if (activityTypeInput) activityTypeInput.value = getScenarioActivityType(scenario);
+            TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
+                const field = document.getElementById(`new-sci-${paragraphId}`);
+                const phraseField = document.getElementById(`new-sci-phrases-${paragraphId}`);
+                if (field) field.value = (scenario.step2Blocks?.[paragraphId] || []).join('\n');
+                if (phraseField) phraseField.value = (scenario.phraseBanks?.[paragraphId] || []).join('\n');
+            });
+            const mode = document.getElementById('scenario-editor-mode');
+            const note = document.getElementById('scenario-code-note');
+            const saveBtn = document.getElementById('scenario-save-btn');
+            if (mode) mode.innerText = `[${scenario.code}] 기존 시나리오 수정 모드`;
+            if (note) note.innerText = '기존 코드명은 artifact와 진행 기록 연결을 위해 변경할 수 없습니다.';
+            if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i>현재 시나리오 변경 저장';
+            renderScenarioEditorLibrary();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function saveScenarioEditor() {
+            if (!requireTeacherAccess()) return;
+            const codeInput = document.getElementById('new-sci-code');
+            const titleInput = document.getElementById('new-sci-title');
+            const requestedCode = codeInput.value.trim().toUpperCase();
+            const title = titleInput.value.trim();
+            const activityType = normalizeActivityType(document.getElementById('new-sci-activity-type')?.value);
+            const code = editingScenarioCode || requestedCode;
+
+            if (!code || !title) {
+                alert('시나리오 코드명과 제목을 입력하십시오.');
+                return;
+            }
+            if (!/^[A-Z0-9-]+$/.test(code)) {
+                alert('시나리오 코드명은 영문 대문자, 숫자, 하이픈(-)만 사용하십시오.');
+                return;
+            }
+
+            const step2Blocks = {};
+            const phraseBanks = {};
+            const missing = [];
+            TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
+                const field = document.getElementById(`new-sci-${paragraphId}`);
+                const phraseField = document.getElementById(`new-sci-phrases-${paragraphId}`);
+                const blocks = parseTeacherBlocks(field ? field.value : '');
+                const phrases = parseTeacherBlocks(phraseField ? phraseField.value : '');
+                if (!blocks.length && !phrases.length) missing.push(`${PARAGRAPH_DRILLS[paragraphId].number}. ${PARAGRAPH_DRILLS[paragraphId].title}`);
+                step2Blocks[paragraphId] = blocks;
+                phraseBanks[paragraphId] = phrases;
+            });
+            if (missing.length) {
+                alert(`Full OPORD scenario에는 5개 paragraph의 Step 2 blocks가 모두 필요합니다.\n\n입력이 필요한 문단: ${missing.join(', ')}`);
+                return;
+            }
+
+            const scenarios = getScenarioStore();
+            const existing = scenarios[code] || {};
+            const isEditing = Boolean(editingScenarioCode);
+            if (!isEditing && scenarios[code] && !confirm(`[${code}] 시나리오가 이미 있습니다. 기존 자료를 새 OPORD 자료로 덮어쓰겠습니까?`)) return;
+
+            scenarios[code] = {
+                ...existing,
+                code,
+                title,
+                activityType,
+                step2Blocks,
+                phraseBanks,
+                createdBy: existing.createdBy || currentUserId,
+                createdAt: existing.createdAt || Date.now(),
+                updatedBy: currentUserId,
+                updatedAt: Date.now(),
+                scenarioVersion: 'lecture-code-v1'
+            };
+            saveScenarioStore(scenarios);
+            resetScenarioStep2Progress(code);
+
+            const actionText = isEditing ? '수정 완료' : '출제 완료';
+            alert(`🎯 [${actionText}] [${code}]의 5개 paragraph scenario reference cards가 저장되었습니다.\n\n기존 artifact는 보관되며, 다음 실습 진입부터 수정한 reference cards가 적용됩니다.`);
+            editingScenarioCode = code;
             renderTeacherDashboard();
+            loadScenarioForEdit(code);
+        }
+
+        // Backward compatibility for earlier buttons or copied versions of the page.
+        function getParagraphTitle(paragraphId) {
+            return PARAGRAPH_DRILLS[paragraphId]?.title || 'Mission';
+        }
+
+        function getArtifactParagraphId(artifact) {
+            return artifact.paragraphId || 'mission';
         }
 
         function renderTeacherDashboard() {
-            // 교관이 아닌 사용자는 교관용 제출 현황을 렌더링할 수 없습니다.
             if (!requireTeacherAccess(false)) {
                 document.getElementById('screen-teacher').classList.add('hidden');
                 return;
             }
 
-            const rows = document.getElementById('teacher-tracker-rows'); rows.innerHTML = '';
-            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS'));
+            if (!editingScenarioCode && !document.getElementById('new-sci-code').value) {
+                resetScenarioEditor();
+            } else {
+                renderScenarioEditorLibrary();
+            }
 
-            if(artifacts.length === 0) {
-                rows.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">아직 학생들이 제출한 과제가 없습니다.</td></tr>`;
+            const rows = document.getElementById('teacher-tracker-rows');
+            rows.innerHTML = '';
+            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+
+            if (artifacts.length === 0) {
+                rows.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 italic">아직 학생들이 제출한 과제가 없습니다.</td></tr>`;
                 return;
             }
+
             artifacts.forEach(art => {
                 const sName = userDatabase[art.studentId] ? userDatabase[art.studentId].name : art.studentId;
+                const paragraphTitle = art.paragraphTitle || getParagraphTitle(getArtifactParagraphId(art));
+                const feedbackCount = getArtifactComments(art).length;
                 rows.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition-all text-xs">
-                        <td class="p-2.5 font-bold text-slate-800">${sName}</td>
-                        <td class="p-2.5 font-mono text-indigo-600 font-bold">${art.scenarioCode}</td>
+                    <tr class="hover:bg-slate-50 transition-all text-xs align-top">
+                        <td class="p-2.5 font-bold text-slate-800">${escapeHtml(sName)}</td>
+                        <td class="p-2.5 font-mono text-indigo-600 font-bold">${escapeHtml(art.scenarioCode)}</td>
+                        <td class="p-2.5"><span class="rounded bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700">${escapeHtml(paragraphTitle)}</span></td>
                         <td class="p-2.5"><span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">✓ PASS</span></td>
-                        <td class="p-2.5 font-mono text-slate-600 bg-slate-50/50">${art.text}</td>
+                        <td class="p-2.5"><span class="rounded bg-amber-50 border border-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">${feedbackCount} comments</span></td>
+                        <td class="p-2.5 font-mono whitespace-pre-wrap text-slate-600 bg-slate-50/50">${escapeHtml(art.text)}</td>
                     </tr>
                 `;
             });
         }
 
-        // [공유 허브(Shared Peer-Hub) 렌더링 엔진]
-        function renderSharedHub() {
-            const hubGrid = document.getElementById('shared-hub-grid');
-            hubGrid.innerHTML = '';
-            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS'));
+        function getArtifactKey(artifact) {
+            return artifact.id || `${artifact.studentId}::${artifact.scenarioCode}::${getArtifactParagraphId(artifact)}`;
+        }
 
-            if(artifacts.length === 0) {
-                hubGrid.innerHTML = `<div class="col-span-2 text-center py-12 text-slate-400 italic text-xs border border-dashed rounded-xl">현재 공유 허브 플랫폼에 등록된 동료의 전술 산출물이 존재하지 않습니다. 먼저 첫 과제를 해결해 보십시오!</div>`;
+        function getArtifactDomId(artifact) {
+            return getArtifactKey(artifact).replace(/[^a-zA-Z0-9_-]/g, '_');
+        }
+
+        function getCommentsStore() {
+            try {
+                return JSON.parse(localStorage.getItem('OPORD_COMMENTS')) || [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function saveCommentsStore(comments) {
+            localStorage.setItem('OPORD_COMMENTS', JSON.stringify(comments));
+        }
+
+        function getArtifactComments(artifact) {
+            const artifactKey = getArtifactKey(artifact);
+            return getCommentsStore()
+                .filter(comment => comment.artifactKey === artifactKey)
+                .sort((a, b) => a.timestamp - b.timestamp);
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function submitPeerComment(artifactKey) {
+            if (!currentUser) return;
+            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+            const artifact = artifacts.find(item => getArtifactKey(item) === artifactKey);
+            if (!artifact) {
+                alert('해당 artifact를 찾을 수 없습니다. 화면을 새로고침한 뒤 다시 시도하십시오.');
+                return;
+            }
+            if (artifact.studentId === currentUserId && currentUser.role !== 'teacher') {
+                alert('본인의 artifact에는 동료 피드백을 남길 수 없습니다. 다른 훈련생의 artifact를 검토하십시오.');
                 return;
             }
 
-            // 가장 최신 제출물이 맨 위로 오도록 정렬
-            const sortedArtifacts = [...artifacts].sort((a,b) => b.timestamp - a.timestamp);
+            const textarea = document.getElementById(`peer-comment-${getArtifactDomId(artifact)}`);
+            const text = textarea ? textarea.value.trim() : '';
+            if (!text) {
+                alert('피드백 내용을 입력하십시오.');
+                return;
+            }
+            if (text.length > 500) {
+                alert('피드백은 500자 이내로 작성하십시오.');
+                return;
+            }
 
-            sortedArtifacts.forEach(art => {
-                const sName = userDatabase[art.studentId] ? userDatabase[art.studentId].name : art.studentId;
-                const isMe = art.studentId === currentUserId;
-                const dateText = new Date(art.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const comments = getCommentsStore();
+            comments.push({
+                id: `comment-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+                artifactKey,
+                authorId: currentUserId,
+                text,
+                timestamp: Date.now()
+            });
+            saveCommentsStore(comments);
+            renderSharedHub();
+        }
+
+        const OPORD_PARAGRAPH_SEQUENCE = ['situation', 'mission', 'execution', 'sustainment', 'commandSignal'];
+
+        function getOpordParagraphLabel(paragraphId) {
+            const drill = PARAGRAPH_DRILLS[paragraphId];
+            return drill ? `${drill.number}. ${drill.title}` : getParagraphTitle(paragraphId);
+        }
+
+        function getParagraphOrder(paragraphId) {
+            const index = OPORD_PARAGRAPH_SEQUENCE.indexOf(paragraphId);
+            return index === -1 ? 999 : index;
+        }
+
+        function artifactIsNewer(candidate, current) {
+            return !current || Number(candidate?.timestamp || 0) >= Number(current?.timestamp || 0);
+        }
+
+        function makeArtifactIndex(artifacts) {
+            const index = {};
+            artifacts.forEach(artifact => {
+                const paragraphId = getArtifactParagraphId(artifact);
+                if (artifactIsNewer(artifact, index[paragraphId])) {
+                    index[paragraphId] = artifact;
+                }
+            });
+            return index;
+        }
+
+        function groupArtifactsByStudentAndScenario(artifacts) {
+            const groups = new Map();
+            artifacts.forEach(artifact => {
+                const key = `${artifact.studentId}::${artifact.scenarioCode}`;
+                if (!groups.has(key)) {
+                    groups.set(key, {
+                        key,
+                        studentId: artifact.studentId,
+                        scenarioCode: artifact.scenarioCode,
+                        artifacts: []
+                    });
+                }
+                groups.get(key).artifacts.push(artifact);
+            });
+
+            return Array.from(groups.values()).map(group => {
+                const artifactIndex = makeArtifactIndex(group.artifacts);
+                const orderedArtifacts = OPORD_PARAGRAPH_SEQUENCE
+                    .map(paragraphId => artifactIndex[paragraphId])
+                    .filter(Boolean);
+                return {
+                    ...group,
+                    artifactIndex,
+                    orderedArtifacts,
+                    completedCount: orderedArtifacts.length,
+                    latestTimestamp: Math.max(0, ...orderedArtifacts.map(artifact => Number(artifact.timestamp || 0))),
+                    commentCount: orderedArtifacts.reduce((sum, artifact) => sum + getArtifactComments(artifact).length, 0)
+                };
+            });
+        }
+
+        function renderArtifactFeedbackSection(artifact, isMe) {
+            if (!artifact) return '';
+            const artifactKey = getArtifactKey(artifact);
+            const artifactDomId = getArtifactDomId(artifact);
+            const comments = getArtifactComments(artifact);
+            const commentFeed = comments.length
+                ? comments.map(comment => {
+                    const author = userDatabase[comment.authorId] ? userDatabase[comment.authorId].name : comment.authorId;
+                    const commentTime = new Date(comment.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                    return `<div class="rounded border border-slate-100 bg-white px-2.5 py-2 text-[10px] leading-relaxed text-slate-600"><div class="mb-1 flex items-center justify-between gap-2"><span class="font-bold text-indigo-700"><i class="fa-solid fa-comment-dots mr-1"></i>${escapeHtml(author)}</span><span class="text-slate-400">${commentTime}</span></div><p>${escapeHtml(comment.text)}</p></div>`;
+                }).join('')
+                : `<div class="rounded border border-dashed border-slate-200 bg-white/70 px-2.5 py-2 text-[10px] italic text-slate-400">아직 등록된 동료 피드백이 없습니다.</div>`;
+            const feedbackComposer = (isMe && currentUser?.role !== 'teacher')
+                ? `<div class="rounded border border-indigo-100 bg-indigo-50/50 px-2.5 py-2 text-[10px] text-indigo-600"><i class="fa-solid fa-info-circle mr-1"></i>내 artifact입니다. 다른 훈련생의 artifact에 피드백을 남겨보십시오.</div>`
+                : `<div class="space-y-2 rounded border border-emerald-100 bg-emerald-50/40 p-2.5"><label class="block text-[10px] font-bold text-emerald-800">Open-ended peer feedback</label><textarea id="peer-comment-${artifactDomId}" rows="2" maxlength="500" class="w-full resize-y rounded border border-emerald-200 bg-white p-2 text-[10px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" placeholder="One strength is… / One question I have is… / I suggest…"></textarea><div class="flex justify-end"><button onclick='submitPeerComment(${JSON.stringify(artifactKey)})' class="rounded bg-emerald-600 px-2.5 py-1.5 text-[10px] font-bold text-white hover:bg-emerald-700"><i class="fa-solid fa-paper-plane mr-1"></i>피드백 게시</button></div></div>`;
+
+            return `<div class="mt-3 space-y-2 border-t border-slate-100 pt-3"><div class="flex items-center justify-between gap-2"><div class="text-[10px] font-black uppercase tracking-widest text-slate-500">Peer feedback</div><span class="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] text-slate-500">${comments.length} comments</span></div>${commentFeed}${feedbackComposer}</div>`;
+        }
+
+        function renderSharedHub() {
+            const hubGrid = document.getElementById('shared-hub-grid');
+            hubGrid.innerHTML = '';
+            hubGrid.className = 'space-y-3';
+            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+
+            if (artifacts.length === 0) {
+                hubGrid.innerHTML = `<div class="text-center py-12 text-slate-400 italic text-xs border border-dashed rounded-xl">현재 공유 허브 플랫폼에 등록된 동료의 전술 산출물이 존재하지 않습니다. 먼저 첫 과제를 해결해 보십시오!</div>`;
+                return;
+            }
+
+            const scenarios = getScenarioStore();
+            const packages = groupArtifactsByStudentAndScenario(artifacts)
+                .sort((a, b) => {
+                    const scenarioCompare = String(a.scenarioCode).localeCompare(String(b.scenarioCode));
+                    if (scenarioCompare !== 0) return scenarioCompare;
+                    const aMine = a.studentId === currentUserId ? 0 : 1;
+                    const bMine = b.studentId === currentUserId ? 0 : 1;
+                    if (aMine !== bMine) return aMine - bMine;
+                    const aName = userDatabase[a.studentId]?.name || a.studentId;
+                    const bName = userDatabase[b.studentId]?.name || b.studentId;
+                    return String(aName).localeCompare(String(bName), 'ko');
+                });
+
+            packages.forEach(bundle => {
+                const sName = userDatabase[bundle.studentId] ? userDatabase[bundle.studentId].name : bundle.studentId;
+                const isMe = bundle.studentId === currentUserId;
+                const scenario = scenarios[bundle.scenarioCode];
+                const scenarioTitle = scenario?.title || `${bundle.scenarioCode} activity`;
+                const latestText = bundle.latestTimestamp
+                    ? new Date(bundle.latestTimestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+                    : '';
+
+                const paragraphSections = OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => {
+                    const artifact = bundle.artifactIndex[paragraphId];
+                    const label = getOpordParagraphLabel(paragraphId);
+                    if (!artifact) {
+                        return `<section class="rounded-lg border border-dashed border-slate-200 bg-slate-50/70 px-3 py-2.5"><div class="text-[10px] font-black text-slate-500">${escapeHtml(label)}</div><div class="mt-1 text-[10px] italic text-slate-400">Not submitted yet.</div></section>`;
+                    }
+                    return `<section class="rounded-lg border border-indigo-100 bg-indigo-50/20 p-3"><div class="mb-2 flex flex-wrap items-center justify-between gap-2"><span class="rounded bg-amber-50 border border-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">${escapeHtml(label)}</span><span class="text-[9px] text-emerald-600"><i class="fa-solid fa-circle-check mr-1"></i>Submitted</span></div><pre class="whitespace-pre-wrap break-words rounded-lg border border-slate-100 bg-white p-3 text-[11px] font-mono leading-relaxed text-slate-700 select-all">${escapeHtml(artifact.text)}</pre>${renderArtifactFeedbackSection(artifact, isMe)}</section>`;
+                }).join('');
 
                 hubGrid.innerHTML += `
-                    <div class="p-4 border ${isMe ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-100 bg-slate-50/40'} rounded-xl shadow-sm flex flex-col justify-between space-y-3">
-                        <div class="flex justify-between items-center">
-                            <span class="font-bold text-slate-800 text-xs flex items-center gap-1">
-                                <i class="fa-solid ${isMe ? 'fa-user-circle text-indigo-500':'fa-user-astronaut text-emerald-500'}"></i>
-                                ${sName} ${isMe ? '<span class="text-[10px] bg-indigo-100 text-indigo-700 px-1 rounded font-normal">나의 빌드</span>' : ''}
-                            </span>
-                            <span class="text-[10px] font-mono text-indigo-600 font-bold bg-white border px-2 py-0.5 rounded shadow-2xs">${art.scenarioCode}</span>
+                    <details class="group rounded-xl border ${isMe ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200 bg-white'} shadow-sm open:shadow-md">
+                        <summary class="cursor-pointer list-none px-4 py-3.5">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div class="min-w-0 flex items-center gap-2">
+                                    <i class="fa-solid ${isMe ? 'fa-user-circle text-indigo-500' : 'fa-user-astronaut text-emerald-500'}"></i>
+                                    <div class="min-w-0"><div class="truncate text-xs font-black text-slate-800">${escapeHtml(sName)} ${isMe ? '<span class="ml-1 rounded bg-indigo-100 px-1 py-0.5 text-[9px] font-normal text-indigo-700">나의 OPORD</span>' : ''}</div><div class="mt-0.5 truncate text-[10px] text-slate-500">${escapeHtml(scenarioTitle)}</div></div>
+                                </div>
+                                <div class="flex items-center gap-2"><span class="rounded border border-indigo-100 bg-indigo-50 px-2 py-1 font-mono text-[10px] font-bold text-indigo-700">${escapeHtml(bundle.scenarioCode)}</span><span class="rounded bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">${bundle.completedCount}/5 paragraphs</span><span class="text-[10px] text-slate-400">${latestText}</span><i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform group-open:rotate-180"></i></div>
+                            </div>
+                            <div class="mt-3 grid grid-cols-5 gap-1.5">${OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => `<span class="rounded border px-1.5 py-1 text-center text-[9px] font-bold ${bundle.artifactIndex[paragraphId] ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}">${PARAGRAPH_DRILLS[paragraphId].number}. ${bundle.artifactIndex[paragraphId] ? '✓' : '—'}</span>`).join('')}</div>
+                        </summary>
+                        <div class="border-t border-slate-100 px-4 pb-4 pt-3">
+                            <div class="mb-3 flex items-center justify-between gap-2"><p class="text-[10px] font-black uppercase tracking-widest text-slate-500">OPORD package · 1 → 5</p><span class="rounded bg-slate-100 px-2 py-0.5 text-[9px] text-slate-500">${bundle.commentCount} total comments</span></div>
+                            <div class="space-y-3">${paragraphSections}</div>
                         </div>
-                        <div class="p-2.5 bg-white border border-slate-100 rounded-lg text-xs font-mono text-slate-700 leading-relaxed shadow-3xs select-all">
-                            "${art.text}"
-                        </div>
-                        <div class="flex justify-between items-center text-[10px] text-slate-400 pt-1">
-                            <span>Status: <strong class="text-emerald-600">Verified Artifact</strong></span>
-                            <span>전송 시간: ${dateText}</span>
-                        </div>
-                    </div>
+                    </details>
                 `;
             });
         }
@@ -436,152 +1311,1046 @@
             const historyContainer = document.getElementById('student-artifact-history');
             listContainer.innerHTML = ''; historyContainer.innerHTML = '';
 
-            const scenarios = JSON.parse(localStorage.getItem('OPORD_SCENARIOS'));
-            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS'));
-            const myPasses = artifacts.filter(a => a.studentId === currentUserId).map(a => a.scenarioCode);
+            const scenarios = getScenarioStore();
+            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+            const paragraphCount = OPORD_PARAGRAPH_SEQUENCE.length;
+            const groups = { lecture: [], code: [] };
+            Object.values(scenarios).forEach(scenario => groups[getScenarioActivityType(scenario)].push(scenario));
 
-            Object.keys(scenarios).forEach(key => {
-                const sci = scenarios[key]; const isPassed = myPasses.includes(sci.code);
+            ['lecture', 'code'].forEach(activityType => {
+                const entries = groups[activityType];
+                if (!entries.length) return;
+                const activity = getActivityMeta(activityType);
+                const description = activityType === 'lecture'
+                    ? '강의·영상 직후: shell을 확인하고 reference를 바탕으로 팀 수정문을 작성합니다.'
+                    : '본격 팀 활동: scenario를 바탕으로 팀 OPORD를 작성합니다. Captain Manhee sidekick은 다음 확장 단계에서 연결됩니다.';
                 listContainer.innerHTML += `
-                    <div class="p-3 border rounded-lg flex justify-between items-center bg-slate-50 hover:border-indigo-300 transition-all">
-                        <div class="space-y-0.5">
-                            <span class="text-[10px] font-mono font-bold ${isPassed ? 'text-emerald-600':'text-indigo-600'}">${sci.code}</span>
-                            <h4 class="text-xs font-bold text-slate-800">${sci.title}</h4>
-                        </div>
-                        <button onclick="startTraining('${sci.code}')" class="px-2.5 py-1 text-[11px] font-bold text-white rounded shadow ${isPassed ? 'bg-emerald-600 hover:bg-emerald-700':'navy-bg hover:bg-slate-800'}">
-                            ${isPassed ? '복습하기' : '도전'}
-                        </button>
+                    <div class="rounded-lg border ${activity.panel} p-2.5 space-y-2">
+                        <div class="flex items-center gap-1.5"><i class="fa-solid ${activity.icon} text-[11px]"></i><span class="text-[10px] font-black uppercase tracking-wider">${activity.label}</span></div>
+                        <p class="text-[9px] leading-relaxed text-slate-500">${description}</p>
+                        <div class="space-y-2" id="dash-group-${activityType}"></div>
                     </div>
                 `;
-            });
-
-            const myArtifacts = artifacts.filter(a => a.studentId === currentUserId);
-            if(myArtifacts.length === 0) {
-                historyContainer.innerHTML = `<div class="text-xs text-slate-400 italic p-6 border border-dashed rounded-lg text-center">보관된 개인 산출물이 없습니다. 미션에 진입하십시오.</div>`;
-            } else {
-                myArtifacts.forEach(art => {
-                    historyContainer.innerHTML += `
-                        <div class="p-3 bg-indigo-50/50 border border-indigo-100 rounded-lg text-xs space-y-1">
-                            <div class="flex justify-between font-bold text-indigo-900">
-                                <span>시나리오: ${art.scenarioCode}</span>
-                                <span class="text-emerald-600"><i class="fa-solid fa-cloud-arrow-up"></i> 저장 및 공유 허브 동기화됨</span>
+                const groupContainer = document.getElementById(`dash-group-${activityType}`);
+                entries.sort((a,b) => a.code.localeCompare(b.code)).forEach(sci => {
+                    const completedParagraphs = new Set(
+                        artifacts
+                            .filter(a => a.studentId === currentUserId && a.scenarioCode === sci.code)
+                            .map(getArtifactParagraphId)
+                    );
+                    const completeCount = completedParagraphs.size;
+                    const isPassed = completeCount === paragraphCount;
+                    const buttonLabel = isPassed ? '복습하기' : (completeCount > 0 ? '계속' : '도전');
+                    groupContainer.innerHTML += `
+                        <div class="p-3 border rounded-lg flex justify-between items-center bg-white hover:border-indigo-300 transition-all gap-3">
+                            <div class="space-y-0.5 min-w-0">
+                                <span class="text-[10px] font-mono font-bold ${isPassed ? 'text-emerald-600' : 'text-indigo-600'}">${escapeHtml(sci.code)} · ${completeCount}/${paragraphCount} paragraphs</span>
+                                <h4 class="text-xs font-bold text-slate-800">${escapeHtml(sci.title)}</h4>
                             </div>
-                            <p class="font-mono text-slate-700 bg-white p-2 rounded border border-indigo-200/40">"${art.text}"</p>
+                            <button onclick="startTraining('${escapeHtml(sci.code)}')" class="shrink-0 px-2.5 py-1 text-[11px] font-bold text-white rounded shadow ${isPassed ? 'bg-emerald-600 hover:bg-emerald-700' : 'navy-bg hover:bg-slate-800'}">${buttonLabel}</button>
                         </div>
                     `;
                 });
+            });
+
+            const myArtifacts = artifacts.filter(a => a.studentId === currentUserId);
+            if (myArtifacts.length === 0) {
+                historyContainer.innerHTML = `<div class="text-xs text-slate-400 italic p-6 border border-dashed rounded-lg text-center">보관된 개인 산출물이 없습니다. 시나리오에 진입하여 paragraph 실습을 시작하십시오.</div>`;
+                return;
+            }
+
+            const scenarioPackages = groupArtifactsByStudentAndScenario(myArtifacts)
+                .sort((a, b) => String(a.scenarioCode).localeCompare(String(b.scenarioCode)));
+
+            scenarioPackages.forEach(bundle => {
+                const scenario = scenarios[bundle.scenarioCode];
+                const scenarioTitle = scenario?.title || `${bundle.scenarioCode} activity`;
+                const paragraphRows = OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => {
+                    const artifact = bundle.artifactIndex[paragraphId];
+                    const label = getOpordParagraphLabel(paragraphId);
+                    if (!artifact) {
+                        return `<div class="rounded-lg border border-dashed border-slate-200 bg-slate-50/60 p-3"><div class="text-[10px] font-black text-slate-500">${escapeHtml(label)}</div><p class="mt-1 text-[10px] italic text-slate-400">Not submitted yet.</p></div>`;
+                    }
+                    return `<div class="rounded-lg border border-indigo-100 bg-indigo-50/30 p-3"><div class="mb-1.5 flex flex-wrap items-center justify-between gap-2"><span class="rounded bg-amber-50 border border-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">${escapeHtml(label)}</span><span class="text-[9px] font-bold text-emerald-600"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>저장 및 공유됨</span></div><pre class="whitespace-pre-wrap break-words rounded border border-indigo-100/70 bg-white p-2.5 text-[10px] font-mono leading-relaxed text-slate-700">${escapeHtml(artifact.text)}</pre></div>`;
+                }).join('');
+
+                historyContainer.innerHTML += `
+                    <section class="rounded-xl border border-indigo-200 bg-indigo-50/30 p-4 space-y-3">
+                        <div class="flex flex-wrap items-start justify-between gap-2 border-b border-indigo-100 pb-3"><div><p class="text-[10px] font-mono font-black text-indigo-700">${escapeHtml(bundle.scenarioCode)} · OPORD ACTIVITY PACKAGE</p><h4 class="mt-1 text-xs font-black text-slate-800">${escapeHtml(scenarioTitle)}</h4></div><span class="rounded bg-emerald-50 border border-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-700">${bundle.completedCount}/5 paragraphs complete</span></div>
+                        <div class="space-y-2">${paragraphRows}</div>
+                    </section>
+                `;
+            });
+        }
+
+        let activeParagraphId = 'mission';
+        let activeBuildStep = 1;
+
+        function getProgressStore() {
+            try {
+                return JSON.parse(localStorage.getItem('OPORD_WORKSHOP_PROGRESS')) || {};
+            } catch (error) {
+                return {};
             }
         }
 
-        function startTraining(code) { selectedScenarioCode = code; showScreen('workshop'); }
+        function saveProgressStore(progress) {
+            localStorage.setItem('OPORD_WORKSHOP_PROGRESS', JSON.stringify(progress));
+        }
+
+        function progressKey(paragraphId, step) {
+            return `${currentUserId}::${selectedScenarioCode}::${paragraphId}::step${step}`;
+        }
+
+        function isStepComplete(paragraphId, step) {
+            return Boolean(getProgressStore()[progressKey(paragraphId, step)]);
+        }
+
+        function markStepComplete(paragraphId, step) {
+            const progress = getProgressStore();
+            progress[progressKey(paragraphId, step)] = true;
+            saveProgressStore(progress);
+        }
+
+        function resetActiveParagraphStep(step) {
+            const progress = getProgressStore();
+            delete progress[progressKey(activeParagraphId, step)];
+            if (step === 1) delete progress[progressKey(activeParagraphId, 2)];
+            saveProgressStore(progress);
+            activeBuildStep = step;
+            loadWorkshop();
+        }
+
+        function startTraining(code) {
+            selectedScenarioCode = code;
+            activeParagraphId = 'mission';
+            activeBuildStep = isStepComplete(activeParagraphId, 1) ? 2 : 1;
+            showScreen('workshop');
+        }
+
+        function selectParagraph(paragraphId) {
+            activeParagraphId = paragraphId;
+            activeBuildStep = isStepComplete(paragraphId, 1) ? 2 : 1;
+            loadWorkshop();
+        }
+
+        function getScenarioStep2Blocks(data, paragraphId) {
+            if (data?.step2Blocks && Object.prototype.hasOwnProperty.call(data.step2Blocks, paragraphId)) {
+                return cloneBlockList(data.step2Blocks[paragraphId]).filter(Boolean);
+            }
+            // Legacy support for early mission-only scenarios.
+            if (paragraphId === 'mission' && Array.isArray(data?.slots2) && data.slots2.length) {
+                return data.slots2.map(item => item.label);
+            }
+            return cloneBlockList(PARAGRAPH_DRILLS[paragraphId].step2Blocks);
+        }
+
+        function getShellItemMeta(item) {
+            if (item && typeof item === 'object' && !Array.isArray(item)) {
+                return {
+                    label: item.label || '',
+                    level: Number(item.level || 0)
+                };
+            }
+            return {
+                label: String(item || ''),
+                level: 0
+            };
+        }
+
+        function getIndentClasses(level) {
+            // Strong visual hierarchy: higher-level shell elements remain flush left,
+            // while subordinate elements are clearly nested beneath their parent.
+            if (level >= 2) return 'ml-24';
+            if (level === 1) return 'ml-12';
+            return '';
+        }
+
+        function getShellGuide(level) {
+            if (level >= 2) return '<span class="mr-2 text-slate-300">↳</span>';
+            if (level === 1) return '<span class="mr-2 text-slate-300">└</span>';
+            return '';
+        }
+
+        function renderParagraphSelector() {
+            const selector = document.getElementById('paragraph-selector');
+            selector.innerHTML = '';
+
+            Object.entries(PARAGRAPH_DRILLS).forEach(([id, drill]) => {
+                const step1 = isStepComplete(id, 1);
+                const step2 = isStepComplete(id, 2);
+                const active = id === activeParagraphId;
+                const status = step2 ? 'Complete' : (step1 ? 'Step 2 ready' : 'Step 1 ready');
+                const stateClass = `${active ? 'active' : ''} ${step2 ? 'completed' : ''}`;
+
+                selector.innerHTML += `
+                    <button onclick="selectParagraph('${id}')" class="paragraph-card ${stateClass} text-left rounded-xl p-4 flex flex-col justify-between gap-3">
+                        <div class="flex items-start justify-between gap-2">
+                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg ${active ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500'} text-sm font-black">${drill.number}</span>
+                            <span class="text-[10px] font-bold ${step2 ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : 'text-indigo-700 bg-indigo-50 border-indigo-100'} border px-2 py-0.5 rounded-full">${status}</span>
+                        </div>
+                        <div>
+                            <div class="font-black text-sm text-slate-800 flex items-center gap-1.5"><i class="fa-solid ${drill.icon} text-indigo-500"></i>${drill.title}</div>
+                            <p class="mt-1 text-[10px] leading-relaxed text-slate-500">${drill.subtitle}</p>
+                        </div>
+                    </button>
+                `;
+            });
+        }
+
+        function buildDropZone({ id, label, placeholder, step, index, blockType, level = 0 }) {
+            const step2Badge = step === 2
+                ? `<span class="w-12 shrink-0 rounded border border-amber-100 bg-amber-50 text-amber-700 py-1 text-center text-[10px] font-mono font-bold">LANG-${index + 1}</span>`
+                : '';
+            const indentClass = step === 1 ? getIndentClasses(level) : '';
+            const guide = step === 1 ? getShellGuide(level) : '';
+            return `
+                <div class="${step === 2 ? 'flex items-center gap-3' : ''} ${indentClass}" ${step === 1 ? 'data-step1-structure-wrapper="true"' : ''}>
+                    ${step2Badge}
+                    <div class="min-w-0 ${step === 2 ? 'flex-1' : ''}">
+                        <div class="mb-1 flex items-center text-[10px] font-bold text-slate-500">${guide}<span>${label}</span></div>
+                        <div id="${id}" class="drop-zone shell-slot flex min-h-[42px] items-center justify-center rounded border border-dashed ${step === 1 ? 'border-indigo-300' : 'border-amber-300'} bg-white px-2 py-1 text-[11px] italic ${step === 1 ? 'text-indigo-500/60' : 'text-amber-600/60'}"
+                             data-placeholder="${placeholder}" data-step="${step}" data-block-type="${blockType}"
+                             ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)">${placeholder}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function makePoolBlock({ id, label, step, index }) {
+            const el = document.createElement('div');
+            el.id = id;
+            el.draggable = true;
+            el.dataset.step = String(step);
+            el.dataset.poolClass = step === 1
+                ? 'drag-block bg-slate-800 hover:bg-slate-700 text-indigo-200 p-2 rounded border border-slate-700 text-[11px] font-mono'
+                : 'drag-block bg-slate-800 hover:bg-slate-700 text-amber-300 p-2 rounded border border-slate-700 text-[11px] font-mono';
+            el.className = el.dataset.poolClass;
+            el.innerHTML = `<i class="fa-solid fa-grip-lines-vertical text-slate-600 mr-1.5"></i>${label}`;
+            el.ondragstart = (event) => event.dataTransfer.setData('text/plain', event.currentTarget.id);
+            el.ondblclick = () => returnBlockToPool(el);
+            return el;
+        }
+
+        function renderActiveParagraphIntro(data, drill, step1Complete, step2Complete) {
+            const intro = document.getElementById('active-paragraph-intro');
+            const status = step2Complete ? 'Completed' : (step1Complete ? 'Step 2 unlocked' : 'Step 1 in progress');
+            const activity = getActivityMeta(getScenarioActivityType(data));
+            intro.innerHTML = `
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2"><p class="text-[10px] font-black uppercase tracking-widest text-indigo-600">Current paragraph workshop</p><span class="rounded border px-2 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
+                        <h3 class="mt-1 text-base font-black text-slate-800"><span class="mr-1 text-indigo-600">${drill.number}.</span> ${drill.title}</h3>
+                        <p class="mt-1 text-[11px] leading-relaxed text-slate-500">${drill.subtitle}</p>
+                    </div>
+                    <span class="rounded-full border ${step2Complete ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-indigo-100 bg-indigo-50 text-indigo-700'} px-3 py-1 text-[10px] font-bold">${status}</span>
+                </div>
+            `;
+        }
+
+        function renderStep1(data, drill, complete) {
+            const step1Slots = document.getElementById('step1-slots');
+            const verifyBtn = document.getElementById('step1-verify-btn');
+            const resetBtn = document.getElementById('step1-reset-btn');
+            const status = document.getElementById('step1-status');
+            const instruction = document.getElementById('step1-instruction');
+            step1Slots.innerHTML = '';
+
+            if (complete) {
+                instruction.innerText = '검증 완료된 OPORD shell 순서입니다. 필요하면 Step 1 다시 조립을 눌러 연습할 수 있습니다.';
+                status.className = 'text-[10px] rounded bg-emerald-100 px-2 py-1 font-bold text-emerald-700';
+                status.innerText = 'Verified OPORD shell';
+                drill.shellItems.forEach((item) => {
+                    const meta = getShellItemMeta(item);
+                    step1Slots.innerHTML += `
+                        <div class="${getIndentClasses(meta.level)} min-w-0 rounded border border-emerald-200 bg-white px-3 py-2 text-[11px] font-mono text-emerald-900">${getShellGuide(meta.level)}<i class="fa-solid fa-check mr-1.5 text-emerald-500"></i>${meta.label}</div>
+                    `;
+                });
+                verifyBtn.classList.add('hidden');
+                resetBtn.classList.remove('hidden');
+                return;
+            }
+
+            instruction.innerText = '오른쪽 OPORD shell blocks를 교범 순서에 맞게 끌어다 놓으십시오.';
+            status.className = 'text-[10px] rounded bg-indigo-100 px-2 py-1 font-bold text-indigo-700';
+            status.innerText = 'OPORD shell drill';
+            verifyBtn.classList.remove('hidden');
+            resetBtn.classList.add('hidden');
+            drill.shellItems.forEach((item, idx) => {
+                const meta = getShellItemMeta(item);
+                step1Slots.innerHTML += buildDropZone({
+                    id: `target-step1-${activeParagraphId}-${idx}`,
+                    // Keep the slot anonymous so students infer the shell element from order + indentation.
+                    label: `${drill.title} OPORD structure ${idx + 1}`,
+                    placeholder: 'Drop a structure block here',
+                    step: 1,
+                    index: idx,
+                    blockType: 'shell',
+                    level: meta.level
+                });
+            });
+        }
+
+        function getStep2DraftStore() {
+            try {
+                return JSON.parse(localStorage.getItem('OPORD_STEP2_GUIDED_DRAFTS')) || {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function saveStep2DraftStore(store) {
+            localStorage.setItem('OPORD_STEP2_GUIDED_DRAFTS', JSON.stringify(store));
+        }
+
+        function step2DraftKey(paragraphId = activeParagraphId) {
+            return `${currentUserId}::${selectedScenarioCode}::${paragraphId}`;
+        }
+
+        function getCurrentStep2Artifact(paragraphId = activeParagraphId) {
+            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+            return artifacts.find(artifact =>
+                artifact.studentId === currentUserId &&
+                artifact.scenarioCode === selectedScenarioCode &&
+                getArtifactParagraphId(artifact) === paragraphId
+            ) || null;
+        }
+
+        function getStep2SeedValues(paragraphId = activeParagraphId) {
+            const drafts = getStep2DraftStore();
+            const savedDraft = drafts[step2DraftKey(paragraphId)];
+            if (savedDraft && typeof savedDraft === 'object') return { ...savedDraft };
+            const artifact = getCurrentStep2Artifact(paragraphId);
+            if (artifact?.formData && typeof artifact.formData === 'object') return { ...artifact.formData };
+            return {};
+        }
+
+        function step2TextInput(field, label, value = '', placeholder = '', required = false, hint = '') {
+            return `
+                <label class="block rounded-lg border border-slate-200 bg-white p-2.5">
+                    <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-600">${label}${required ? '<span class="ml-1 text-rose-500">*</span>' : ''}</span>
+                    <input type="text" data-step2-field="${field}" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}" oninput="saveStep2DraftFromUI()" class="w-full rounded border border-slate-200 px-2.5 py-2 text-[11px] text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" />
+                    ${hint ? `<span class="mt-1 block text-[9px] leading-relaxed text-slate-400">${hint}</span>` : ''}
+                </label>
+            `;
+        }
+
+        function step2TextArea(field, label, value = '', placeholder = '', required = false, hint = '', rows = 3) {
+            return `
+                <label class="block rounded-lg border border-slate-200 bg-white p-2.5">
+                    <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-600">${label}${required ? '<span class="ml-1 text-rose-500">*</span>' : ''}</span>
+                    <textarea data-step2-field="${field}" rows="${rows}" placeholder="${escapeHtml(placeholder)}" oninput="saveStep2DraftFromUI()" class="w-full resize-y rounded border border-slate-200 px-2.5 py-2 text-[11px] leading-relaxed text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100">${escapeHtml(value)}</textarea>
+                    ${hint ? `<span class="mt-1 block text-[9px] leading-relaxed text-slate-400">${hint}</span>` : ''}
+                </label>
+            `;
+        }
+
+        function step2Checkbox(field, label, checked = false) {
+            return `
+                <label class="flex cursor-pointer items-center gap-2 rounded border border-slate-200 bg-white px-2.5 py-2 text-[10px] font-semibold text-slate-600 hover:border-amber-300">
+                    <input type="checkbox" data-step2-field="${field}" ${checked ? 'checked' : ''} onchange="saveStep2DraftFromUI()" class="h-3.5 w-3.5 accent-amber-600" />
+                    <span>${label}</span>
+                </label>
+            `;
+        }
+
+        function getStep2FormValues() {
+            const values = {};
+            document.querySelectorAll('#step2-slots [data-step2-field]').forEach(element => {
+                values[element.dataset.step2Field] = element.type === 'checkbox' ? element.checked : element.value;
+            });
+            return values;
+        }
+
+        function saveStep2DraftFromUI() {
+            if (!currentUser || !document.getElementById('step2-slots')) return;
+            const values = getStep2FormValues();
+            const store = getStep2DraftStore();
+            store[step2DraftKey()] = values;
+            saveStep2DraftStore(store);
+            refreshStep2LivePreview();
+        }
+
+        function getPhraseBank(data, paragraphId) {
+            const hasScenarioPhraseBank = data?.phraseBanks
+                && Object.prototype.hasOwnProperty.call(data.phraseBanks, paragraphId);
+            if (hasScenarioPhraseBank) {
+                return cloneBlockList(data.phraseBanks[paragraphId]).filter(Boolean);
+            }
+            return cloneBlockList(DEFAULT_PHRASE_BANKS[paragraphId]).filter(Boolean);
+        }
+
+        function getReferenceDescriptor(data, paragraphId) {
+            const isSustainmentSample = data?.code === 'OPORD-01' && paragraphId === 'sustainment';
+            if (isSustainmentSample) {
+                return {
+                    title: 'Teacher sample script — not from the video',
+                    note: 'Use this only as a model for sustainment wording; it is not part of the video dictation.'
+                };
+            }
+            const activityType = getScenarioActivityType(data);
+            return {
+                title: activityType === 'lecture' ? 'Teacher lecture reference / video script' : 'Teacher scenario reference cards',
+                note: activityType === 'lecture' ? 'Use as a model; revise in your own wording' : 'Use as cues, not answer keys'
+            };
+        }
+
+        function renderScenarioReferenceCards(data, paragraphId) {
+            const cards = getScenarioStep2Blocks(data, paragraphId);
+            const phraseBank = getPhraseBank(data, paragraphId);
+            const referenceDescriptor = getReferenceDescriptor(data, paragraphId);
+            const refTitle = referenceDescriptor.title;
+            const refNote = referenceDescriptor.note;
+            const cardHtml = cards.length
+                ? cards.map(card => `<div class="rounded border border-slate-700 bg-slate-800/80 px-2.5 py-2 text-[10px] leading-relaxed text-slate-200">${escapeHtml(card)}</div>`).join('')
+                : '<div class="rounded border border-dashed border-slate-600 px-2.5 py-2 text-[10px] italic text-slate-400">No teacher reference cards yet.</div>';
+            const phraseHtml = phraseBank.length
+                ? phraseBank.map(phrase => `<span class="rounded bg-indigo-950 px-2 py-1 text-[9px] text-indigo-200">${escapeHtml(phrase)}</span>`).join('')
+                : '<span class="text-[9px] italic text-slate-400">No teacher phrase bank provided for this paragraph.</span>';
+            return `
+                <div class="space-y-3">
+                    <div class="rounded border border-indigo-800 bg-indigo-950/50 p-2.5">
+                        <div class="mb-2 flex items-center justify-between gap-2"><span class="text-[10px] font-black uppercase tracking-wider ${paragraphId === 'sustainment' && data?.code === 'OPORD-01' ? 'text-amber-300' : 'text-indigo-200'}">${refTitle}</span><span class="text-[9px] ${paragraphId === 'sustainment' && data?.code === 'OPORD-01' ? 'text-amber-200/80' : 'text-indigo-300'}">${refNote}</span></div>
+                        <div class="space-y-2">${cardHtml}</div>
+                    </div>
+                    <div class="rounded border border-slate-700 bg-slate-800/70 p-2.5">
+                        <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-amber-300">Teacher phrase bank</p>
+                        <div class="flex flex-wrap gap-1.5">${phraseHtml}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderTeamProcess(paragraphId) {
+            const processes = {
+                situation: '<strong>Team interaction:</strong> 1) Read the reference cards together. 2) Assign one member to terrain/weather, one to enemy, one to friendly forces, and one to edit concise entries. 3) Check that each line explains an operational effect.',
+                mission: '<strong>Team interaction:</strong> One member proposes the 5W elements, one checks tactical verb + objective, and the group reads the final mission statement aloud before submitting.',
+                execution: '<strong>Suggested team roles:</strong> Commander—intent; Planner—concept/phases; Platoon leaders—tasks; RTO—coordinating instructions; Editor—clarity and brevity check.',
+                sustainment: '<strong>Team interaction:</strong> The logistics lead selects support priorities, the personnel/medic lead drafts accountability and casualty support, and the editor turns them into three concise OPORD entries.',
+                commandSignal: '<strong>Suggested team roles:</strong> Commander—location and succession; XO—control and reports; RTO—PACE communication plan; Editor—checks that every field is actionable.'
+            };
+            return `<div class="rounded-lg border border-indigo-100 bg-indigo-50/70 px-3 py-2 text-[10px] leading-relaxed text-indigo-800"><i class="fa-solid fa-people-group mr-1"></i>${processes[paragraphId] || ''}</div>`;
+        }
+
+        function renderMissionPreview(values) {
+            const parts = [
+                String(values.missionUnit || '').trim(),
+                String(values.missionTime || '').trim(),
+                String(values.missionTask || '').trim(),
+                String(values.missionObjective || '').trim(),
+                String(values.missionPurpose || '').trim()
+            ].filter(Boolean);
+            return parts.length ? `${parts.join(' ')}${/[.!?]$/.test(parts[parts.length - 1]) ? '' : '.'}` : 'Your live mission statement preview will appear here.';
+        }
+
+        function refreshStep2LivePreview() {
+            if (activeParagraphId !== 'mission') return;
+            const preview = document.getElementById('mission-live-preview');
+            if (!preview) return;
+            preview.innerText = renderMissionPreview(getStep2FormValues());
+        }
+
+        function renderSituationWriting(values) {
+            return `
+                ${renderTeamProcess('situation')}
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing target:</strong> Write concise operational entries. Do not copy the reference cards word-for-word; explain what matters for this scenario.</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${step2TextArea('situationAOI', 'Area of Interest', values.situationAOI, 'e.g., Northern approaches to OBJ ...', false, 'What wider area can affect this mission?', 2)}
+                    ${step2TextArea('situationAO', 'Area of Operations', values.situationAO, 'e.g., Company sector around ...', true, 'Where will the unit actually operate?', 2)}
+                    ${step2TextArea('situationTerrain', 'Terrain', values.situationTerrain, 'e.g., Hill 402 dominates ...', true, 'State the operational effect, not only the feature.', 2)}
+                    ${step2TextArea('situationWeather', 'Weather', values.situationWeather, 'e.g., Fog after 2200 limits ...', false, 'Visibility, wind, precipitation, BMNT/EENT, etc.', 2)}
+                    ${step2TextArea('situationEnemy', 'Enemy Forces', values.situationEnemy, 'e.g., Squad-sized element occupies ...', true, 'Size, activity, location, capability, intent.', 2)}
+                    ${step2TextArea('situationFriendly', 'Friendly Forces', values.situationFriendly, 'e.g., 1st Platoon fixes enemy forces ...', true, 'Higher, adjacent, or supporting unit relationship.', 2)}
+                    ${step2TextArea('situationCivil', 'Civil Considerations', values.situationCivil, 'e.g., Civilian traffic likely near ...', false, '', 2)}
+                    ${step2TextArea('situationAttach', 'Attachments and Detachments', values.situationAttach, 'e.g., One engineer team attached ...', false, '', 2)}
+                    ${step2TextArea('situationAssumptions', 'Assumptions', values.situationAssumptions, 'e.g., Bridge remains passable until ...', false, '', 2)}
+                </div>
+            `;
+        }
+
+        function renderMissionWriting(values) {
+            return `
+                ${renderTeamProcess('mission')}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${step2TextInput('missionUnit', 'Who: Unit', values.missionUnit, 'e.g., 2nd Platoon,', true)}
+                    ${step2TextInput('missionTime', 'When: Time / Condition', values.missionTime, 'e.g., NLT 2000,', true)}
+                    ${step2TextInput('missionTask', 'What: Tactical Task', values.missionTask, 'e.g., seizes', true, 'Use an OPORD action verb.')}
+                    ${step2TextInput('missionObjective', 'Where: Objective / Location', values.missionObjective, 'e.g., OBJ HWARANG', true)}
+                </div>
+                ${step2TextArea('missionPurpose', 'Why: Purpose', values.missionPurpose, 'e.g., in order to support the company’s main effort.', true, 'Use “in order to …” and finish the sentence.', 2)}
+                <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+                    <p class="text-[10px] font-black uppercase tracking-wider text-indigo-700">Live mission statement preview</p>
+                    <p id="mission-live-preview" class="mt-1.5 whitespace-pre-wrap text-[12px] font-mono leading-relaxed text-indigo-950">${escapeHtml(renderMissionPreview(values))}</p>
+                </div>
+            `;
+        }
+
+        function renderExecutionWriting(values) {
+            return `
+                ${renderTeamProcess('execution')}
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing target:</strong> Create a shared plan, not five disconnected sentences. Your intent must guide your concept, tasks, and coordinating instructions.</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${step2TextArea('executionPurpose', 'Commander’s Intent: Purpose', values.executionPurpose, 'Why must this operation happen?', true, '', 2)}
+                    ${step2TextArea('executionKeyTasks', 'Commander’s Intent: Key Tasks', values.executionKeyTasks, 'What must be accomplished?', false, 'Use short task phrases separated by semicolons.', 2)}
+                    ${step2TextArea('executionEndState', 'Commander’s Intent: End State', values.executionEndState, 'What should be true when complete?', true, '', 2)}
+                    ${step2TextArea('executionConcept', 'Concept of Operation', values.executionConcept, 'Describe the overall tactical approach.', true, '', 3)}
+                    ${step2TextArea('executionPhase1', 'Phase I', values.executionPhase1, 'e.g., Move from AA EAGLE to SBF 1.', true, '', 2)}
+                    ${step2TextArea('executionPhase2', 'Phase II', values.executionPhase2, 'e.g., Assault and seize OBJ HWARANG.', false, '', 2)}
+                </div>
+                ${step2TextArea('executionTasks', 'Tasks to Subordinate Units', values.executionTasks, '1st Platoon: ...\n2nd Platoon: ...\nWeapons Squad: ...', true, 'Give each unit a task and purpose where possible.', 5)}
+                ${step2TextArea('executionCoord', 'Coordinating Instructions', values.executionCoord, 'Time / control measure / reporting / risk control: ...', true, 'Use items such as LD, PL, LOA, report when, do not advance beyond.', 4)}
+            `;
+        }
+
+        function renderSustainmentWriting(values) {
+            return `
+                ${renderTeamProcess('sustainment')}
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3">
+                    <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-amber-800">Support planning checklist</p>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        ${step2Checkbox('sustainClassI', 'Class I / Water', values.sustainClassI)}
+                        ${step2Checkbox('sustainClassV', 'Class V / Ammunition', values.sustainClassV)}
+                        ${step2Checkbox('sustainClassVIII', 'Class VIII / Medical', values.sustainClassVIII)}
+                        ${step2Checkbox('sustainMaintenance', 'Maintenance', values.sustainMaintenance)}
+                        ${step2Checkbox('sustainAccountability', 'Personnel Accountability', values.sustainAccountability)}
+                        ${step2Checkbox('sustainCCP', 'CCP / CASEVAC', values.sustainCCP)}
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    ${step2TextArea('sustainLogistics', 'Logistics Plan', values.sustainLogistics, 'Resupply / distribution / maintenance instructions.', true, '', 4)}
+                    ${step2TextArea('sustainPersonnel', 'Personnel Plan', values.sustainPersonnel, 'Accountability / personnel reporting instructions.', true, '', 4)}
+                    ${step2TextArea('sustainHealth', 'Health Service Support', values.sustainHealth, 'TCCC / CCP / evacuation instructions.', true, '', 4)}
+                </div>
+            `;
+        }
+
+        function renderCommandSignalWriting(values) {
+            return `
+                ${renderTeamProcess('commandSignal')}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${step2TextArea('commandLocation', 'Command: Location of Commander', values.commandLocation, 'e.g., The commander moves with ...', true, '', 2)}
+                    ${step2TextArea('commandSuccession', 'Command: Succession of Command', values.commandSuccession, 'e.g., The XO assumes command if ...', true, '', 2)}
+                    ${step2TextArea('commandLiaison', 'Command: Liaison Requirements', values.commandLiaison, 'e.g., Liaison with adjacent unit at ...', false, '', 2)}
+                    ${step2TextArea('commandPost', 'Control: Command Posts', values.commandPost, 'e.g., Company CP located at ...', true, '', 2)}
+                    ${step2TextArea('commandReports', 'Control: Reports', values.commandReports, 'e.g., Submit SITREP at ... / Report when ...', true, '', 2)}
+                </div>
+                <div class="rounded-lg border border-indigo-100 bg-indigo-50/60 p-3">
+                    <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-indigo-800">Signal: PACE communication plan</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        ${step2TextInput('signalPrimary', 'Primary', values.signalPrimary, 'e.g., Company command net', true)}
+                        ${step2TextInput('signalAlternate', 'Alternate', values.signalAlternate, 'e.g., Platoon internal net', false)}
+                        ${step2TextInput('signalContingency', 'Contingency', values.signalContingency, 'e.g., Runner / messenger', false)}
+                        ${step2TextInput('signalEmergency', 'Emergency', values.signalEmergency, 'e.g., Emergency signal / pyrotechnic', false)}
+                    </div>
+                </div>
+            `;
+        }
+
+        function lectureDraftPlaceholder(paragraphId) {
+            const prompts = {
+                situation: 'AREA OF INTEREST\n...\nAREA OF OPERATIONS\n  TERRAIN: ...\n  WEATHER: ...\nENEMY FORCES: ...\nFRIENDLY FORCES: ...',
+                mission: '2nd Platoon, at / NLT ____, seizes / defends ____, in order to ____.',
+                execution: 'COMMANDER’S INTENT\n...\nCONCEPT OF OPERATIONS\n...\nSCHEME OF MOVEMENT AND MANEUVER\n...\nTASKS TO SUBORDINATE UNITS\n...\nCOORDINATING INSTRUCTIONS\n...',
+                sustainment: 'LOGISTIC\n  Supply and Field Services: ...\n  Distribution and Resupply Operations: ...\nPERSONNEL SERVICES SUPPORT\n...\nTACTICAL COMBAT CASUALTY CARE\n...',
+                commandSignal: 'COMMAND (Location of Leaders): ...\nCONTROL (Command Post Location): ...\nSIGNAL\n  Radio Frequencies: ...\n  Passwords / Running Passwords: ...'
+            };
+            return prompts[paragraphId] || 'Write your revised OPORD paragraph here.';
+        }
+
+        function renderLectureOpenWriting(data, drill, values) {
+            const existingArtifact = getCurrentStep2Artifact();
+            const draftValue = values.lectureDraft || existingArtifact?.text || '';
+            return `
+                <div class="rounded-lg border border-violet-100 bg-violet-50/70 px-3 py-2 text-[10px] leading-relaxed text-violet-900"><i class="fa-solid fa-chalkboard-user mr-1"></i><strong>Lecture-in-class workflow:</strong> Read or watch the teacher reference together, complete the Step 1 shell, then write your team’s <strong>revised ${drill.title}</strong> in your own wording. Keep the shell hierarchy visible in your formatting; do not copy the reference sentence verbatim.</div>
+                ${step2TextArea('lectureDraft', `Team revised ${drill.title} paragraph`, draftValue, lectureDraftPlaceholder(activeParagraphId), true, 'Use line breaks and the Step 1 headings where useful. This is the team product that will be shared after the lecture.', 14)}
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Quick self-check:</strong> Does your text follow the shell above? Is each line actionable and concise? Did the team revise the teacher model rather than merely copy it?</div>
+            `;
+        }
+
+        function renderStep2WritingForm(data, drill, values) {
+            if (getScenarioActivityType(data) === 'lecture') {
+                return renderLectureOpenWriting(data, drill, values);
+            }
+            const forms = {
+                situation: renderSituationWriting,
+                mission: renderMissionWriting,
+                execution: renderExecutionWriting,
+                sustainment: renderSustainmentWriting,
+                commandSignal: renderCommandSignalWriting
+            };
+            const renderer = forms[activeParagraphId] || renderMissionWriting;
+            return renderer(values);
+        }
+
+        function renderStep2(data, drill, step1Complete, complete) {
+            const panel = document.getElementById('step2-panel');
+            const step2Slots = document.getElementById('step2-slots');
+            const verifyBtn = document.getElementById('step2-verify-btn');
+            const resetBtn = document.getElementById('step2-reset-btn');
+            const status = document.getElementById('step2-status');
+            const instruction = document.getElementById('step2-instruction');
+            const heading = document.getElementById('step2-heading');
+            const activityType = getScenarioActivityType(data);
+            if (heading) heading.innerHTML = activityType === 'lecture'
+                ? '<i class="fa-solid fa-pen-to-square mr-1"></i>Step 2: Lecture Revision Writing'
+                : '<i class="fa-solid fa-people-group mr-1"></i>Step 2: Code Your Way Team Writing';
+            step2Slots.innerHTML = '';
+
+            if (!step1Complete) {
+                panel.classList.add('step-locked');
+                instruction.innerText = activityType === 'lecture' ? 'Step 1의 OPORD shell sequence를 통과하면 팀의 open-ended revision workspace가 열립니다.' : 'Step 1의 OPORD shell sequence를 통과하면 Code Your Way team writing workspace가 열립니다.';
+                status.className = 'text-[10px] rounded bg-slate-200 px-2 py-1 font-bold text-slate-500';
+                status.innerText = 'Locked until Step 1';
+                step2Slots.innerHTML = `<div class="rounded-lg border border-dashed border-amber-200 bg-white/60 px-4 py-5 text-center text-[11px] text-slate-400"><i class="fa-solid fa-lock mr-1"></i> First construct the OPORD shell.</div>`;
+                verifyBtn.classList.add('hidden');
+                resetBtn.classList.add('hidden');
+                return;
+            }
+
+            panel.classList.remove('step-locked');
+            if (complete) {
+                const artifact = getCurrentStep2Artifact();
+                instruction.innerText = '제출된 team writing artifact입니다. 수정 · 재작성으로 다시 열어 내용을 보완할 수 있습니다.';
+                status.className = 'text-[10px] rounded bg-emerald-100 px-2 py-1 font-bold text-emerald-700';
+                status.innerText = 'Submitted writing artifact';
+                step2Slots.innerHTML = `
+                    <div class="rounded-xl border border-emerald-200 bg-white p-3">
+                        <div class="mb-2 flex items-center justify-between gap-2"><span class="text-[10px] font-black uppercase tracking-wider text-emerald-700"><i class="fa-solid fa-check-circle mr-1"></i>Team paragraph output</span><span class="text-[9px] text-slate-400">Shared to artifact pile-up</span></div>
+                        <pre class="whitespace-pre-wrap break-words rounded-lg border border-emerald-100 bg-emerald-50/50 p-3 text-[11px] font-mono leading-relaxed text-emerald-950">${escapeHtml(artifact?.text || 'Saved writing artifact not found.')}</pre>
+                    </div>
+                `;
+                verifyBtn.classList.add('hidden');
+                resetBtn.classList.remove('hidden');
+                resetBtn.innerText = 'Step 2 수정 · 재작성';
+                return;
+            }
+
+            const values = getStep2SeedValues();
+            instruction.innerText = drill.step2Prompt;
+            status.className = 'text-[10px] rounded bg-amber-100 px-2 py-1 font-bold text-amber-800';
+            status.innerText = activityType === 'lecture' ? 'Lecture revision draft' : drill.step2Title;
+            verifyBtn.classList.remove('hidden');
+            verifyBtn.innerHTML = activityType === 'lecture' ? '<i class="fa-solid fa-cloud-arrow-up"></i> Revised Paragraph 제출 및 공유' : '<i class="fa-solid fa-cloud-arrow-up"></i> Team Writing 제출 및 공유';
+            resetBtn.classList.add('hidden');
+            step2Slots.innerHTML = renderStep2WritingForm(data, drill, values);
+            refreshStep2LivePreview();
+        }
+
+        function renderPool(data, drill, step1Complete, step2Complete) {
+            const pool = document.getElementById('block-pool');
+            const title = document.getElementById('pool-title');
+            const note = document.getElementById('pool-note');
+            pool.innerHTML = '';
+
+            if (!step1Complete) {
+                activeBuildStep = 1;
+                title.innerHTML = '<i class="fa-solid fa-cubes"></i> OPORD Shell Block Pool';
+                note.innerHTML = 'Step 1: 교범의 하위 요소를 올바른 shell 순서로 끌어다 놓으십시오. 더블클릭하면 pool로 돌아옵니다.';
+                const items = [...drill.shellItems].map((item, idx) => ({ label: getShellItemMeta(item).label, idx }));
+                items.sort(() => Math.random() - 0.5);
+                items.forEach(item => pool.appendChild(makePoolBlock({
+                    id: `block-step1-${activeParagraphId}-${item.idx}`,
+                    label: item.label,
+                    step: 1,
+                    index: item.idx
+                })));
+                return;
+            }
+
+            const activityType = getScenarioActivityType(data);
+            if (!step2Complete) {
+                activeBuildStep = 2;
+                title.innerHTML = activityType === 'lecture'
+                    ? '<i class="fa-solid fa-chalkboard-user"></i> Lecture Reference & Phrase Bank'
+                    : '<i class="fa-solid fa-map-location-dot"></i> Scenario Reference & Phrase Bank';
+                note.innerHTML = activityType === 'lecture'
+                    ? '교관이 입력한 영상 스크립트·예문을 참고하되, Step 2에는 팀의 수정문을 자기 말로 작성하십시오.'
+                    : '교관이 제공한 scenario reference를 참고하되, Step 2에서는 팀의 own wording으로 작성하십시오.';
+                pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
+                return;
+            }
+
+            title.innerHTML = '<i class="fa-solid fa-circle-check"></i> Paragraph Submitted';
+            note.innerHTML = activityType === 'lecture' ? '이 paragraph의 shell과 lecture revision draft가 모두 제출되었습니다.' : '이 paragraph의 Step 1 shell과 Step 2 team writing이 모두 완료되었습니다.';
+            pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
+        }
 
         function loadWorkshop() {
-            const scenarios = JSON.parse(localStorage.getItem('OPORD_SCENARIOS'));
-            const data = scenarios[selectedScenarioCode];
+            const scenarios = getScenarioStore();
+            const data = scenarios[selectedScenarioCode] || defaultScenarios['OPORD-01'];
+            const drill = PARAGRAPH_DRILLS[activeParagraphId];
+            const step1Complete = isStepComplete(activeParagraphId, 1);
+            const step2Complete = isStepComplete(activeParagraphId, 2);
 
             document.getElementById('work-active-code').innerText = data.code;
             document.getElementById('work-active-title').innerText = data.title;
             document.getElementById('hint-box').classList.add('hidden');
-            document.getElementById('feedback-message').className = "text-xs font-semibold text-slate-400";
-            document.getElementById('feedback-message').innerText = "전술 요소를 결합하고 검증을 요청하십시오.";
+            document.getElementById('feedback-message').className = 'text-xs font-semibold text-slate-400';
+            document.getElementById('feedback-message').innerText = `${drill.title} paragraph를 선택했습니다. Step 1 OPORD shell부터 조립하십시오.`;
 
-            const s1Box = document.getElementById('step1-slots');
-            const s2Box = document.getElementById('step2-slots');
-            const pool = document.getElementById('block-pool');
-            s1Box.innerHTML = ''; s2Box.innerHTML = ''; pool.innerHTML = '';
+            renderParagraphSelector();
+            renderActiveParagraphIntro(data, drill, step1Complete, step2Complete);
+            renderStep1(data, drill, step1Complete);
+            renderStep2(data, drill, step1Complete, step2Complete);
+            renderPool(data, drill, step1Complete, step2Complete);
+        }
 
-            data.slots1.forEach((slot, idx) => {
-                s1Box.innerHTML += `
-                    <div class="flex items-center gap-3">
-                        <span class="text-[10px] font-mono font-bold text-indigo-500 bg-indigo-50/50 w-12 py-1 rounded text-center border border-indigo-100">구조-${idx+1}</span>
-                        <div id="target-s1-${slot.id}" class="drop-zone flex-1 min-h-[42px] px-2 py-1 border border-dashed border-slate-300 rounded bg-white flex items-center justify-center text-[11px] text-slate-400 italic"
-                             ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event, 's1-${slot.id}')">구조 뼈대 드롭존</div>
-                    </div>
-                `;
+        function allowDrop(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('drag-over');
+        }
+
+        function dragLeave(event) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+
+        function returnBlockToPool(block) {
+            const zone = block.parentElement;
+            if (zone && zone.classList.contains('drop-zone')) {
+                zone.innerHTML = zone.dataset.placeholder || 'Block drop zone';
+            }
+            block.className = block.dataset.poolClass;
+            document.getElementById('block-pool').appendChild(block);
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            const target = event.currentTarget;
+            target.classList.remove('drag-over');
+            const blockId = event.dataTransfer.getData('text/plain');
+            const dragged = document.getElementById(blockId);
+            if (!dragged) return;
+
+            if (target.firstElementChild) {
+                const previous = target.firstElementChild;
+                previous.className = previous.dataset.poolClass;
+                document.getElementById('block-pool').appendChild(previous);
+            }
+            target.innerHTML = '';
+            target.appendChild(dragged);
+
+            const placedStyle = target.dataset.step === '1'
+                ? 'drag-block bg-indigo-50 text-indigo-900 p-2 rounded border border-indigo-200 text-[11px] font-mono w-full'
+                : 'drag-block bg-amber-50 text-amber-900 p-2 rounded border border-amber-200 text-[11px] font-mono w-full';
+            dragged.className = placedStyle;
+        }
+
+        function clearStep1Diagnostics() {
+            document.querySelectorAll('[data-step1-structure-wrapper="true"]').forEach(wrapper => {
+                wrapper.classList.remove('rounded-lg', 'bg-rose-50/70', 'ring-1', 'ring-rose-200', 'px-2', 'py-1');
             });
-
-            data.slots2.forEach((slot, idx) => {
-                s2Box.innerHTML += `
-                    <div class="flex items-center gap-3">
-                        <span class="text-[10px] font-mono font-bold text-amber-600 bg-amber-50/50 w-12 py-1 rounded text-center border border-amber-100">문장-${idx+1}</span>
-                        <div id="target-s2-${slot.id}" class="drop-zone flex-1 min-h-[42px] px-2 py-1 border border-dashed border-amber-300 rounded bg-white flex items-center justify-center text-[11px] text-amber-600/50 italic"
-                             ondragover="allowDrop(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event, 's2-${slot.id}')">실전 문장 드롭존</div>
-                    </div>
-                `;
-            });
-
-            let poolItems = [];
-            data.slots1.forEach(s => poolItems.push({ id: `s1-${s.id}`, label: s.label, type: 's1' }));
-            data.slots2.forEach(s => poolItems.push({ id: `s2-${s.id}`, label: s.label, type: 's2' }));
-            poolItems.sort(() => Math.random() - 0.5);
-
-            poolItems.forEach(b => {
-                const el = document.createElement('div'); el.id = `block-${b.id}`; el.draggable = true;
-                el.className = b.type === 's1' ? "drag-block bg-slate-800 hover:bg-slate-700 text-slate-200 p-2 rounded border border-slate-700 text-[11px]" : "drag-block bg-slate-800 hover:bg-slate-700 text-amber-300 p-2 rounded border border-slate-700 text-[11px] font-mono";
-                el.innerHTML = `<i class="fa-solid fa-grip-lines-vertical text-slate-600 mr-1.5"></i>${b.label}`;
-                el.ondragstart = (e) => e.dataTransfer.setData("text/plain", e.target.id);
-                el.ondblclick = () => {
-                    if (el.parentElement && el.parentElement.classList.contains('drop-zone')) {
-                        const zone = el.parentElement; zone.innerHTML = zone.id.includes('target-s1') ? '구조 뼈대 드롭존' : '실전 문장 드롭존';
-                        el.className = b.type === 's1' ? "drag-block bg-slate-800 hover:bg-slate-700 text-slate-200 p-2 rounded border border-slate-700 text-[11px]" : "drag-block bg-slate-800 hover:bg-slate-700 text-amber-300 p-2 rounded border border-slate-700 text-[11px] font-mono";
-                        document.getElementById('block-pool').appendChild(el);
-                    }
-                };
-                pool.appendChild(el);
+            document.querySelectorAll('[id^="target-step1-"]').forEach(zone => {
+                zone.classList.remove('border-rose-400', 'bg-rose-50', 'text-rose-500/80');
             });
         }
 
-        function allowDrop(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }
-        function dragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
-        function handleDrop(e, fullId) {
-            e.preventDefault(); e.currentTarget.classList.remove('drag-over');
-            const blockId = e.dataTransfer.getData("text/plain"); const dragged = document.getElementById(blockId);
-            if (dragged) {
-                if (e.currentTarget.innerText.includes('드롭존')) { e.currentTarget.innerHTML = ''; } 
-                else {
-                    const old = e.currentTarget.firstElementChild;
-                    old.className = old.id.includes('-s1-') ? "drag-block bg-slate-800 hover:bg-slate-700 text-slate-200 p-2 rounded border border-slate-700 text-[11px]" : "drag-block bg-slate-800 hover:bg-slate-700 text-amber-300 p-2 rounded border border-slate-700 text-[11px] font-mono";
-                    document.getElementById('block-pool').appendChild(old);
+        function getStep1Mistakes(drill) {
+            const mistakes = [];
+            drill.shellItems.forEach((_, idx) => {
+                const zone = document.getElementById(`target-step1-${activeParagraphId}-${idx}`);
+                const expectedId = `block-step1-${activeParagraphId}-${idx}`;
+                const actualId = zone?.firstElementChild?.id || null;
+                if (actualId !== expectedId) {
+                    mistakes.push({ idx, zone, expectedId, actualId });
                 }
-                e.currentTarget.appendChild(dragged);
-                dragged.className = fullId.startsWith('s1-') ? "drag-block bg-indigo-50 text-indigo-900 p-2 rounded border border-indigo-200 text-[11px] font-semibold w-full" : "drag-block bg-amber-50 text-amber-900 p-2 rounded border border-amber-200 text-[11px] font-mono w-full";
-            }
+            });
+            return mistakes;
         }
 
-        function verifyCurrentParagraph() {
-            const scenarios = JSON.parse(localStorage.getItem('OPORD_SCENARIOS'));
-            const data = scenarios[selectedScenarioCode];
-            
-            let perfect = true;
-            data.slots1.forEach(s => { const z = document.getElementById(`target-s1-${s.id}`); if (!z.firstElementChild || z.firstElementChild.id !== `block-s1-${s.id}`) { perfect = false; } });
-            data.slots2.forEach(s => { const z = document.getElementById(`target-s2-${s.id}`); if (!z.firstElementChild || z.firstElementChild.id !== `block-s2-${s.id}`) { perfect = false; } });
+        function formatStructureNumbers(indices) {
+            const unique = [...new Set(indices)].sort((a, b) => a - b);
+            if (!unique.length) return '';
+            const ranges = [];
+            let start = unique[0];
+            let previous = unique[0];
+            for (let i = 1; i < unique.length; i += 1) {
+                const value = unique[i];
+                if (value === previous + 1) {
+                    previous = value;
+                    continue;
+                }
+                ranges.push(start === previous ? String(start + 1) : `${start + 1}–${previous + 1}`);
+                start = value;
+                previous = value;
+            }
+            ranges.push(start === previous ? String(start + 1) : `${start + 1}–${previous + 1}`);
+            return ranges.join(', ');
+        }
 
-            const fbm = document.getElementById('feedback-message'); const hintBox = document.getElementById('hint-box');
+        function showStep1TargetedHint(drill, mistakes) {
+            clearStep1Diagnostics();
 
-            if (perfect) {
-                const compiledText = data.slots2.map(s => s.label).join(' ');
-                let artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS'));
-                
-                // 학생이 동일 시나리오를 다시 통과하면 최신화(기존 값 업데이트)
-                const existingIdx = artifacts.findIndex(a => a.studentId === currentUserId && a.scenarioCode === selectedScenarioCode);
-                const record = { studentId: currentUserId, scenarioCode: selectedScenarioCode, text: compiledText, timestamp: Date.now() };
-                
-                if(existingIdx > -1) artifacts[existingIdx] = record;
-                else artifacts.push(record);
+            // Highlight only the first few incorrect locations so a single early
+            // sequencing error does not turn the entire exercise into an answer key.
+            const highlighted = mistakes.slice(0, 4);
+            highlighted.forEach(({ zone }) => {
+                if (!zone) return;
+                const wrapper = zone.closest('[data-step1-structure-wrapper="true"]');
+                if (wrapper) wrapper.classList.add('rounded-lg', 'bg-rose-50/70', 'ring-1', 'ring-rose-200', 'px-2', 'py-1');
+                zone.classList.add('border-rose-400', 'bg-rose-50', 'text-rose-500/80');
+            });
 
-                localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify(artifacts));
+            const first = mistakes[0];
+            const expectedZoneIndex = drill.shellItems.findIndex((_, idx) => {
+                const zone = document.getElementById(`target-step1-${activeParagraphId}-${idx}`);
+                return zone?.firstElementChild?.id === first.expectedId;
+            });
 
-                fbm.className = "text-xs font-bold text-emerald-600";
-                fbm.innerHTML = "🎉 통과! 당신의 작전명령서 산출물이 동료 공유 허브 및 교관 탑에 실시간 동기화되었습니다.";
-                hintBox.classList.add('hidden');
-                
-                setTimeout(() => { showScreen('hub'); }, 1500); // 통과 즉시 친구들의 창으로 바로 연결
+            const targetedIndexes = [first.idx];
+            let relationMessage = '현재 block의 계층과 앞뒤 순서를 다시 비교해 보십시오.';
+
+            if (expectedZoneIndex >= 0 && expectedZoneIndex !== first.idx) {
+                targetedIndexes.push(expectedZoneIndex);
+                relationMessage = '두 위치에 놓인 block의 순서를 서로 비교해 보십시오.';
+            } else if (!first.actualId) {
+                relationMessage = '이 위치는 비어 있습니다. pool에서 이 층위에 맞는 block을 찾아 배치해 보십시오.';
             } else {
-                fbm.className = "text-xs font-bold text-rose-500";
-                fbm.innerHTML = "⚠️ 구조적 오류: 나열 방식이 연합군 육군 교리 절차와 맞지 않습니다.";
-                hintBox.classList.remove('hidden');
+                const actualMatch = first.actualId.match(/-(\d+)$/);
+                const actualIndex = actualMatch ? Number(actualMatch[1]) : null;
+                if (actualIndex !== null && actualIndex > first.idx) {
+                    relationMessage = '현재 위치의 block은 이보다 뒤쪽 구조와 연결될 가능성이 있습니다.';
+                } else if (actualIndex !== null && actualIndex < first.idx) {
+                    relationMessage = '현재 위치의 block은 이보다 앞쪽 구조와 연결될 가능성이 있습니다.';
+                }
             }
+
+            const targets = formatStructureNumbers(targetedIndexes);
+            const otherCount = Math.max(0, mistakes.length - highlighted.length);
+            const extra = otherCount > 0 ? ` 추가로 ${otherCount}개 위치도 다시 확인해 보십시오.` : '';
+            showHint(`<strong>오류 위치 힌트:</strong> ${drill.title} OPORD structure ${targets}. ${relationMessage}${extra}`);
         }
+
+        function showHint(message) {
+            const hint = document.getElementById('hint-box');
+            hint.innerHTML = `<i class="fa-solid fa-lightbulb mr-1"></i>${message}`;
+            hint.classList.remove('hidden');
+        }
+
+        function verifyStep1() {
+            const drill = PARAGRAPH_DRILLS[activeParagraphId];
+            const mistakes = getStep1Mistakes(drill);
+            const correct = mistakes.length === 0;
+            const feedback = document.getElementById('feedback-message');
+
+            if (!correct) {
+                feedback.className = 'text-xs font-bold text-rose-500';
+                feedback.innerText = `⚠️ ${mistakes.length}개 위치에서 OPORD shell sequence가 맞지 않습니다.`;
+                showStep1TargetedHint(drill, mistakes);
+                return;
+            }
+
+            clearStep1Diagnostics();
+            markStepComplete(activeParagraphId, 1);
+            feedback.className = 'text-xs font-bold text-emerald-600';
+            feedback.innerText = '✓ Step 1 통과: OPORD shell sequence가 확인되었습니다. Step 2 language builder가 열립니다.';
+            document.getElementById('hint-box').classList.add('hidden');
+            activeBuildStep = 2;
+            loadWorkshop();
+        }
+
+
+        // When this prototype is open in another tab of the same browser, reload the relevant view after a scenario edit.
+        window.addEventListener('storage', event => {
+            if (event.key !== 'OPORD_SCENARIOS') return;
+            if (!currentUser) return;
+            const teacherVisible = !document.getElementById('screen-teacher').classList.contains('hidden');
+            const dashboardVisible = !document.getElementById('screen-dashboard').classList.contains('hidden');
+            const workshopVisible = !document.getElementById('screen-workshop').classList.contains('hidden');
+            if (teacherVisible && currentUser.role === 'teacher') renderTeacherDashboard();
+            if (dashboardVisible) renderStudentDashboard();
+            if (workshopVisible) loadWorkshop();
+        });
+
+        function getRequiredStep2Fields(paragraphId, activityType = getScenarioActivityType(getScenarioStore()[selectedScenarioCode])) {
+            if (activityType === 'lecture') return ['lectureDraft'];
+            const required = {
+                situation: ['situationAO', 'situationTerrain', 'situationEnemy', 'situationFriendly'],
+                mission: ['missionUnit', 'missionTime', 'missionTask', 'missionObjective', 'missionPurpose'],
+                execution: ['executionPurpose', 'executionEndState', 'executionConcept', 'executionPhase1', 'executionTasks', 'executionCoord'],
+                sustainment: ['sustainLogistics', 'sustainPersonnel', 'sustainHealth'],
+                commandSignal: ['commandLocation', 'commandSuccession', 'commandPost', 'commandReports', 'signalPrimary']
+            };
+            return required[paragraphId] || [];
+        }
+
+        function normalizeSentence(text) {
+            const value = String(text || '').trim();
+            if (!value) return '';
+            return /[.!?]$/.test(value) ? value : `${value}.`;
+        }
+
+        function compileStep2Writing(paragraphId, values, activityType = getScenarioActivityType(getScenarioStore()[selectedScenarioCode])) {
+            if (activityType === 'lecture') return String(values.lectureDraft || '').trim();
+            const line = (label, value) => value && String(value).trim() ? `${label}: ${String(value).trim()}` : '';
+            const checkedSupport = [
+                values.sustainClassI && 'Class I / Water',
+                values.sustainClassV && 'Class V / Ammunition',
+                values.sustainClassVIII && 'Class VIII / Medical',
+                values.sustainMaintenance && 'Maintenance',
+                values.sustainAccountability && 'Personnel Accountability',
+                values.sustainCCP && 'CCP / CASEVAC'
+            ].filter(Boolean).join(', ');
+
+            if (paragraphId === 'situation') {
+                return [
+                    line('Area of Interest', values.situationAOI),
+                    line('Area of Operations', values.situationAO),
+                    line('Terrain', values.situationTerrain),
+                    line('Weather', values.situationWeather),
+                    line('Enemy Forces', values.situationEnemy),
+                    line('Friendly Forces', values.situationFriendly),
+                    line('Civil Considerations', values.situationCivil),
+                    line('Attachments and Detachments', values.situationAttach),
+                    line('Assumptions', values.situationAssumptions)
+                ].filter(Boolean).join('\n');
+            }
+
+            if (paragraphId === 'mission') {
+                return renderMissionPreview(values);
+            }
+
+            if (paragraphId === 'execution') {
+                return [
+                    'COMMANDER’S INTENT',
+                    line('Purpose', values.executionPurpose),
+                    line('Key Tasks', values.executionKeyTasks),
+                    line('End State', values.executionEndState),
+                    '',
+                    'CONCEPT OF OPERATION',
+                    line('Concept', values.executionConcept),
+                    line('Phase I', values.executionPhase1),
+                    line('Phase II', values.executionPhase2),
+                    '',
+                    'TASKS TO SUBORDINATE UNITS',
+                    String(values.executionTasks || '').trim(),
+                    '',
+                    'COORDINATING INSTRUCTIONS',
+                    String(values.executionCoord || '').trim()
+                ].filter(item => item !== undefined && item !== null).join('\n');
+            }
+
+            if (paragraphId === 'sustainment') {
+                return [
+                    'LOGISTICS',
+                    checkedSupport ? `Planning checklist: ${checkedSupport}` : '',
+                    String(values.sustainLogistics || '').trim(),
+                    '',
+                    'PERSONNEL',
+                    String(values.sustainPersonnel || '').trim(),
+                    '',
+                    'HEALTH SERVICE SUPPORT',
+                    String(values.sustainHealth || '').trim()
+                ].filter(item => item !== undefined && item !== null).join('\n');
+            }
+
+            if (paragraphId === 'commandSignal') {
+                return [
+                    'COMMAND',
+                    line('Location of Commander', values.commandLocation),
+                    line('Succession of Command', values.commandSuccession),
+                    line('Liaison Requirements', values.commandLiaison),
+                    '',
+                    'CONTROL',
+                    line('Command Posts', values.commandPost),
+                    line('Reports', values.commandReports),
+                    '',
+                    'SIGNAL',
+                    line('Primary', values.signalPrimary),
+                    line('Alternate', values.signalAlternate),
+                    line('Contingency', values.signalContingency),
+                    line('Emergency', values.signalEmergency)
+                ].filter(item => item !== undefined && item !== null).join('\n');
+            }
+
+            return '';
+        }
+
+        function validateStep2Writing(paragraphId, values, activityType = getScenarioActivityType(getScenarioStore()[selectedScenarioCode])) {
+            const required = getRequiredStep2Fields(paragraphId, activityType);
+            const missing = required.filter(field => {
+                const value = values[field];
+                return typeof value === 'boolean' ? !value : !String(value || '').trim();
+            });
+
+            document.querySelectorAll('#step2-slots [data-step2-field]').forEach(element => {
+                element.classList.remove('border-rose-400', 'bg-rose-50');
+            });
+            missing.forEach(field => {
+                const element = document.querySelector(`#step2-slots [data-step2-field="${field}"]`);
+                if (element) element.classList.add('border-rose-400', 'bg-rose-50');
+            });
+            return missing;
+        }
+
+        function getReadableStep2FieldName(field) {
+            const names = {
+                situationAO: 'Area of Operations', situationTerrain: 'Terrain', situationEnemy: 'Enemy Forces', situationFriendly: 'Friendly Forces',
+                missionUnit: 'Who / Unit', missionTime: 'When / Time', missionTask: 'What / Task', missionObjective: 'Where / Objective', missionPurpose: 'Why / Purpose',
+                executionPurpose: 'Intent: Purpose', executionEndState: 'Intent: End State', executionConcept: 'Concept of Operation', executionPhase1: 'Phase I', executionTasks: 'Tasks to Subordinate Units', executionCoord: 'Coordinating Instructions',
+                sustainLogistics: 'Logistics Plan', sustainPersonnel: 'Personnel Plan', sustainHealth: 'Health Service Support',
+                lectureDraft: 'Team revised paragraph', commandLocation: 'Location of Commander', commandSuccession: 'Succession of Command', commandPost: 'Command Posts', commandReports: 'Reports', signalPrimary: 'Primary Signal'
+            };
+            return names[field] || field;
+        }
+
+        function verifyStep2() {
+            const values = getStep2FormValues();
+            const data = getScenarioStore()[selectedScenarioCode] || defaultScenarios['OPORD-01'];
+            const activityType = getScenarioActivityType(data);
+            const missing = validateStep2Writing(activeParagraphId, values, activityType);
+            const feedback = document.getElementById('feedback-message');
+            const drill = PARAGRAPH_DRILLS[activeParagraphId];
+
+            if (missing.length) {
+                feedback.className = 'text-xs font-bold text-rose-500';
+                feedback.innerText = `⚠️ ${missing.length}개의 required writing field를 더 작성하십시오.`;
+                const labels = missing.slice(0, 4).map(getReadableStep2FieldName).join(', ');
+                const extra = missing.length > 4 ? ` 외 ${missing.length - 4}개` : '';
+                showHint(`<strong>Writing check:</strong> 아직 비어 있는 핵심 항목은 ${labels}${extra}입니다. 팀에서 역할을 나누어 먼저 이 부분을 완성해 보십시오.`);
+                return;
+            }
+
+            const compiledText = compileStep2Writing(activeParagraphId, values, activityType);
+            if (!compiledText.trim()) {
+                feedback.className = 'text-xs font-bold text-rose-500';
+                feedback.innerText = '⚠️ 작성된 내용이 없습니다.';
+                showHint('팀의 문단 내용을 작성한 뒤 다시 제출하십시오.');
+                return;
+            }
+
+            const draftStore = getStep2DraftStore();
+            draftStore[step2DraftKey()] = values;
+            saveStep2DraftStore(draftStore);
+
+            let artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+            const existingIndex = artifacts.findIndex(artifact =>
+                artifact.studentId === currentUserId &&
+                artifact.scenarioCode === selectedScenarioCode &&
+                getArtifactParagraphId(artifact) === activeParagraphId
+            );
+            const existingArtifact = existingIndex > -1 ? artifacts[existingIndex] : null;
+            const record = {
+                id: existingArtifact?.id || `artifact-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+                studentId: currentUserId,
+                scenarioCode: selectedScenarioCode,
+                paragraphId: activeParagraphId,
+                paragraphTitle: `${drill.number}. ${drill.title}`,
+                text: compiledText,
+                formData: values,
+                artifactMode: activityType === 'lecture' ? 'lecture-open-writing-v1' : 'code-guided-writing-v1',
+                timestamp: Date.now()
+            };
+            if (existingIndex > -1) artifacts[existingIndex] = record;
+            else artifacts.push(record);
+            localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify(artifacts));
+
+            markStepComplete(activeParagraphId, 2);
+            feedback.className = 'text-xs font-bold text-emerald-600';
+            feedback.innerText = activityType === 'lecture' ? `🎉 ${drill.title} revised paragraph가 저장되고 공유 허브에 제출되었습니다.` : `🎉 ${drill.title} team writing artifact가 저장되고 공유 허브에 제출되었습니다.`;
+            document.getElementById('hint-box').classList.add('hidden');
+            loadWorkshop();
+        }
+
     </script>
 </body>
 </html>
