@@ -724,10 +724,41 @@
             }
         };
 
+        // OPORD-01 Step 2 begins with the two thinking prompts used in the lecture deck.
+        // This is deliberately lighter than OPORD-02: learners identify what the clip shows before they write a full OPORD.
+        const OPORD01_THINKING_PROMPTS = {
+            situation: [
+                'Based on the script, what is the terrain / weather’s effect on the operation?',
+                'What detailed information about Enemy / Friendly forces is missing or needs clarification?'
+            ],
+            mission: [
+                'What is wrong or incomplete in this mission message? Check conciseness, tense, and the five Ws.',
+                'Which who, what, when, where, and why details must be added before it becomes a clear mission statement?'
+            ],
+            execution: [
+                'What is this briefing about?',
+                'Which aspects of Execution do you see? Identify the commander’s intent, concept / scheme, tasks, or coordinating instructions.'
+            ],
+            sustainment: [
+                'What supplies, personnel support, and casualty-care support will this unit need?',
+                'How will the team plan resupply, accountability, and evacuation?'
+            ],
+            commandSignal: [
+                'What components of Command and Signal do you see in the clip?',
+                'What would you add or revise to make the command-and-signal plan more usable?'
+            ]
+        };
+
+        function isOpord01ThinkingPromptActivity(data, paragraphId = activeParagraphId) {
+            return data?.code === 'OPORD-01'
+                && getScenarioActivityType(data) === 'lecture'
+                && Array.isArray(OPORD01_THINKING_PROMPTS[paragraphId]);
+        }
+
         // One-time course-content refresh. It updates only OPORD-01 in a browser that
         // previously stored an older prototype, while leaving OPORD-02 and custom activities intact.
-        // Version v3 also adds a clearly labeled non-video sample script for Sustainment.
-        const VIDEO_DICTATION_CONTENT_VERSION = 'opord-video-dictation-v3';
+        // Version v4 changes OPORD-01 Step 2 from open-ended paragraph drafting to two guided thinking responses per paragraph.
+        const VIDEO_DICTATION_CONTENT_VERSION = 'opord-video-dictation-v4';
 
         function applyVideoDictationContentRefresh() {
             if (localStorage.getItem('OPORD_VIDEO_DICTATION_CONTENT_VERSION') === VIDEO_DICTATION_CONTENT_VERSION) return;
@@ -781,6 +812,48 @@
         }
 
         applyVideoDictationContentRefresh();
+
+        // One-time OPORD-02 form refresh. Earlier Code Your Way forms included
+        // higher-echelon / unrelated fields. This version resets only OPORD-02
+        // local Step 2 test state so the revised company-and-below shell opens cleanly.
+        const OPORD02_COMPANY_SHELL_FORM_VERSION = 'opord02-company-shell-v2';
+
+        function applyOpord02CompanyShellFormRefresh() {
+            if (localStorage.getItem('OPORD02_COMPANY_SHELL_FORM_VERSION') === OPORD02_COMPANY_SHELL_FORM_VERSION) return;
+
+            const pruneObjectByScenario = (key) => {
+                try {
+                    const raw = JSON.parse(localStorage.getItem(key)) || {};
+                    Object.keys(raw).forEach(itemKey => {
+                        if (itemKey.includes('::OPORD-02::')) delete raw[itemKey];
+                    });
+                    localStorage.setItem(key, JSON.stringify(raw));
+                } catch (error) {
+                    // Ignore malformed prototype cache; the app recreates it as needed.
+                }
+            };
+
+            pruneObjectByScenario('OPORD_WORKSHOP_PROGRESS');
+            pruneObjectByScenario('OPORD_STEP2_GUIDED_DRAFTS');
+
+            try {
+                const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+                localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify(artifacts.filter(artifact => artifact.scenarioCode !== 'OPORD-02')));
+            } catch (error) {
+                // Ignore malformed prototype cache.
+            }
+
+            try {
+                const comments = JSON.parse(localStorage.getItem('OPORD_COMMENTS')) || [];
+                localStorage.setItem('OPORD_COMMENTS', JSON.stringify(comments.filter(comment => !String(comment.artifactKey || '').includes('::OPORD-02::'))));
+            } catch (error) {
+                // Ignore malformed prototype cache.
+            }
+
+            localStorage.setItem('OPORD02_COMPANY_SHELL_FORM_VERSION', OPORD02_COMPANY_SHELL_FORM_VERSION);
+        }
+
+        applyOpord02CompanyShellFormRefresh();
 
         let editingScenarioCode = null;
 
@@ -1723,11 +1796,11 @@
 
         function renderTeamProcess(paragraphId) {
             const processes = {
-                situation: '<strong>Team interaction:</strong> 1) Read the reference cards together. 2) Assign one member to terrain/weather, one to enemy, one to friendly forces, and one to edit concise entries. 3) Check that each line explains an operational effect.',
+                situation: '<strong>Team interaction:</strong> Assign one member to AOI/AO and terrain-weather, one to enemy, one to friendly-force relationships, and one to attachments/detachments. Edit for operational effect and brevity.',
                 mission: '<strong>Team interaction:</strong> One member proposes the 5W elements, one checks tactical verb + objective, and the group reads the final mission statement aloud before submitting.',
                 execution: '<strong>Suggested team roles:</strong> Commander—intent; Planner—concept/phases; Platoon leaders—tasks; RTO—coordinating instructions; Editor—clarity and brevity check.',
-                sustainment: '<strong>Team interaction:</strong> The logistics lead selects support priorities, the personnel/medic lead drafts accountability and casualty support, and the editor turns them into three concise OPORD entries.',
-                commandSignal: '<strong>Suggested team roles:</strong> Commander—location and succession; XO—control and reports; RTO—PACE communication plan; Editor—checks that every field is actionable.'
+                sustainment: '<strong>Team interaction:</strong> Assign a logistics lead for supply/distribution, a personnel lead for personnel services support, and a medic lead for TCCC. The editor checks that the entries follow the Step 1 shell.',
+                commandSignal: '<strong>Suggested team roles:</strong> Commander—location and succession; XO—command-post control; RTO—radio/PACE/password/pyrotechnic plan; Editor—checks that every field is actionable.'
             };
             return `<div class="rounded-lg border border-indigo-100 bg-indigo-50/70 px-3 py-2 text-[10px] leading-relaxed text-indigo-800"><i class="fa-solid fa-people-group mr-1"></i>${processes[paragraphId] || ''}</div>`;
         }
@@ -1753,17 +1826,22 @@
         function renderSituationWriting(values) {
             return `
                 ${renderTeamProcess('situation')}
-                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing target:</strong> Write concise operational entries. Do not copy the reference cards word-for-word; explain what matters for this scenario.</div>
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing target:</strong> Follow the same company-and-below shell used in Step 1. Write concise operational entries; do not copy the reference cards word-for-word.</div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    ${step2TextArea('situationAOI', 'Area of Interest', values.situationAOI, 'e.g., Northern approaches to OBJ ...', false, 'What wider area can affect this mission?', 2)}
-                    ${step2TextArea('situationAO', 'Area of Operations', values.situationAO, 'e.g., Company sector around ...', true, 'Where will the unit actually operate?', 2)}
-                    ${step2TextArea('situationTerrain', 'Terrain', values.situationTerrain, 'e.g., Hill 402 dominates ...', true, 'State the operational effect, not only the feature.', 2)}
-                    ${step2TextArea('situationWeather', 'Weather', values.situationWeather, 'e.g., Fog after 2200 limits ...', false, 'Visibility, wind, precipitation, BMNT/EENT, etc.', 2)}
-                    ${step2TextArea('situationEnemy', 'Enemy Forces', values.situationEnemy, 'e.g., Squad-sized element occupies ...', true, 'Size, activity, location, capability, intent.', 2)}
-                    ${step2TextArea('situationFriendly', 'Friendly Forces', values.situationFriendly, 'e.g., 1st Platoon fixes enemy forces ...', true, 'Higher, adjacent, or supporting unit relationship.', 2)}
-                    ${step2TextArea('situationCivil', 'Civil Considerations', values.situationCivil, 'e.g., Civilian traffic likely near ...', false, '', 2)}
-                    ${step2TextArea('situationAttach', 'Attachments and Detachments', values.situationAttach, 'e.g., One engineer team attached ...', false, '', 2)}
-                    ${step2TextArea('situationAssumptions', 'Assumptions', values.situationAssumptions, 'e.g., Bridge remains passable until ...', false, '', 2)}
+                    ${step2TextArea('situationAOI', 'Area of Interest', values.situationAOI, 'e.g., Eastern approaches to Outpost EAGLE ...', true, 'What wider area can affect this mission?', 2)}
+                    ${step2TextArea('situationAO', 'Area of Operations', values.situationAO, 'e.g., Company defensive sector around ...', true, 'Where will the unit actually operate?', 2)}
+                    ${step2TextArea('situationTerrain', 'Terrain', values.situationTerrain, 'e.g., Draws east of the outpost provide ...', true, 'State the operational effect, not only the feature.', 2)}
+                    ${step2TextArea('situationWeather', 'Weather', values.situationWeather, 'e.g., Fog after 2200 limits ...', true, 'Visibility, wind, precipitation, BMNT/EENT, etc.', 2)}
+                    ${step2TextArea('situationEnemy', 'Enemy Forces (Latest Intelligence)', values.situationEnemy, 'e.g., Platoon-sized element assessed to infiltrate ...', true, 'Composition, strength, capability, location, and likely COA.', 2)}
+                    <div class="md:col-span-2 rounded-lg border border-indigo-100 bg-indigo-50/50 p-3">
+                        <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-indigo-800">Friendly Forces</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            ${step2TextArea('situationTwoLevelsUp', 'Two Levels Up', values.situationTwoLevelsUp, 'e.g., Battalion conducts ...', true, 'State the mission or purpose that frames this unit.', 2)}
+                            ${step2TextArea('situationOneLevelUp', 'One Level Up', values.situationOneLevelUp, 'e.g., Company establishes ...', true, 'State the higher unit’s mission / intent.', 2)}
+                            ${step2TextArea('situationAdjacent', 'Adjacent Units', values.situationAdjacent, 'e.g., 1st Platoon secures ...', true, 'State relationship and task of adjacent/supporting units.', 2)}
+                        </div>
+                    </div>
+                    ${step2TextArea('situationAttach', 'Attachments and Detachments', values.situationAttach, 'e.g., One medic team attached to ... / None.', true, 'State attached/detached support, or write “None.”', 2)}
                 </div>
             `;
         }
@@ -1805,21 +1883,24 @@
         function renderSustainmentWriting(values) {
             return `
                 ${renderTeamProcess('sustainment')}
-                <div class="rounded-lg border border-amber-100 bg-white/70 p-3">
-                    <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-amber-800">Support planning checklist</p>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        ${step2Checkbox('sustainClassI', 'Class I / Water', values.sustainClassI)}
-                        ${step2Checkbox('sustainClassV', 'Class V / Ammunition', values.sustainClassV)}
-                        ${step2Checkbox('sustainClassVIII', 'Class VIII / Medical', values.sustainClassVIII)}
-                        ${step2Checkbox('sustainMaintenance', 'Maintenance', values.sustainMaintenance)}
-                        ${step2Checkbox('sustainAccountability', 'Personnel Accountability', values.sustainAccountability)}
-                        ${step2Checkbox('sustainCCP', 'CCP / CASEVAC', values.sustainCCP)}
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing target:</strong> Use the Step 1 company-and-below Sustainment shell. Cover the logistics, personnel-services, and TCCC details the unit can actually use.</div>
+                <div class="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3">
+                    <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-indigo-800">Logistic</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        ${step2TextArea('sustainSupplyFieldServices', 'Supply and Field Services', values.sustainSupplyFieldServices, 'Water / food / ammunition / fuel / battery: ...', true, 'State what is available or how it will be provided.', 3)}
+                        ${step2TextArea('sustainDistributionResupply', 'Distribution and Resupply Operations', values.sustainDistributionResupply, 'Airdrop / drone delivery / foot delivery / on-site exploitation: ...', true, 'State how and when resupply will reach the unit.', 3)}
+                        ${step2TextArea('sustainMaintenance', 'Maintenance', values.sustainMaintenance, 'Weapons / vehicles / communications equipment: ...', false, 'Write “None” when not required.', 3)}
+                        ${step2TextArea('sustainTransportation', 'Transportation (When Required)', values.sustainTransportation, 'Vehicle / CASEVAC vehicle / other transport: ...', false, 'Write “None” when not required.', 3)}
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    ${step2TextArea('sustainLogistics', 'Logistics Plan', values.sustainLogistics, 'Resupply / distribution / maintenance instructions.', true, '', 4)}
-                    ${step2TextArea('sustainPersonnel', 'Personnel Plan', values.sustainPersonnel, 'Accountability / personnel reporting instructions.', true, '', 4)}
-                    ${step2TextArea('sustainHealth', 'Health Service Support', values.sustainHealth, 'TCCC / CCP / evacuation instructions.', true, '', 4)}
+                ${step2TextArea('sustainPersonnelServices', 'Personnel Services Support', values.sustainPersonnelServices, 'Accountability / EPW / replacement / reporting instructions: ...', true, 'Use the Step 1 heading exactly; state the personnel-support instructions.', 4)}
+                <div class="rounded-lg border border-rose-100 bg-rose-50/40 p-3">
+                    <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-rose-800">Tactical Combat Casualty Care</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        ${step2TextArea('sustainCareUnderFire', 'Care Under Fire', values.sustainCareUnderFire, 'e.g., Return fire, move to cover, apply tourniquet when feasible: ...', true, '', 3)}
+                        ${step2TextArea('sustainTacticalFieldCare', 'Tactical Field Care', values.sustainTacticalFieldCare, 'e.g., Treat at CCP / prepare casualty card / reassess: ...', true, '', 3)}
+                        ${step2TextArea('sustainTacticalEvacuation', 'Tactical Evacuation', values.sustainTacticalEvacuation, 'CASEVAC / MEDEVAC / CCP / HLZ-LZ plan: ...', true, '', 3)}
+                    </div>
                 </div>
             `;
         }
@@ -1827,20 +1908,27 @@
         function renderCommandSignalWriting(values) {
             return `
                 ${renderTeamProcess('commandSignal')}
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing target:</strong> Use the Step 1 company-and-below Command and Signal shell. Keep locations, communications, passwords, and visual signals immediately usable.</div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    ${step2TextArea('commandLocation', 'Command: Location of Commander', values.commandLocation, 'e.g., The commander moves with ...', true, '', 2)}
-                    ${step2TextArea('commandSuccession', 'Command: Succession of Command', values.commandSuccession, 'e.g., The XO assumes command if ...', true, '', 2)}
-                    ${step2TextArea('commandLiaison', 'Command: Liaison Requirements', values.commandLiaison, 'e.g., Liaison with adjacent unit at ...', false, '', 2)}
-                    ${step2TextArea('commandPost', 'Control: Command Posts', values.commandPost, 'e.g., Company CP located at ...', true, '', 2)}
-                    ${step2TextArea('commandReports', 'Control: Reports', values.commandReports, 'e.g., Submit SITREP at ... / Report when ...', true, '', 2)}
+                    ${step2TextArea('commandLocation', 'Command (Location of Leaders)', values.commandLocation, 'e.g., Platoon leader moves with the main effort ...', true, '', 2)}
+                    ${step2TextArea('commandSuccession', 'Command: Succession of Command', values.commandSuccession, 'e.g., Platoon sergeant assumes command if ...', true, 'Use this supporting detail to make command continuity clear.', 2)}
+                    ${step2TextArea('commandPost', 'Control (Command Post Location)', values.commandPost, 'e.g., Company CP is located at ...', true, '', 2)}
                 </div>
-                <div class="rounded-lg border border-indigo-100 bg-indigo-50/60 p-3">
-                    <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-indigo-800">Signal: PACE communication plan</p>
+                <div class="rounded-lg border border-indigo-100 bg-indigo-50/60 p-3 space-y-3">
+                    <p class="text-[10px] font-black uppercase tracking-wider text-indigo-800">Signal</p>
+                    ${step2TextArea('signalRadioFrequencies', 'Radio Frequencies', values.signalRadioFrequencies, 'e.g., Company command net / platoon internal net / CEOI reference: ...', true, 'Identify the net / radio-frequency arrangement or CEOI reference.', 2)}
+                    <div class="rounded border border-indigo-100 bg-white/70 p-3">
+                        <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-indigo-800">PACE Communication Plan</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            ${step2TextInput('signalPrimary', 'Primary', values.signalPrimary, 'e.g., Company command net', true)}
+                            ${step2TextInput('signalAlternate', 'Alternate', values.signalAlternate, 'e.g., Platoon internal net', false)}
+                            ${step2TextInput('signalContingency', 'Contingency', values.signalContingency, 'e.g., Runner / messenger', false)}
+                            ${step2TextInput('signalEmergency', 'Emergency', values.signalEmergency, 'e.g., Emergency signal / pyrotechnic', false)}
+                        </div>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        ${step2TextInput('signalPrimary', 'Primary', values.signalPrimary, 'e.g., Company command net', true)}
-                        ${step2TextInput('signalAlternate', 'Alternate', values.signalAlternate, 'e.g., Platoon internal net', false)}
-                        ${step2TextInput('signalContingency', 'Contingency', values.signalContingency, 'e.g., Runner / messenger', false)}
-                        ${step2TextInput('signalEmergency', 'Emergency', values.signalEmergency, 'e.g., Emergency signal / pyrotechnic', false)}
+                        ${step2TextArea('signalPasswords', 'Passwords / Running Passwords', values.signalPasswords, 'Number combination / challenge password / running password: ...', true, 'Include only fictional classroom examples.', 3)}
+                        ${step2TextArea('signalPyrotechnic', 'Pyrotechnic Signals', values.signalPyrotechnic, 'Signal / meaning / condition for use: ...', true, 'Write “None” when no pyrotechnic signal is assigned.', 3)}
                     </div>
                 </div>
             `;
@@ -1857,6 +1945,19 @@
             return prompts[paragraphId] || 'Write your revised OPORD paragraph here.';
         }
 
+        function renderLectureThinkingPrompts(data, drill, values) {
+            const prompts = OPORD01_THINKING_PROMPTS[activeParagraphId] || [];
+            const [prompt1 = 'What did you notice?', prompt2 = 'How would you improve it?'] = prompts;
+            return `
+                <div class="rounded-lg border border-violet-100 bg-violet-50/70 px-3 py-2 text-[10px] leading-relaxed text-violet-900"><i class="fa-solid fa-comments mr-1"></i><strong>Lecture-in-class thinking workflow:</strong> Read or watch the reference together. After completing the Step 1 shell, answer the two questions below in short team notes. <strong>Do not draft the full OPORD paragraph yet;</strong> that full construction belongs to OPORD-02.</div>
+                <div class="grid grid-cols-1 gap-3">
+                    ${step2TextArea('lectureResponse1', 'Thinking prompt 1', values.lectureResponse1 || '', prompt1, true, prompt1, 4)}
+                    ${step2TextArea('lectureResponse2', 'Thinking prompt 2', values.lectureResponse2 || '', prompt2, true, prompt2, 4)}
+                </div>
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Quick self-check:</strong> Did the team answer both questions with evidence from the video/script and phrase bank? Keep the notes short and specific; full OPORD drafting comes next in OPORD-02.</div>
+            `;
+        }
+
         function renderLectureOpenWriting(data, drill, values) {
             const existingArtifact = getCurrentStep2Artifact();
             const draftValue = values.lectureDraft || existingArtifact?.text || '';
@@ -1868,6 +1969,9 @@
         }
 
         function renderStep2WritingForm(data, drill, values) {
+            if (isOpord01ThinkingPromptActivity(data)) {
+                return renderLectureThinkingPrompts(data, drill, values);
+            }
             if (getScenarioActivityType(data) === 'lecture') {
                 return renderLectureOpenWriting(data, drill, values);
             }
@@ -1891,14 +1995,21 @@
             const instruction = document.getElementById('step2-instruction');
             const heading = document.getElementById('step2-heading');
             const activityType = getScenarioActivityType(data);
-            if (heading) heading.innerHTML = activityType === 'lecture'
-                ? '<i class="fa-solid fa-pen-to-square mr-1"></i>Step 2: Lecture Revision Writing'
-                : '<i class="fa-solid fa-people-group mr-1"></i>Step 2: Code Your Way Team Writing';
+            const isThinkingPromptActivity = isOpord01ThinkingPromptActivity(data);
+            if (heading) heading.innerHTML = isThinkingPromptActivity
+                ? '<i class="fa-solid fa-comments mr-1"></i>Step 2: Guided Thinking Prompts'
+                : (activityType === 'lecture'
+                    ? '<i class="fa-solid fa-pen-to-square mr-1"></i>Step 2: Lecture Revision Writing'
+                    : '<i class="fa-solid fa-people-group mr-1"></i>Step 2: Code Your Way Team Writing');
             step2Slots.innerHTML = '';
 
             if (!step1Complete) {
                 panel.classList.add('step-locked');
-                instruction.innerText = activityType === 'lecture' ? 'Step 1의 OPORD shell sequence를 통과하면 팀의 open-ended revision workspace가 열립니다.' : 'Step 1의 OPORD shell sequence를 통과하면 Code Your Way team writing workspace가 열립니다.';
+                instruction.innerText = isThinkingPromptActivity
+                    ? 'Step 1의 OPORD shell sequence를 통과하면 영상·스크립트 기반의 두 가지 thinking prompt가 열립니다.'
+                    : (activityType === 'lecture'
+                        ? 'Step 1의 OPORD shell sequence를 통과하면 팀의 open-ended revision workspace가 열립니다.'
+                        : 'Step 1의 OPORD shell sequence를 통과하면 Code Your Way team writing workspace가 열립니다.');
                 status.className = 'text-[10px] rounded bg-slate-200 px-2 py-1 font-bold text-slate-500';
                 status.innerText = 'Locked until Step 1';
                 step2Slots.innerHTML = `<div class="rounded-lg border border-dashed border-amber-200 bg-white/60 px-4 py-5 text-center text-[11px] text-slate-400"><i class="fa-solid fa-lock mr-1"></i> First construct the OPORD shell.</div>`;
@@ -1910,9 +2021,11 @@
             panel.classList.remove('step-locked');
             if (complete) {
                 const artifact = getCurrentStep2Artifact();
-                instruction.innerText = '제출된 team writing artifact입니다. 수정 · 재작성으로 다시 열어 내용을 보완할 수 있습니다.';
+                instruction.innerText = isThinkingPromptActivity
+                    ? '제출된 guided thinking responses입니다. 수정 · 재작성으로 다시 열어 팀의 관찰을 보완할 수 있습니다.'
+                    : '제출된 team writing artifact입니다. 수정 · 재작성으로 다시 열어 내용을 보완할 수 있습니다.';
                 status.className = 'text-[10px] rounded bg-emerald-100 px-2 py-1 font-bold text-emerald-700';
-                status.innerText = 'Submitted writing artifact';
+                status.innerText = isThinkingPromptActivity ? 'Submitted thinking responses' : 'Submitted writing artifact';
                 step2Slots.innerHTML = `
                     <div class="rounded-xl border border-emerald-200 bg-white p-3">
                         <div class="mb-2 flex items-center justify-between gap-2"><span class="text-[10px] font-black uppercase tracking-wider text-emerald-700"><i class="fa-solid fa-check-circle mr-1"></i>Team paragraph output</span><span class="text-[9px] text-slate-400">Shared to artifact pile-up</span></div>
@@ -1926,11 +2039,17 @@
             }
 
             const values = getStep2SeedValues();
-            instruction.innerText = drill.step2Prompt;
+            instruction.innerText = isThinkingPromptActivity
+                ? '영상·스크립트와 phrase bank를 근거로 아래 두 thinking prompt에 짧고 구체적인 팀 답변을 작성하십시오.'
+                : drill.step2Prompt;
             status.className = 'text-[10px] rounded bg-amber-100 px-2 py-1 font-bold text-amber-800';
-            status.innerText = activityType === 'lecture' ? 'Lecture revision draft' : drill.step2Title;
+            status.innerText = isThinkingPromptActivity ? 'Guided thinking responses' : (activityType === 'lecture' ? 'Lecture revision draft' : drill.step2Title);
             verifyBtn.classList.remove('hidden');
-            verifyBtn.innerHTML = activityType === 'lecture' ? '<i class="fa-solid fa-cloud-arrow-up"></i> Revised Paragraph 제출 및 공유' : '<i class="fa-solid fa-cloud-arrow-up"></i> Team Writing 제출 및 공유';
+            verifyBtn.innerHTML = isThinkingPromptActivity
+                ? '<i class="fa-solid fa-cloud-arrow-up"></i> Thinking Responses 제출 및 공유'
+                : (activityType === 'lecture'
+                    ? '<i class="fa-solid fa-cloud-arrow-up"></i> Revised Paragraph 제출 및 공유'
+                    : '<i class="fa-solid fa-cloud-arrow-up"></i> Team Writing 제출 및 공유');
             resetBtn.classList.add('hidden');
             step2Slots.innerHTML = renderStep2WritingForm(data, drill, values);
             refreshStep2LivePreview();
@@ -1963,15 +2082,21 @@
                 title.innerHTML = activityType === 'lecture'
                     ? '<i class="fa-solid fa-chalkboard-user"></i> Lecture Reference & Phrase Bank'
                     : '<i class="fa-solid fa-map-location-dot"></i> Scenario Reference & Phrase Bank';
-                note.innerHTML = activityType === 'lecture'
-                    ? '교관이 입력한 영상 스크립트·예문을 참고하되, Step 2에는 팀의 수정문을 자기 말로 작성하십시오.'
-                    : '교관이 제공한 scenario reference를 참고하되, Step 2에서는 팀의 own wording으로 작성하십시오.';
+                note.innerHTML = isOpord01ThinkingPromptActivity(data)
+                    ? '영상 스크립트·phrase bank를 참고하여 Step 2의 두 thinking prompt에 팀의 짧은 근거 답변을 작성하십시오. 전체 OPORD 작성은 OPORD-02에서 합니다.'
+                    : (activityType === 'lecture'
+                        ? '교관이 입력한 영상 스크립트·예문을 참고하되, Step 2에는 팀의 수정문을 자기 말로 작성하십시오.'
+                        : '교관이 제공한 scenario reference를 참고하되, Step 2에서는 팀의 own wording으로 작성하십시오.');
                 pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
                 return;
             }
 
             title.innerHTML = '<i class="fa-solid fa-circle-check"></i> Paragraph Submitted';
-            note.innerHTML = activityType === 'lecture' ? '이 paragraph의 shell과 lecture revision draft가 모두 제출되었습니다.' : '이 paragraph의 Step 1 shell과 Step 2 team writing이 모두 완료되었습니다.';
+            note.innerHTML = isOpord01ThinkingPromptActivity(data)
+                ? '이 paragraph의 shell과 두 guided thinking responses가 모두 제출되었습니다.'
+                : (activityType === 'lecture'
+                    ? '이 paragraph의 shell과 lecture revision draft가 모두 제출되었습니다.'
+                    : '이 paragraph의 Step 1 shell과 Step 2 team writing이 모두 완료되었습니다.');
             pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
         }
 
@@ -2162,13 +2287,15 @@
         });
 
         function getRequiredStep2Fields(paragraphId, activityType = getScenarioActivityType(getScenarioStore()[selectedScenarioCode])) {
+            const activeScenario = getScenarioStore()[selectedScenarioCode];
+            if (isOpord01ThinkingPromptActivity(activeScenario, paragraphId)) return ['lectureResponse1', 'lectureResponse2'];
             if (activityType === 'lecture') return ['lectureDraft'];
             const required = {
-                situation: ['situationAO', 'situationTerrain', 'situationEnemy', 'situationFriendly'],
+                situation: ['situationAOI', 'situationAO', 'situationTerrain', 'situationWeather', 'situationEnemy', 'situationTwoLevelsUp', 'situationOneLevelUp', 'situationAdjacent', 'situationAttach'],
                 mission: ['missionUnit', 'missionTime', 'missionTask', 'missionObjective', 'missionPurpose'],
                 execution: ['executionPurpose', 'executionEndState', 'executionConcept', 'executionPhase1', 'executionTasks', 'executionCoord'],
-                sustainment: ['sustainLogistics', 'sustainPersonnel', 'sustainHealth'],
-                commandSignal: ['commandLocation', 'commandSuccession', 'commandPost', 'commandReports', 'signalPrimary']
+                sustainment: ['sustainSupplyFieldServices', 'sustainDistributionResupply', 'sustainPersonnelServices', 'sustainCareUnderFire', 'sustainTacticalFieldCare', 'sustainTacticalEvacuation'],
+                commandSignal: ['commandLocation', 'commandSuccession', 'commandPost', 'signalRadioFrequencies', 'signalPrimary', 'signalPasswords', 'signalPyrotechnic']
             };
             return required[paragraphId] || [];
         }
@@ -2180,29 +2307,42 @@
         }
 
         function compileStep2Writing(paragraphId, values, activityType = getScenarioActivityType(getScenarioStore()[selectedScenarioCode])) {
+            const activeScenario = getScenarioStore()[selectedScenarioCode];
+            if (isOpord01ThinkingPromptActivity(activeScenario, paragraphId)) {
+                const prompts = OPORD01_THINKING_PROMPTS[paragraphId] || [];
+                return [
+                    'GUIDED THINKING RESPONSES',
+                    '',
+                    `1. ${prompts[0] || 'Thinking prompt 1'}`,
+                    String(values.lectureResponse1 || '').trim(),
+                    '',
+                    `2. ${prompts[1] || 'Thinking prompt 2'}`,
+                    String(values.lectureResponse2 || '').trim()
+                ].join('\n').trim();
+            }
             if (activityType === 'lecture') return String(values.lectureDraft || '').trim();
             const line = (label, value) => value && String(value).trim() ? `${label}: ${String(value).trim()}` : '';
-            const checkedSupport = [
-                values.sustainClassI && 'Class I / Water',
-                values.sustainClassV && 'Class V / Ammunition',
-                values.sustainClassVIII && 'Class VIII / Medical',
-                values.sustainMaintenance && 'Maintenance',
-                values.sustainAccountability && 'Personnel Accountability',
-                values.sustainCCP && 'CCP / CASEVAC'
-            ].filter(Boolean).join(', ');
-
             if (paragraphId === 'situation') {
                 return [
-                    line('Area of Interest', values.situationAOI),
-                    line('Area of Operations', values.situationAO),
+                    'AREA OF INTEREST',
+                    String(values.situationAOI || '').trim(),
+                    '',
+                    'AREA OF OPERATIONS',
+                    String(values.situationAO || '').trim(),
                     line('Terrain', values.situationTerrain),
                     line('Weather', values.situationWeather),
-                    line('Enemy Forces', values.situationEnemy),
-                    line('Friendly Forces', values.situationFriendly),
-                    line('Civil Considerations', values.situationCivil),
-                    line('Attachments and Detachments', values.situationAttach),
-                    line('Assumptions', values.situationAssumptions)
-                ].filter(Boolean).join('\n');
+                    '',
+                    'ENEMY FORCES (LATEST INTELLIGENCE)',
+                    String(values.situationEnemy || '').trim(),
+                    '',
+                    'FRIENDLY FORCES',
+                    line('Two Levels Up', values.situationTwoLevelsUp),
+                    line('One Level Up', values.situationOneLevelUp),
+                    line('Adjacent Units', values.situationAdjacent),
+                    '',
+                    'ATTACHMENTS AND DETACHMENTS',
+                    String(values.situationAttach || '').trim()
+                ].filter(item => item !== undefined && item !== null).join('\n');
             }
 
             if (paragraphId === 'mission') {
@@ -2231,34 +2371,40 @@
 
             if (paragraphId === 'sustainment') {
                 return [
-                    'LOGISTICS',
-                    checkedSupport ? `Planning checklist: ${checkedSupport}` : '',
-                    String(values.sustainLogistics || '').trim(),
+                    'LOGISTIC',
+                    line('Supply and Field Services', values.sustainSupplyFieldServices),
+                    line('Distribution and Resupply Operations', values.sustainDistributionResupply),
+                    line('Maintenance', values.sustainMaintenance),
+                    line('Transportation (When Required)', values.sustainTransportation),
                     '',
-                    'PERSONNEL',
-                    String(values.sustainPersonnel || '').trim(),
+                    'PERSONNEL SERVICES SUPPORT',
+                    String(values.sustainPersonnelServices || '').trim(),
                     '',
-                    'HEALTH SERVICE SUPPORT',
-                    String(values.sustainHealth || '').trim()
+                    'TACTICAL COMBAT CASUALTY CARE',
+                    line('Care Under Fire', values.sustainCareUnderFire),
+                    line('Tactical Field Care', values.sustainTacticalFieldCare),
+                    line('Tactical Evacuation', values.sustainTacticalEvacuation)
                 ].filter(item => item !== undefined && item !== null).join('\n');
             }
 
             if (paragraphId === 'commandSignal') {
                 return [
-                    'COMMAND',
-                    line('Location of Commander', values.commandLocation),
+                    'COMMAND (LOCATION OF LEADERS)',
+                    String(values.commandLocation || '').trim(),
                     line('Succession of Command', values.commandSuccession),
-                    line('Liaison Requirements', values.commandLiaison),
                     '',
-                    'CONTROL',
-                    line('Command Posts', values.commandPost),
-                    line('Reports', values.commandReports),
+                    'CONTROL (COMMAND POST LOCATION)',
+                    String(values.commandPost || '').trim(),
                     '',
                     'SIGNAL',
+                    line('Radio Frequencies', values.signalRadioFrequencies),
+                    'PACE Communication Plan',
                     line('Primary', values.signalPrimary),
                     line('Alternate', values.signalAlternate),
                     line('Contingency', values.signalContingency),
-                    line('Emergency', values.signalEmergency)
+                    line('Emergency', values.signalEmergency),
+                    line('Passwords / Running Passwords', values.signalPasswords),
+                    line('Pyrotechnic Signals', values.signalPyrotechnic)
                 ].filter(item => item !== undefined && item !== null).join('\n');
             }
 
@@ -2284,11 +2430,11 @@
 
         function getReadableStep2FieldName(field) {
             const names = {
-                situationAO: 'Area of Operations', situationTerrain: 'Terrain', situationEnemy: 'Enemy Forces', situationFriendly: 'Friendly Forces',
+                situationAOI: 'Area of Interest', situationAO: 'Area of Operations', situationTerrain: 'Terrain', situationWeather: 'Weather', situationEnemy: 'Enemy Forces (Latest Intelligence)', situationTwoLevelsUp: 'Two Levels Up', situationOneLevelUp: 'One Level Up', situationAdjacent: 'Adjacent Units', situationAttach: 'Attachments and Detachments',
                 missionUnit: 'Who / Unit', missionTime: 'When / Time', missionTask: 'What / Task', missionObjective: 'Where / Objective', missionPurpose: 'Why / Purpose',
                 executionPurpose: 'Intent: Purpose', executionEndState: 'Intent: End State', executionConcept: 'Concept of Operation', executionPhase1: 'Phase I', executionTasks: 'Tasks to Subordinate Units', executionCoord: 'Coordinating Instructions',
-                sustainLogistics: 'Logistics Plan', sustainPersonnel: 'Personnel Plan', sustainHealth: 'Health Service Support',
-                lectureDraft: 'Team revised paragraph', commandLocation: 'Location of Commander', commandSuccession: 'Succession of Command', commandPost: 'Command Posts', commandReports: 'Reports', signalPrimary: 'Primary Signal'
+                sustainSupplyFieldServices: 'Supply and Field Services', sustainDistributionResupply: 'Distribution and Resupply Operations', sustainPersonnelServices: 'Personnel Services Support', sustainCareUnderFire: 'Care Under Fire', sustainTacticalFieldCare: 'Tactical Field Care', sustainTacticalEvacuation: 'Tactical Evacuation',
+                lectureDraft: 'Team revised paragraph', lectureResponse1: 'Thinking prompt 1 response', lectureResponse2: 'Thinking prompt 2 response', commandLocation: 'Location of Leaders', commandSuccession: 'Succession of Command', commandPost: 'Command Post Location', signalRadioFrequencies: 'Radio Frequencies', signalPrimary: 'Primary Signal', signalPasswords: 'Passwords / Running Passwords', signalPyrotechnic: 'Pyrotechnic Signals'
             };
             return names[field] || field;
         }
@@ -2337,7 +2483,7 @@
                 paragraphTitle: `${drill.number}. ${drill.title}`,
                 text: compiledText,
                 formData: values,
-                artifactMode: activityType === 'lecture' ? 'lecture-open-writing-v1' : 'code-guided-writing-v1',
+                artifactMode: isOpord01ThinkingPromptActivity(data) ? 'lecture-guided-thinking-v1' : (activityType === 'lecture' ? 'lecture-open-writing-v1' : 'code-guided-writing-v1'),
                 timestamp: Date.now()
             };
             if (existingIndex > -1) artifacts[existingIndex] = record;
@@ -2346,7 +2492,11 @@
 
             markStepComplete(activeParagraphId, 2);
             feedback.className = 'text-xs font-bold text-emerald-600';
-            feedback.innerText = activityType === 'lecture' ? `🎉 ${drill.title} revised paragraph가 저장되고 공유 허브에 제출되었습니다.` : `🎉 ${drill.title} team writing artifact가 저장되고 공유 허브에 제출되었습니다.`;
+            feedback.innerText = isOpord01ThinkingPromptActivity(data)
+                ? `🎉 ${drill.title} thinking responses가 저장되고 공유 허브에 제출되었습니다.`
+                : (activityType === 'lecture'
+                    ? `🎉 ${drill.title} revised paragraph가 저장되고 공유 허브에 제출되었습니다.`
+                    : `🎉 ${drill.title} team writing artifact가 저장되고 공유 허브에 제출되었습니다.`);
             document.getElementById('hint-box').classList.add('hidden');
             loadWorkshop();
         }
