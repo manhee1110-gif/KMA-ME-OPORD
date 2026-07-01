@@ -335,6 +335,12 @@
             }
         };
 
+        // Captain Manhee is a real OpenAI-backed coaching service hosted on Google Cloud Run.
+        // This browser code contains only the public endpoint — never an API key.
+        const CAPTAIN_MANHEE_API_URL = 'https://captain-manhee-api-597978033950.asia-northeast3.run.app/chat';
+        const CAPTAIN_MANHEE_MAX_REQUESTS_PER_PARAGRAPH = 5;
+        const CAPTAIN_MANHEE_CHAT_STORAGE_KEY = 'OPORD_CAPTAIN_MANHEE_CHATS_V1';
+
         // ATP 3-21.10 (June 2026), Figure B-6 is used as the structural source for Step 1.
         // Each paragraph has its own workshop so learners can build one section at a time.
         const PARAGRAPH_DRILLS = {
@@ -1396,7 +1402,7 @@
                 const activity = getActivityMeta(activityType);
                 const description = activityType === 'lecture'
                     ? '강의·영상 직후: shell을 확인하고 reference를 바탕으로 팀 수정문을 작성합니다.'
-                    : '본격 팀 활동: scenario를 바탕으로 팀 OPORD를 작성합니다. Captain Manhee sidekick은 다음 확장 단계에서 연결됩니다.';
+                    : '본격 팀 활동: scenario를 바탕으로 팀 OPORD를 작성합니다. Step 1 통과 뒤 Captain Manhee writing sidekick이 현재 draft·reference·phrase bank를 바탕으로 Socratic coaching을 제공합니다.';
                 listContainer.innerHTML += `
                     <div class="rounded-lg border ${activity.panel} p-2.5 space-y-2">
                         <div class="flex items-center gap-1.5"><i class="fa-solid ${activity.icon} text-[11px]"></i><span class="text-[10px] font-black uppercase tracking-wider">${activity.label}</span></div>
@@ -1662,6 +1668,183 @@
                     level: meta.level
                 });
             });
+        }
+
+        function isCaptainManheeScenario(data) {
+            return data?.code === 'OPORD-02' && getScenarioActivityType(data) === 'code';
+        }
+
+        function captainManheeChatKey(paragraphId = activeParagraphId) {
+            return `${currentUserId}::${selectedScenarioCode}::${paragraphId}`;
+        }
+
+        function getCaptainManheeChatStore() {
+            try {
+                return JSON.parse(localStorage.getItem(CAPTAIN_MANHEE_CHAT_STORAGE_KEY)) || {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function saveCaptainManheeChatStore(store) {
+            localStorage.setItem(CAPTAIN_MANHEE_CHAT_STORAGE_KEY, JSON.stringify(store));
+        }
+
+        function getCaptainManheeChatState(paragraphId = activeParagraphId) {
+            const store = getCaptainManheeChatStore();
+            const raw = store[captainManheeChatKey(paragraphId)] || {};
+            return {
+                requestCount: Math.max(0, Number(raw.requestCount || 0)),
+                messages: Array.isArray(raw.messages) ? raw.messages.slice(-12) : []
+            };
+        }
+
+        function saveCaptainManheeChatState(state, paragraphId = activeParagraphId) {
+            const store = getCaptainManheeChatStore();
+            store[captainManheeChatKey(paragraphId)] = {
+                requestCount: Math.max(0, Number(state?.requestCount || 0)),
+                messages: Array.isArray(state?.messages) ? state.messages.slice(-12) : []
+            };
+            saveCaptainManheeChatStore(store);
+        }
+
+        function getCaptainManheeValues() {
+            const visibleValues = getStep2FormValues();
+            return Object.keys(visibleValues).length ? visibleValues : getStep2SeedValues();
+        }
+
+        function buildCaptainManheeContext(data, drill) {
+            const values = getCaptainManheeValues();
+            const activityType = getScenarioActivityType(data);
+            const state = getCaptainManheeChatState();
+            const shell = (drill.shellItems || []).map(item => getShellItemMeta(item).label);
+            const recentConversation = state.messages.slice(-4).map(message => ({
+                role: message.role === 'assistant' ? 'coach' : 'team',
+                text: String(message.text || '').slice(0, 800)
+            }));
+
+            return {
+                activity: `${data.code}: fictional OPORD classroom scenario`,
+                paragraph: `${drill.number}. ${drill.title}`,
+                OPORD_shell: shell,
+                teacher_reference: getScenarioStep2Blocks(data, activeParagraphId),
+                phrase_bank: getPhraseBank(data, activeParagraphId),
+                current_team_draft: compileStep2Writing(activeParagraphId, values, activityType),
+                recent_conversation: recentConversation,
+                coaching_mode: 'Socratic writing coach. Do not write the final paragraph for the team.'
+            };
+        }
+
+        function renderCaptainManheePanel(data, drill, step1Complete) {
+            if (!step1Complete || !isCaptainManheeScenario(data)) return '';
+
+            const state = getCaptainManheeChatState();
+            const atLimit = state.requestCount >= CAPTAIN_MANHEE_MAX_REQUESTS_PER_PARAGRAPH;
+            const messages = state.messages.length
+                ? state.messages.map(message => {
+                    const isCoach = message.role === 'assistant';
+                    return `
+                        <div class="rounded-lg border ${isCoach ? 'border-emerald-800/70 bg-emerald-950/35 text-emerald-50' : 'border-slate-700 bg-slate-800 text-slate-100'} px-2.5 py-2">
+                            <div class="mb-1 text-[9px] font-black uppercase tracking-wider ${isCoach ? 'text-emerald-300' : 'text-indigo-300'}">${isCoach ? '<i class="fa-solid fa-user-tie mr-1"></i>Captain Manhee' : '<i class="fa-solid fa-people-group mr-1"></i>Team question'}</div>
+                            <div class="whitespace-pre-wrap break-words text-[10px] leading-relaxed">${escapeHtml(message.text || '')}</div>
+                        </div>
+                    `;
+                }).join('')
+                : '<div class="rounded-lg border border-dashed border-slate-700 bg-slate-800/50 px-2.5 py-3 text-[10px] leading-relaxed text-slate-400">Ask about the current shell, reference cards, phrase bank, or your draft. Captain Manhee receives this paragraph’s context automatically.</div>';
+
+            return `
+                <section id="captain-manhee-panel" class="mt-4 space-y-3 rounded-xl border border-emerald-700/70 bg-slate-950/60 p-3 shadow-inner">
+                    <div class="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                            <h5 class="text-xs font-black text-emerald-300"><i class="fa-solid fa-user-tie mr-1"></i>Captain Manhee · Writing Sidekick</h5>
+                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">OPORD-02 only. This Socratic coach uses the current paragraph’s shell, reference, phrase bank, and visible team draft. It gives hints — not a finished answer.</p>
+                        </div>
+                        <span class="rounded-full border ${atLimit ? 'border-rose-700 bg-rose-950/50 text-rose-200' : 'border-emerald-800 bg-emerald-950/50 text-emerald-200'} px-2 py-1 text-[9px] font-black">${state.requestCount}/${CAPTAIN_MANHEE_MAX_REQUESTS_PER_PARAGRAPH} coaching turns</span>
+                    </div>
+                    <div id="captain-manhee-history" class="max-h-72 space-y-2 overflow-y-auto pr-1">${messages}</div>
+                    <label class="block">
+                        <span class="sr-only">Question for Captain Manhee</span>
+                        <textarea id="captain-manhee-message" rows="3" ${atLimit ? 'disabled' : ''} onkeydown="if(event.ctrlKey && event.key === 'Enter'){ event.preventDefault(); sendCaptainManheeMessage(); }" placeholder="e.g., Which Mission 5W is still missing from our draft?" class="w-full resize-y rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-[10px] leading-relaxed text-slate-100 placeholder:text-slate-500 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-900/70 disabled:cursor-not-allowed disabled:opacity-50"></textarea>
+                    </label>
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span id="captain-manhee-status" class="text-[9px] leading-relaxed text-slate-400">${atLimit ? 'This paragraph has reached its coaching limit. Continue through team discussion and instructor feedback.' : 'Ask a focused question. Ctrl + Enter also sends.'}</span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="resetCaptainManheeChat()" class="rounded border border-slate-700 px-2 py-1.5 text-[9px] font-bold text-slate-300 hover:border-slate-500 hover:bg-slate-800">Clear chat</button>
+                            <button id="captain-manhee-send" type="button" onclick="sendCaptainManheeMessage()" ${atLimit ? 'disabled' : ''} class="rounded bg-emerald-600 px-2.5 py-1.5 text-[9px] font-black text-white shadow hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-600"><i class="fa-solid fa-paper-plane mr-1"></i>Ask Captain</button>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function resetCaptainManheeChat() {
+            const store = getCaptainManheeChatStore();
+            delete store[captainManheeChatKey()];
+            saveCaptainManheeChatStore(store);
+            const data = getScenarioStore()[selectedScenarioCode] || defaultScenarios['OPORD-01'];
+            const drill = PARAGRAPH_DRILLS[activeParagraphId];
+            renderPool(data, drill, isStepComplete(activeParagraphId, 1), isStepComplete(activeParagraphId, 2));
+        }
+
+        async function sendCaptainManheeMessage() {
+            const input = document.getElementById('captain-manhee-message');
+            const status = document.getElementById('captain-manhee-status');
+            const sendButton = document.getElementById('captain-manhee-send');
+            const message = String(input?.value || '').trim();
+            const data = getScenarioStore()[selectedScenarioCode] || defaultScenarios['OPORD-01'];
+            const drill = PARAGRAPH_DRILLS[activeParagraphId];
+            const state = getCaptainManheeChatState();
+
+            if (!message) {
+                if (status) status.innerText = 'Type a focused question first.';
+                return;
+            }
+            if (!isCaptainManheeScenario(data) || !isStepComplete(activeParagraphId, 1)) {
+                if (status) status.innerText = 'Complete Step 1 before using Captain Manhee.';
+                return;
+            }
+            if (state.requestCount >= CAPTAIN_MANHEE_MAX_REQUESTS_PER_PARAGRAPH) {
+                if (status) status.innerText = 'This paragraph has reached its coaching limit.';
+                return;
+            }
+
+            if (input) input.disabled = true;
+            if (sendButton) sendButton.disabled = true;
+            if (status) status.innerText = 'Captain Manhee is checking the current draft…';
+
+            try {
+                const response = await fetch(CAPTAIN_MANHEE_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message,
+                        context: buildCaptainManheeContext(data, drill)
+                    })
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                const reply = String(payload?.reply || payload?.error || '').trim();
+                if (!response.ok || !reply) {
+                    throw new Error(reply || 'Captain Manhee is temporarily unavailable.');
+                }
+
+                state.requestCount += 1;
+                state.messages.push({ role: 'user', text: message, timestamp: Date.now() });
+                state.messages.push({ role: 'assistant', text: reply, timestamp: Date.now() });
+                saveCaptainManheeChatState(state);
+            } catch (error) {
+                state.requestCount += 1;
+                state.messages.push({ role: 'user', text: message, timestamp: Date.now() });
+                state.messages.push({
+                    role: 'assistant',
+                    text: 'Captain Manhee could not connect right now. Continue with the reference cards, phrase bank, and instructor feedback.',
+                    timestamp: Date.now()
+                });
+                saveCaptainManheeChatState(state);
+                console.error('Captain Manhee request failed:', error);
+            }
+
+            renderPool(data, drill, true, isStepComplete(activeParagraphId, 2));
         }
 
         function getStep2DraftStore() {
@@ -2087,7 +2270,7 @@
                     : (activityType === 'lecture'
                         ? '교관이 입력한 영상 스크립트·예문을 참고하되, Step 2에는 팀의 수정문을 자기 말로 작성하십시오.'
                         : '교관이 제공한 scenario reference를 참고하되, Step 2에서는 팀의 own wording으로 작성하십시오.');
-                pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
+                pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId) + renderCaptainManheePanel(data, drill, step1Complete);
                 return;
             }
 
@@ -2097,7 +2280,7 @@
                 : (activityType === 'lecture'
                     ? '이 paragraph의 shell과 lecture revision draft가 모두 제출되었습니다.'
                     : '이 paragraph의 Step 1 shell과 Step 2 team writing이 모두 완료되었습니다.');
-            pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
+            pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId) + renderCaptainManheePanel(data, drill, step1Complete);
         }
 
         function loadWorkshop() {
