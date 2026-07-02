@@ -129,7 +129,7 @@
                                     <option value="lecture">Lecture-In-Class Activity — 강의 직후 구조 확인·수정 작성</option>
                                     <option value="code">Code Your Way Activity — 팀 기반 본격 OPORD 작성</option>
                                 </select>
-                                <p class="mt-1 text-[10px] leading-relaxed text-slate-400">Lecture 모드는 Step 2에서 하나의 open-ended revision draft를 작성합니다. Code Your Way 모드는 paragraph별 scaffolded team writing을 사용하며, 다음 단계에서 Captain Manhee sidekick을 붙일 자리입니다.</p>
+                                <p class="mt-1 text-[10px] leading-relaxed text-slate-400">Lecture 모드는 Step 2에서 하나의 open-ended revision draft를 작성합니다. Code Your Way 모드는 first-level OPORD chunk별 scaffolded team writing을 사용하며, 각 chunk에 최대 3회의 Captain Manhee coach check를 적용합니다.</p>
                             </div>
                             <div class="rounded-lg border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
                                 <div>
@@ -338,8 +338,10 @@
         // Captain Manhee is a real OpenAI-backed coaching service hosted on Google Cloud Run.
         // This browser code contains only the public endpoint — never an API key.
         const CAPTAIN_MANHEE_API_URL = 'https://captain-manhee-api-597978033950.asia-northeast3.run.app/chat';
-        const CAPTAIN_MANHEE_MAX_REQUESTS_PER_PARAGRAPH = 5;
-        const CAPTAIN_MANHEE_CHAT_STORAGE_KEY = 'OPORD_CAPTAIN_MANHEE_CHATS_V1';
+        // Captain Manhee is used as a short, structured checkpoint—not an always-open chat.
+        // Each first-level OPORD writing chunk receives up to three instructor-bot checks.
+        const CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK = 3;
+        const CAPTAIN_MANHEE_CHECKPOINT_STORAGE_KEY = 'OPORD_CAPTAIN_MANHEE_CHECKPOINTS_V3';
 
         // ATP 3-21.10 (June 2026), Figure B-6 is used as the structural source for Step 1.
         // Each paragraph has its own workshop so learners can build one section at a time.
@@ -1136,6 +1138,7 @@
         }
 
         function renderTeacherDashboard() {
+            recoverCompletedCodeActivityArtifacts();
             if (!requireTeacherAccess(false)) {
                 document.getElementById('screen-teacher').classList.add('hidden');
                 return;
@@ -1323,6 +1326,7 @@
         }
 
         function renderSharedHub() {
+            recoverCompletedCodeActivityArtifacts();
             const hubGrid = document.getElementById('shared-hub-grid');
             hubGrid.innerHTML = '';
             hubGrid.className = 'space-y-3';
@@ -1386,6 +1390,7 @@
         }
 
         function renderStudentDashboard() {
+            recoverCompletedCodeActivityArtifacts();
             const listContainer = document.getElementById('dash-scenario-list');
             const historyContainer = document.getElementById('student-artifact-history');
             listContainer.innerHTML = ''; historyContainer.innerHTML = '';
@@ -1402,7 +1407,7 @@
                 const activity = getActivityMeta(activityType);
                 const description = activityType === 'lecture'
                     ? '강의·영상 직후: shell을 확인하고 reference를 바탕으로 팀 수정문을 작성합니다.'
-                    : '본격 팀 활동: scenario를 바탕으로 팀 OPORD를 작성합니다. Step 1 통과 뒤 Captain Manhee writing sidekick이 현재 draft·reference·phrase bank를 바탕으로 Socratic coaching을 제공합니다.';
+                    : '본격 팀 활동: scenario를 바탕으로 팀 OPORD를 작성합니다. Step 1 통과 뒤 각 first-level writing chunk를 팀이 먼저 작성하고, 필요할 때만 3회의 Captain Manhee coach check로 revision hint를 받습니다.';
                 listContainer.innerHTML += `
                     <div class="rounded-lg border ${activity.panel} p-2.5 space-y-2">
                         <div class="flex items-center gap-1.5"><i class="fa-solid ${activity.icon} text-[11px]"></i><span class="text-[10px] font-black uppercase tracking-wider">${activity.label}</span></div>
@@ -1412,18 +1417,29 @@
                 `;
                 const groupContainer = document.getElementById(`dash-group-${activityType}`);
                 entries.sort((a,b) => a.code.localeCompare(b.code)).forEach(sci => {
-                    const completedParagraphs = new Set(
+                    const submittedParagraphs = new Set(
                         artifacts
                             .filter(a => a.studentId === currentUserId && a.scenarioCode === sci.code)
                             .map(getArtifactParagraphId)
                     );
+                    const progress = getProgressStore();
+                    const completedParagraphs = new Set(submittedParagraphs);
+                    OPORD_PARAGRAPH_SEQUENCE.forEach(paragraphId => {
+                        if (progress[`${currentUserId}::${sci.code}::${paragraphId}::step2`]) {
+                            completedParagraphs.add(paragraphId);
+                        }
+                    });
                     const completeCount = completedParagraphs.size;
+                    const submittedCount = submittedParagraphs.size;
                     const isPassed = completeCount === paragraphCount;
                     const buttonLabel = isPassed ? '복습하기' : (completeCount > 0 ? '계속' : '도전');
+                    const statusDetail = submittedCount === completeCount
+                        ? `${completeCount}/${paragraphCount} paragraphs`
+                        : `${completeCount}/${paragraphCount} complete · ${submittedCount} shared`;
                     groupContainer.innerHTML += `
                         <div class="p-3 border rounded-lg flex justify-between items-center bg-white hover:border-indigo-300 transition-all gap-3">
                             <div class="space-y-0.5 min-w-0">
-                                <span class="text-[10px] font-mono font-bold ${isPassed ? 'text-emerald-600' : 'text-indigo-600'}">${escapeHtml(sci.code)} · ${completeCount}/${paragraphCount} paragraphs</span>
+                                <span class="text-[10px] font-mono font-bold ${isPassed ? 'text-emerald-600' : 'text-indigo-600'}">${escapeHtml(sci.code)} · ${statusDetail}</span>
                                 <h4 class="text-xs font-bold text-slate-800">${escapeHtml(sci.title)}</h4>
                             </div>
                             <button onclick="startTraining('${escapeHtml(sci.code)}')" class="shrink-0 px-2.5 py-1 text-[11px] font-bold text-white rounded shadow ${isPassed ? 'bg-emerald-600 hover:bg-emerald-700' : 'navy-bg hover:bg-slate-800'}">${buttonLabel}</button>
@@ -1674,38 +1690,87 @@
             return data?.code === 'OPORD-02' && getScenarioActivityType(data) === 'code';
         }
 
-        function captainManheeChatKey(paragraphId = activeParagraphId) {
-            return `${currentUserId}::${selectedScenarioCode}::${paragraphId}`;
+        // Step 2 stays at the first meaningful tree level. Learners collaborate on a
+        // broad OPORD component first, then request a short coach check for that component.
+        const OPORD02_CHECKPOINT_CHUNKS = {
+            situation: [
+                { id: 'situation-aoi', label: 'Area of Interest', fields: ['situationAOI'], checkFields: ['situationAOI'], note: 'Identify the wider area that can affect the mission.', coachCriteria: ['Names a wider relevant area and links it to the fictional mission context.', 'Keeps the entry concise and operationally useful.'] },
+                { id: 'situation-ao', label: 'Area of Operations', fields: ['situationAO'], checkFields: ['situationAO'], note: 'Describe the area where the unit will operate.', coachCriteria: ['Identifies the actual operating area.', 'Shows a relevant terrain, weather, visibility, or movement effect without turning the draft into a checklist.', 'Uses scenario-supported details only.'] },
+                { id: 'situation-enemy', label: 'Enemy Forces (Latest Intelligence)', fields: ['situationEnemy'], checkFields: ['situationEnemy'], note: 'Describe the relevant enemy situation using the available scenario evidence.', coachCriteria: ['Includes relevant enemy composition, strength, capability, location, or likely activity when supported by the scenario.', 'Avoids inventing intelligence not present in the teacher reference.'] },
+                { id: 'situation-friendly', label: 'Friendly Forces', fields: ['situationFriendly'], checkFields: ['situationFriendly'], note: 'Show the friendly-force relationships that frame the team.', coachCriteria: ['Makes higher, higher-echelon, adjacent, or supporting-unit relationships understandable.', 'Explains why the friendly relationship matters to the team without requiring visible subheadings.'] },
+                { id: 'situation-attachments', label: 'Attachments and Detachments', fields: ['situationAttach'], checkFields: ['situationAttach'], note: 'State attached or detached support, or write None where appropriate.', coachCriteria: ['States an attached or detached capability and its relationship to the team, or clearly states None.', 'Keeps the wording concrete and usable.'] }
+            ],
+            mission: [
+                { id: 'mission-statement', label: 'Mission Statement', fields: ['missionStatement'], checkFields: ['missionStatement'], note: 'Write one concise operational mission statement.', coachCriteria: ['Contains the needed unit, task, time or condition, location or objective, and purpose in one coherent statement.', 'Uses an appropriate OPORD action verb and a clear purpose.', 'Does not expose the hidden 5W rubric as a checklist to the learner.'] }
+            ],
+            execution: [
+                { id: 'execution-intent', label: 'Commander’s Intent', fields: ['executionIntent'], checkFields: ['executionIntent'], note: 'State the commander’s overall intent for the operation.', coachCriteria: ['Makes purpose, key tasks, and end state discernible in a coherent intent statement.', 'Keeps intent distinct from a detailed task list.'] },
+                { id: 'execution-concept', label: 'Concept of Operations', fields: ['executionConcept'], checkFields: ['executionConcept'], note: 'Describe the overall tactical approach.', coachCriteria: ['Explains the broad approach or operational framework rather than listing every individual assignment.', 'Keeps the approach aligned with the teacher scenario.'] },
+                { id: 'execution-maneuver', label: 'Scheme of Movement and Maneuver', fields: ['executionManeuver'], checkFields: ['executionManeuver'], note: 'Make the movement sequence or phases visible.', coachCriteria: ['Makes the sequence, phase logic, or movement relationship understandable.', 'Shows movement and maneuver at a broad level without needing labelled phases.'] },
+                { id: 'execution-tasks', label: 'Tasks to Subordinate Units', fields: ['executionTasks'], checkFields: ['executionTasks'], note: 'Assign usable tasks to relevant subordinate units.', coachCriteria: ['Assigns clear, executable tasks to relevant subordinate or supporting units.', 'Distinguishes unit tasks from the overall concept where possible.'] },
+                { id: 'execution-coordinating', label: 'Coordinating Instructions', fields: ['executionCoord'], checkFields: ['executionCoord'], note: 'State controls, timing, reporting, or risk-reduction instructions.', coachCriteria: ['Includes usable coordination such as time, control measures, reporting, risk reduction, or load guidance when appropriate.', 'Avoids unsupported operational details.'] }
+            ],
+            sustainment: [
+                { id: 'sustain-logistic', label: 'Logistic', fields: ['sustainLogistic'], checkFields: ['sustainLogistic'], note: 'Cover the support arrangements that keep the unit operating.', coachCriteria: ['Makes available support and resupply or distribution arrangements understandable.', 'Addresses maintenance or transportation only when relevant, or makes their absence clear.', 'Uses support arrangements grounded in the classroom scenario.'] },
+                { id: 'sustain-personnel', label: 'Personnel Services Support', fields: ['sustainPersonnelServices'], checkFields: ['sustainPersonnelServices'], note: 'Give a concise accountability or personnel-support instruction.', coachCriteria: ['States clear personnel accountability, reporting, replacement, EPW, or other personnel-support arrangements when relevant.', 'Keeps the entry concise and usable.'] },
+                { id: 'sustain-tccc', label: 'Tactical Combat Casualty Care', fields: ['sustainTccc'], checkFields: ['sustainTccc'], note: 'Describe casualty-care and evacuation support for the fictional scenario.', coachCriteria: ['Makes immediate care, field care, and evacuation arrangements discernible where relevant.', 'Uses only fictional classroom support details supplied in the scenario; does not invent medical procedures.'] }
+            ],
+            commandSignal: [
+                { id: 'command-location', label: 'Command', fields: ['commandCommand'], checkFields: ['commandCommand'], note: 'State leader location and command continuity.', coachCriteria: ['Makes leader location and succession of command clear.', 'Keeps command continuity usable for the team.'] },
+                { id: 'command-control', label: 'Control', fields: ['commandControl'], checkFields: ['commandControl'], note: 'State command-post location or control arrangements.', coachCriteria: ['States a command-post location, control point, or reporting arrangement that can be used in the scenario.', 'Keeps control wording concise.'] },
+                { id: 'command-signal', label: 'Signal', fields: ['commandSignal'], checkFields: ['commandSignal'], note: 'Describe the communications plan for the fictional scenario.', coachCriteria: ['Makes a primary communication method and fallback or PACE logic discernible when appropriate.', 'Includes authentication, passwords, or visual signals only when supported and only as fictional classroom examples.', 'Avoids exposing the hidden signal subheading rubric as a checklist.'] }
+            ]
+        };
+
+        function getCaptainManheeChunkDefinitions(paragraphId = activeParagraphId) {
+            return OPORD02_CHECKPOINT_CHUNKS[paragraphId] || [];
         }
 
-        function getCaptainManheeChatStore() {
+        function getCaptainManheeChunk(chunkId, paragraphId = activeParagraphId) {
+            return getCaptainManheeChunkDefinitions(paragraphId).find(chunk => chunk.id === chunkId) || null;
+        }
+
+        function captainManheeCheckpointKey(chunkId, paragraphId = activeParagraphId) {
+            return `${currentUserId}::${selectedScenarioCode}::${paragraphId}::${chunkId}`;
+        }
+
+        function getCaptainManheeCheckpointStore() {
             try {
-                return JSON.parse(localStorage.getItem(CAPTAIN_MANHEE_CHAT_STORAGE_KEY)) || {};
+                return JSON.parse(localStorage.getItem(CAPTAIN_MANHEE_CHECKPOINT_STORAGE_KEY)) || {};
             } catch (error) {
                 return {};
             }
         }
 
-        function saveCaptainManheeChatStore(store) {
-            localStorage.setItem(CAPTAIN_MANHEE_CHAT_STORAGE_KEY, JSON.stringify(store));
+        function saveCaptainManheeCheckpointStore(store) {
+            localStorage.setItem(CAPTAIN_MANHEE_CHECKPOINT_STORAGE_KEY, JSON.stringify(store));
         }
 
-        function getCaptainManheeChatState(paragraphId = activeParagraphId) {
-            const store = getCaptainManheeChatStore();
-            const raw = store[captainManheeChatKey(paragraphId)] || {};
+        function normalizeCheckpointState(raw = {}) {
+            const checks = Array.isArray(raw.checks)
+                ? raw.checks.slice(-CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK).map(check => ({
+                    attempt: Math.max(1, Number(check?.attempt || 1)),
+                    reply: String(check?.reply || ''),
+                    status: check?.status === 'ready' ? 'ready' : 'revise',
+                    signature: String(check?.signature || ''),
+                    timestamp: Number(check?.timestamp || 0)
+                }))
+                : [];
             return {
-                requestCount: Math.max(0, Number(raw.requestCount || 0)),
-                messages: Array.isArray(raw.messages) ? raw.messages.slice(-12) : []
+                checks,
+                notice: String(raw.notice || '')
             };
         }
 
-        function saveCaptainManheeChatState(state, paragraphId = activeParagraphId) {
-            const store = getCaptainManheeChatStore();
-            store[captainManheeChatKey(paragraphId)] = {
-                requestCount: Math.max(0, Number(state?.requestCount || 0)),
-                messages: Array.isArray(state?.messages) ? state.messages.slice(-12) : []
-            };
-            saveCaptainManheeChatStore(store);
+        function getCaptainManheeCheckpointState(chunkId, paragraphId = activeParagraphId) {
+            const store = getCaptainManheeCheckpointStore();
+            return normalizeCheckpointState(store[captainManheeCheckpointKey(chunkId, paragraphId)] || {});
+        }
+
+        function saveCaptainManheeCheckpointState(chunkId, state, paragraphId = activeParagraphId) {
+            const store = getCaptainManheeCheckpointStore();
+            store[captainManheeCheckpointKey(chunkId, paragraphId)] = normalizeCheckpointState(state);
+            saveCaptainManheeCheckpointStore(store);
         }
 
         function getCaptainManheeValues() {
@@ -1713,104 +1778,151 @@
             return Object.keys(visibleValues).length ? visibleValues : getStep2SeedValues();
         }
 
-        function buildCaptainManheeContext(data, drill) {
-            const values = getCaptainManheeValues();
-            const activityType = getScenarioActivityType(data);
-            const state = getCaptainManheeChatState();
+        function chunkDraftSignature(values, chunk) {
+            return (chunk?.fields || [])
+                .map(field => `${field}:${String(values?.[field] ?? '').trim().replace(/\s+/g, ' ')}`)
+                .join('||');
+        }
+
+        function compileChunkDraft(values, chunk) {
+            return (chunk?.fields || [])
+                .map(field => `${getReadableStep2FieldName(field)}: ${String(values?.[field] || '').trim() || '[blank]'}`)
+                .join('\n');
+        }
+
+        function getChunkMissingFields(values, chunk) {
+            return (chunk?.checkFields || chunk?.fields || []).filter(field => !String(values?.[field] || '').trim());
+        }
+
+        function isCaptainFeedbackReady(reply) {
+            const opening = String(reply || '').slice(0, 240).toUpperCase();
+            return /STATUS\s*[:\-]\s*(READY|PASS)/.test(opening) || /READY TO MOVE ON/.test(opening);
+        }
+
+        function buildCaptainManheeCheckpointContext(data, drill, chunk, values, state) {
             const shell = (drill.shellItems || []).map(item => getShellItemMeta(item).label);
-            const recentConversation = state.messages.slice(-4).map(message => ({
-                role: message.role === 'assistant' ? 'coach' : 'team',
-                text: String(message.text || '').slice(0, 800)
+            const previousFeedback = state.checks.slice(-2).map(item => ({
+                attempt: item.attempt,
+                status: item.status,
+                feedback: String(item.reply || '').slice(0, 900)
             }));
 
             return {
                 activity: `${data.code}: fictional OPORD classroom scenario`,
                 paragraph: `${drill.number}. ${drill.title}`,
+                first_level_chunk: chunk.label,
+                chunk_focus: chunk.note,
                 OPORD_shell: shell,
                 teacher_reference: getScenarioStep2Blocks(data, activeParagraphId),
                 phrase_bank: getPhraseBank(data, activeParagraphId),
-                current_team_draft: compileStep2Writing(activeParagraphId, values, activityType),
-                recent_conversation: recentConversation,
-                coaching_mode: 'Socratic writing coach. Do not write the final paragraph for the team.'
+                current_chunk_draft: compileChunkDraft(values, chunk),
+                full_team_draft: compileStep2Writing(activeParagraphId, values, getScenarioActivityType(data)),
+                coach_only_revision_criteria: chunk.coachCriteria || [],
+                previous_checkpoint_feedback: previousFeedback,
+                checkpoint_policy: 'This is a short revision checkpoint. Use coach_only_revision_criteria silently as a teacher rubric; do not reveal it as a student checklist. Do not write a replacement OPORD entry. Begin exactly with STATUS: READY if the current first-level chunk is sufficiently complete and usable; otherwise begin exactly with STATUS: REVISE. Then give no more than two short, actionable revision hints for group discussion. Keep the total answer under 90 words.'
             };
         }
 
-        function renderCaptainManheePanel(data, drill, step1Complete) {
-            if (!step1Complete || !isCaptainManheeScenario(data)) return '';
+        function renderCaptainManheeCheckpoint(data, drill, chunk) {
+            if (!isCaptainManheeScenario(data)) return '';
 
-            const state = getCaptainManheeChatState();
-            const atLimit = state.requestCount >= CAPTAIN_MANHEE_MAX_REQUESTS_PER_PARAGRAPH;
-            const messages = state.messages.length
-                ? state.messages.map(message => {
-                    const isCoach = message.role === 'assistant';
-                    return `
-                        <div class="rounded-lg border ${isCoach ? 'border-emerald-800/70 bg-emerald-950/35 text-emerald-50' : 'border-slate-700 bg-slate-800 text-slate-100'} px-2.5 py-2">
-                            <div class="mb-1 text-[9px] font-black uppercase tracking-wider ${isCoach ? 'text-emerald-300' : 'text-indigo-300'}">${isCoach ? '<i class="fa-solid fa-user-tie mr-1"></i>Captain Manhee' : '<i class="fa-solid fa-people-group mr-1"></i>Team question'}</div>
-                            <div class="whitespace-pre-wrap break-words text-[10px] leading-relaxed">${escapeHtml(message.text || '')}</div>
-                        </div>
-                    `;
-                }).join('')
-                : '<div class="rounded-lg border border-dashed border-slate-700 bg-slate-800/50 px-2.5 py-3 text-[10px] leading-relaxed text-slate-400">Ask about the current shell, reference cards, phrase bank, or your draft. Captain Manhee receives this paragraph’s context automatically.</div>';
+            const state = getCaptainManheeCheckpointState(chunk.id);
+            const checksUsed = state.checks.length;
+            const lastCheck = state.checks[checksUsed - 1];
+            const ready = lastCheck?.status === 'ready';
+            const exhausted = checksUsed >= CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK;
+            const feedbackHtml = lastCheck
+                ? `<div class="mt-3 rounded-lg border ${ready ? 'border-emerald-200 bg-emerald-50/80' : 'border-amber-200 bg-amber-50/80'} p-2.5"><div class="mb-1 flex flex-wrap items-center justify-between gap-2"><span class="text-[9px] font-black uppercase tracking-wider ${ready ? 'text-emerald-700' : 'text-amber-800'}"><i class="fa-solid ${ready ? 'fa-circle-check' : 'fa-wrench'} mr-1"></i>Captain Manhee · Check ${lastCheck.attempt}</span><span class="rounded px-1.5 py-0.5 text-[9px] font-bold ${ready ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${ready ? 'Ready to move on' : 'Revise together'}</span></div><div class="whitespace-pre-wrap break-words text-[10px] leading-relaxed text-slate-700">${escapeHtml(lastCheck.reply)}</div></div>`
+                : '<div class="mt-3 text-[9px] leading-relaxed text-slate-400">Write this chunk together first. Then use one short coach check to identify the strongest next revision.</div>';
+            const previousChecksHtml = state.checks.length > 1
+                ? `<details class="mt-2"><summary class="cursor-pointer text-[9px] font-bold text-slate-500">Earlier checkpoint feedback (${state.checks.length - 1})</summary><div class="mt-2 space-y-2">${state.checks.slice(0, -1).map(item => `<div class="rounded border border-slate-200 bg-white px-2 py-1.5 text-[9px] leading-relaxed text-slate-500"><span class="font-black">Check ${item.attempt}:</span> ${escapeHtml(item.reply)}</div>`).join('')}</div></details>`
+                : '';
+            const noticeHtml = state.notice
+                ? `<div class="mt-2 rounded border border-rose-200 bg-rose-50 px-2.5 py-2 text-[9px] leading-relaxed text-rose-700"><i class="fa-solid fa-pen mr-1"></i>${escapeHtml(state.notice)}</div>`
+                : '';
+
+            let actionHtml = '';
+            if (ready) {
+                actionHtml = '<span class="text-[9px] font-bold text-emerald-700"><i class="fa-solid fa-arrow-right mr-1"></i>Chunk cleared for team progression</span>';
+            } else if (exhausted) {
+                actionHtml = '<span class="text-[9px] font-bold text-rose-700"><i class="fa-solid fa-person-chalkboard mr-1"></i>3 checks used · ask the instructor next</span>';
+            } else {
+                const nextAttempt = checksUsed + 1;
+                actionHtml = `<button type="button" onclick="requestCaptainManheeChunkCheck('${chunk.id}')" class="rounded bg-rose-600 px-2.5 py-1.5 text-[9px] font-black text-white shadow hover:bg-rose-500"><i class="fa-solid fa-check mr-1"></i>Coach Check ${nextAttempt} / ${CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK}</button>`;
+            }
 
             return `
-                <section id="captain-manhee-panel" class="mt-4 space-y-3 rounded-xl border border-emerald-700/70 bg-slate-950/60 p-3 shadow-inner">
+                <div class="mt-3 rounded-lg border border-rose-200 bg-rose-50/40 p-2.5">
                     <div class="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                            <h5 class="text-xs font-black text-emerald-300"><i class="fa-solid fa-user-tie mr-1"></i>Captain Manhee · Writing Sidekick</h5>
-                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">OPORD-02 only. This Socratic coach uses the current paragraph’s shell, reference, phrase bank, and visible team draft. It gives hints — not a finished answer.</p>
-                        </div>
-                        <span class="rounded-full border ${atLimit ? 'border-rose-700 bg-rose-950/50 text-rose-200' : 'border-emerald-800 bg-emerald-950/50 text-emerald-200'} px-2 py-1 text-[9px] font-black">${state.requestCount}/${CAPTAIN_MANHEE_MAX_REQUESTS_PER_PARAGRAPH} coaching turns</span>
+                        <div><p class="text-[10px] font-black uppercase tracking-wider text-rose-800"><i class="fa-solid fa-people-group mr-1"></i>Group coach checkpoint</p><p class="mt-0.5 text-[9px] leading-relaxed text-rose-700">Discuss and revise as a team before checking. Captain Manhee gives a hint only; it does not write the chunk for you.</p></div>
+                        <span class="rounded-full border ${exhausted ? 'border-rose-300 bg-rose-100 text-rose-700' : 'border-rose-200 bg-white text-rose-700'} px-2 py-1 text-[9px] font-black">${checksUsed}/${CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK} checks</span>
                     </div>
-                    <div id="captain-manhee-history" class="max-h-72 space-y-2 overflow-y-auto pr-1">${messages}</div>
-                    <label class="block">
-                        <span class="sr-only">Question for Captain Manhee</span>
-                        <textarea id="captain-manhee-message" rows="3" ${atLimit ? 'disabled' : ''} onkeydown="if(event.ctrlKey && event.key === 'Enter'){ event.preventDefault(); sendCaptainManheeMessage(); }" placeholder="e.g., Which Mission 5W is still missing from our draft?" class="w-full resize-y rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-[10px] leading-relaxed text-slate-100 placeholder:text-slate-500 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-900/70 disabled:cursor-not-allowed disabled:opacity-50"></textarea>
-                    </label>
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                        <span id="captain-manhee-status" class="text-[9px] leading-relaxed text-slate-400">${atLimit ? 'This paragraph has reached its coaching limit. Continue through team discussion and instructor feedback.' : 'Ask a focused question. Ctrl + Enter also sends.'}</span>
-                        <div class="flex items-center gap-2">
-                            <button type="button" onclick="resetCaptainManheeChat()" class="rounded border border-slate-700 px-2 py-1.5 text-[9px] font-bold text-slate-300 hover:border-slate-500 hover:bg-slate-800">Clear chat</button>
-                            <button id="captain-manhee-send" type="button" onclick="sendCaptainManheeMessage()" ${atLimit ? 'disabled' : ''} class="rounded bg-emerald-600 px-2.5 py-1.5 text-[9px] font-black text-white shadow hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-600"><i class="fa-solid fa-paper-plane mr-1"></i>Ask Captain</button>
-                        </div>
-                    </div>
+                    ${feedbackHtml}
+                    ${previousChecksHtml}
+                    ${noticeHtml}
+                    <div class="mt-3 flex justify-end">${actionHtml}</div>
+                </div>
+            `;
+        }
+
+        function renderCheckpointChunk(data, drill, chunkId, bodyHtml, extraClass = '') {
+            const chunk = getCaptainManheeChunk(chunkId);
+            if (!chunk) return bodyHtml;
+            return `
+                <section class="rounded-xl border border-slate-200 bg-white/70 p-3 ${extraClass}">
+                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2"><div><h5 class="text-[10px] font-black uppercase tracking-wider text-slate-700">${escapeHtml(chunk.label)}</h5><p class="mt-0.5 text-[9px] leading-relaxed text-slate-400">${escapeHtml(chunk.note)}</p></div><span class="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">1st-level chunk</span></div>
+                    ${bodyHtml}
+                    ${renderCaptainManheeCheckpoint(data, drill, chunk)}
                 </section>
             `;
         }
 
-        function resetCaptainManheeChat() {
-            const store = getCaptainManheeChatStore();
-            delete store[captainManheeChatKey()];
-            saveCaptainManheeChatStore(store);
+        async function requestCaptainManheeChunkCheck(chunkId) {
             const data = getScenarioStore()[selectedScenarioCode] || defaultScenarios['OPORD-01'];
             const drill = PARAGRAPH_DRILLS[activeParagraphId];
-            renderPool(data, drill, isStepComplete(activeParagraphId, 1), isStepComplete(activeParagraphId, 2));
-        }
+            const chunk = getCaptainManheeChunk(chunkId);
+            if (!chunk || !isCaptainManheeScenario(data) || !isStepComplete(activeParagraphId, 1)) return;
 
-        async function sendCaptainManheeMessage() {
-            const input = document.getElementById('captain-manhee-message');
-            const status = document.getElementById('captain-manhee-status');
-            const sendButton = document.getElementById('captain-manhee-send');
-            const message = String(input?.value || '').trim();
-            const data = getScenarioStore()[selectedScenarioCode] || defaultScenarios['OPORD-01'];
-            const drill = PARAGRAPH_DRILLS[activeParagraphId];
-            const state = getCaptainManheeChatState();
+            // Preserve the most recent team writing before evaluating it.
+            saveStep2DraftFromUI();
+            const values = getCaptainManheeValues();
+            const state = getCaptainManheeCheckpointState(chunkId);
+            const missing = getChunkMissingFields(values, chunk);
 
-            if (!message) {
-                if (status) status.innerText = 'Type a focused question first.';
-                return;
-            }
-            if (!isCaptainManheeScenario(data) || !isStepComplete(activeParagraphId, 1)) {
-                if (status) status.innerText = 'Complete Step 1 before using Captain Manhee.';
-                return;
-            }
-            if (state.requestCount >= CAPTAIN_MANHEE_MAX_REQUESTS_PER_PARAGRAPH) {
-                if (status) status.innerText = 'This paragraph has reached its coaching limit.';
+            if (state.checks.length >= CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK) {
+                state.notice = 'All three coach checks have been used for this chunk. Bring the next question to the instructor.';
+                saveCaptainManheeCheckpointState(chunkId, state);
+                renderStep2(data, drill, true, isStepComplete(activeParagraphId, 2));
                 return;
             }
 
-            if (input) input.disabled = true;
-            if (sendButton) sendButton.disabled = true;
-            if (status) status.innerText = 'Captain Manhee is checking the current draft…';
+            if (missing.length) {
+                state.notice = `Write a team draft first: ${missing.map(getReadableStep2FieldName).join(', ')}.`;
+                saveCaptainManheeCheckpointState(chunkId, state);
+                renderStep2(data, drill, true, isStepComplete(activeParagraphId, 2));
+                return;
+            }
+
+            const signature = chunkDraftSignature(values, chunk);
+            const lastCheck = state.checks[state.checks.length - 1];
+            if (lastCheck && lastCheck.signature === signature && lastCheck.status !== 'ready') {
+                state.notice = 'Revise at least one detail in this chunk before using the next coach check.';
+                saveCaptainManheeCheckpointState(chunkId, state);
+                renderStep2(data, drill, true, isStepComplete(activeParagraphId, 2));
+                return;
+            }
+
+            state.notice = '';
+            saveCaptainManheeCheckpointState(chunkId, state);
+
+            const button = document.querySelector(`button[onclick="requestCaptainManheeChunkCheck('${chunk.id}')"]`);
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Coach checking…';
+            }
+
+            const attempt = state.checks.length + 1;
+            const message = `Checkpoint review ${attempt} of ${CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK} for the first-level OPORD chunk “${chunk.label}”. Review the group’s own writing only. Use any coach-only revision criteria silently; do not turn them into a visible checklist. Do not draft a replacement. Begin exactly with STATUS: READY or STATUS: REVISE, then give at most two brief revision hints for group discussion.`;
 
             try {
                 const response = await fetch(CAPTAIN_MANHEE_API_URL, {
@@ -1818,7 +1930,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         message,
-                        context: buildCaptainManheeContext(data, drill)
+                        context: buildCaptainManheeCheckpointContext(data, drill, chunk, values, state)
                     })
                 });
 
@@ -1828,23 +1940,22 @@
                     throw new Error(reply || 'Captain Manhee is temporarily unavailable.');
                 }
 
-                state.requestCount += 1;
-                state.messages.push({ role: 'user', text: message, timestamp: Date.now() });
-                state.messages.push({ role: 'assistant', text: reply, timestamp: Date.now() });
-                saveCaptainManheeChatState(state);
-            } catch (error) {
-                state.requestCount += 1;
-                state.messages.push({ role: 'user', text: message, timestamp: Date.now() });
-                state.messages.push({
-                    role: 'assistant',
-                    text: 'Captain Manhee could not connect right now. Continue with the reference cards, phrase bank, and instructor feedback.',
+                state.checks.push({
+                    attempt,
+                    reply,
+                    status: isCaptainFeedbackReady(reply) ? 'ready' : 'revise',
+                    signature,
                     timestamp: Date.now()
                 });
-                saveCaptainManheeChatState(state);
-                console.error('Captain Manhee request failed:', error);
+                state.notice = '';
+                saveCaptainManheeCheckpointState(chunkId, state);
+            } catch (error) {
+                state.notice = 'Captain Manhee could not connect. This did not use a coach check—continue team discussion and try again later.';
+                saveCaptainManheeCheckpointState(chunkId, state);
+                console.error('Captain Manhee checkpoint request failed:', error);
             }
 
-            renderPool(data, drill, true, isStepComplete(activeParagraphId, 2));
+            renderStep2(data, drill, true, isStepComplete(activeParagraphId, 2));
         }
 
         function getStep2DraftStore() {
@@ -1853,6 +1964,73 @@
             } catch (error) {
                 return {};
             }
+        }
+
+        // Compatibility bridge: older OPORD-02 prototype sessions could retain a completed
+        // Step 2 progress flag and a saved draft without an artifact package. Rebuild the
+        // missing package once so the Code Your Way activity appears in Dashboard and Peer Review.
+        function recoverCompletedCodeActivityArtifacts() {
+            const scenarios = getScenarioStore();
+            const progress = getProgressStore();
+            const drafts = getStep2DraftStore();
+            let artifacts;
+
+            try {
+                artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+            } catch (error) {
+                artifacts = [];
+            }
+
+            let changed = false;
+            Object.entries(progress).forEach(([key, isComplete]) => {
+                if (!isComplete) return;
+
+                const match = String(key).match(/^(.+?)::([^:]+)::(situation|mission|execution|sustainment|commandSignal)::step2$/);
+                if (!match) return;
+
+                const [, studentId, scenarioCode, paragraphId] = match;
+                const scenario = scenarios[scenarioCode];
+                if (!scenario || getScenarioActivityType(scenario) !== 'code') return;
+
+                const alreadySaved = artifacts.some(artifact =>
+                    artifact.studentId === studentId &&
+                    artifact.scenarioCode === scenarioCode &&
+                    getArtifactParagraphId(artifact) === paragraphId
+                );
+                if (alreadySaved) return;
+
+                const rawValues = drafts[`${studentId}::${scenarioCode}::${paragraphId}`];
+                if (!rawValues || typeof rawValues !== 'object') return;
+                const values = normalizeOpord02BroadDraft(paragraphId, rawValues, scenario);
+
+                const compiledText = compileStep2Writing(
+                    paragraphId,
+                    values,
+                    getScenarioActivityType(scenario),
+                    scenario
+                ).trim();
+                if (!compiledText) return;
+
+                const drill = PARAGRAPH_DRILLS[paragraphId];
+                artifacts.push({
+                    id: `recovered-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+                    studentId,
+                    scenarioCode,
+                    paragraphId,
+                    paragraphTitle: drill ? `${drill.number}. ${drill.title}` : getParagraphTitle(paragraphId),
+                    text: compiledText,
+                    formData: { ...values },
+                    artifactMode: 'code-top-level-chunk-writing-v2',
+                    recoveredFromProgress: true,
+                    timestamp: Date.now()
+                });
+                changed = true;
+            });
+
+            if (changed) {
+                localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify(artifacts));
+            }
+            return changed;
         }
 
         function saveStep2DraftStore(store) {
@@ -1872,12 +2050,48 @@
             ) || null;
         }
 
+        function joinLegacyDraftParts(...parts) {
+            return parts
+                .map(part => String(part || '').trim())
+                .filter(Boolean)
+                .join('\n');
+        }
+
+        function normalizeOpord02BroadDraft(paragraphId, rawValues = {}, scenario = getScenarioStore()[selectedScenarioCode]) {
+            const values = { ...(rawValues || {}) };
+            if (!scenario || scenario.code !== 'OPORD-02' || getScenarioActivityType(scenario) !== 'code') return values;
+
+            if (paragraphId === 'situation') {
+                values.situationAO = values.situationAO || joinLegacyDraftParts(values.situationAO, values.situationTerrain, values.situationWeather);
+                values.situationFriendly = values.situationFriendly || joinLegacyDraftParts(values.situationTwoLevelsUp, values.situationOneLevelUp, values.situationAdjacent);
+            }
+            if (paragraphId === 'mission') {
+                values.missionStatement = values.missionStatement || renderMissionPreview(values);
+                if (values.missionStatement === 'Your live mission statement preview will appear here.') values.missionStatement = '';
+            }
+            if (paragraphId === 'execution') {
+                values.executionIntent = values.executionIntent || joinLegacyDraftParts(values.executionPurpose, values.executionKeyTasks, values.executionEndState);
+                values.executionManeuver = values.executionManeuver || joinLegacyDraftParts(values.executionPhase1, values.executionPhase2);
+            }
+            if (paragraphId === 'sustainment') {
+                values.sustainLogistic = values.sustainLogistic || joinLegacyDraftParts(values.sustainSupplyFieldServices, values.sustainDistributionResupply, values.sustainMaintenance, values.sustainTransportation);
+                values.sustainTccc = values.sustainTccc || joinLegacyDraftParts(values.sustainCareUnderFire, values.sustainTacticalFieldCare, values.sustainTacticalEvacuation);
+            }
+            if (paragraphId === 'commandSignal') {
+                values.commandCommand = values.commandCommand || joinLegacyDraftParts(values.commandLocation, values.commandSuccession);
+                values.commandControl = values.commandControl || values.commandPost || '';
+                values.commandSignal = values.commandSignal || joinLegacyDraftParts(values.signalRadioFrequencies, values.signalPrimary, values.signalAlternate, values.signalContingency, values.signalEmergency, values.signalPasswords, values.signalPyrotechnic);
+            }
+            return values;
+        }
+
         function getStep2SeedValues(paragraphId = activeParagraphId) {
             const drafts = getStep2DraftStore();
+            const scenario = getScenarioStore()[selectedScenarioCode];
             const savedDraft = drafts[step2DraftKey(paragraphId)];
-            if (savedDraft && typeof savedDraft === 'object') return { ...savedDraft };
+            if (savedDraft && typeof savedDraft === 'object') return normalizeOpord02BroadDraft(paragraphId, savedDraft, scenario);
             const artifact = getCurrentStep2Artifact(paragraphId);
-            if (artifact?.formData && typeof artifact.formData === 'object') return { ...artifact.formData };
+            if (artifact?.formData && typeof artifact.formData === 'object') return normalizeOpord02BroadDraft(paragraphId, artifact.formData, scenario);
             return {};
         }
 
@@ -1979,140 +2193,89 @@
 
         function renderTeamProcess(paragraphId) {
             const processes = {
-                situation: '<strong>Team interaction:</strong> Assign one member to AOI/AO and terrain-weather, one to enemy, one to friendly-force relationships, and one to attachments/detachments. Edit for operational effect and brevity.',
-                mission: '<strong>Team interaction:</strong> One member proposes the 5W elements, one checks tactical verb + objective, and the group reads the final mission statement aloud before submitting.',
-                execution: '<strong>Suggested team roles:</strong> Commander—intent; Planner—concept/phases; Platoon leaders—tasks; RTO—coordinating instructions; Editor—clarity and brevity check.',
-                sustainment: '<strong>Team interaction:</strong> Assign a logistics lead for supply/distribution, a personnel lead for personnel services support, and a medic lead for TCCC. The editor checks that the entries follow the Step 1 shell.',
-                commandSignal: '<strong>Suggested team roles:</strong> Commander—location and succession; XO—command-post control; RTO—radio/PACE/password/pyrotechnic plan; Editor—checks that every field is actionable.'
+                situation: '<strong>Team interaction:</strong> Discuss the situation one first-level heading at a time. Decide what matters, then record one concise group entry for each heading.',
+                mission: '<strong>Team interaction:</strong> Draft one mission sentence together. Read it aloud, then decide whether it gives another team enough shared understanding to act.',
+                execution: '<strong>Suggested team roles:</strong> Assign one member to each first-level Execution heading; the editor checks that the five headings work together as one plan.',
+                sustainment: '<strong>Team interaction:</strong> Assign a logistics lead, personnel lead, and medic lead. Each group writes one concise top-level support entry before asking for a coach check.',
+                commandSignal: '<strong>Suggested team roles:</strong> Commander drafts Command, XO drafts Control, RTO drafts Signal, and the editor checks that each top-level entry is immediately usable.'
             };
             return `<div class="rounded-lg border border-indigo-100 bg-indigo-50/70 px-3 py-2 text-[10px] leading-relaxed text-indigo-800"><i class="fa-solid fa-people-group mr-1"></i>${processes[paragraphId] || ''}</div>`;
         }
 
         function renderMissionPreview(values) {
-            const parts = [
-                String(values.missionUnit || '').trim(),
-                String(values.missionTime || '').trim(),
-                String(values.missionTask || '').trim(),
-                String(values.missionObjective || '').trim(),
-                String(values.missionPurpose || '').trim()
+            const statement = String(values?.missionStatement || '').trim();
+            if (statement) return /[.!?]$/.test(statement) ? statement : `${statement}.`;
+            const legacyParts = [
+                String(values?.missionUnit || '').trim(),
+                String(values?.missionTime || '').trim(),
+                String(values?.missionTask || '').trim(),
+                String(values?.missionObjective || '').trim(),
+                String(values?.missionPurpose || '').trim()
             ].filter(Boolean);
-            return parts.length ? `${parts.join(' ')}${/[.!?]$/.test(parts[parts.length - 1]) ? '' : '.'}` : 'Your live mission statement preview will appear here.';
+            return legacyParts.length ? `${legacyParts.join(' ')}${/[.!?]$/.test(legacyParts[legacyParts.length - 1]) ? '' : '.'}` : 'Your mission statement will appear here.';
         }
 
         function refreshStep2LivePreview() {
-            if (activeParagraphId !== 'mission') return;
             const preview = document.getElementById('mission-live-preview');
             if (!preview) return;
             preview.innerText = renderMissionPreview(getStep2FormValues());
         }
 
-        function renderSituationWriting(values) {
+        function renderSituationWriting(data, values) {
             return `
                 ${renderTeamProcess('situation')}
-                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing target:</strong> Follow the same company-and-below shell used in Step 1. Write concise operational entries; do not copy the reference cards word-for-word.</div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    ${step2TextArea('situationAOI', 'Area of Interest', values.situationAOI, 'e.g., Eastern approaches to Outpost EAGLE ...', true, 'What wider area can affect this mission?', 2)}
-                    ${step2TextArea('situationAO', 'Area of Operations', values.situationAO, 'e.g., Company defensive sector around ...', true, 'Where will the unit actually operate?', 2)}
-                    ${step2TextArea('situationTerrain', 'Terrain', values.situationTerrain, 'e.g., Draws east of the outpost provide ...', true, 'State the operational effect, not only the feature.', 2)}
-                    ${step2TextArea('situationWeather', 'Weather', values.situationWeather, 'e.g., Fog after 2200 limits ...', true, 'Visibility, wind, precipitation, BMNT/EENT, etc.', 2)}
-                    ${step2TextArea('situationEnemy', 'Enemy Forces (Latest Intelligence)', values.situationEnemy, 'e.g., Platoon-sized element assessed to infiltrate ...', true, 'Composition, strength, capability, location, and likely COA.', 2)}
-                    <div class="md:col-span-2 rounded-lg border border-indigo-100 bg-indigo-50/50 p-3">
-                        <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-indigo-800">Friendly Forces</p>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            ${step2TextArea('situationTwoLevelsUp', 'Two Levels Up', values.situationTwoLevelsUp, 'e.g., Battalion conducts ...', true, 'State the mission or purpose that frames this unit.', 2)}
-                            ${step2TextArea('situationOneLevelUp', 'One Level Up', values.situationOneLevelUp, 'e.g., Company establishes ...', true, 'State the higher unit’s mission / intent.', 2)}
-                            ${step2TextArea('situationAdjacent', 'Adjacent Units', values.situationAdjacent, 'e.g., 1st Platoon secures ...', true, 'State relationship and task of adjacent/supporting units.', 2)}
-                        </div>
-                    </div>
-                    ${step2TextArea('situationAttach', 'Attachments and Detachments', values.situationAttach, 'e.g., One medic team attached to ... / None.', true, 'State attached/detached support, or write “None.”', 2)}
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing workflow:</strong> Write one broad entry under each first-level Situation heading. Keep the smaller analytic requirements in the background; Captain Manhee will use them only when the team requests a checkpoint.</div>
+                <div class="space-y-3">
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.situation, 'situation-aoi', step2TextArea('situationAOI', 'Area of Interest', values.situationAOI, 'e.g., Eastern approaches to Outpost EAGLE ...', true, 'Identify the wider area that can affect this mission.', 4))}
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.situation, 'situation-ao', step2TextArea('situationAO', 'Area of Operations', values.situationAO, 'Describe the area where the unit will operate and the conditions that matter ...', true, 'Write one broad operational entry.', 5))}
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.situation, 'situation-enemy', step2TextArea('situationEnemy', 'Enemy Forces (Latest Intelligence)', values.situationEnemy, 'Describe the relevant enemy situation from the scenario ...', true, 'Write one broad operational entry.', 4))}
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.situation, 'situation-friendly', step2TextArea('situationFriendly', 'Friendly Forces', values.situationFriendly, 'Describe the friendly-force relationships that frame the team ...', true, 'Write one broad operational entry.', 5))}
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.situation, 'situation-attachments', step2TextArea('situationAttach', 'Attachments and Detachments', values.situationAttach, 'e.g., One medic team attached to ... / None.', true, 'State attached/detached support, or write “None.”', 4))}
                 </div>
             `;
         }
 
-        function renderMissionWriting(values) {
+        function renderMissionWriting(data, values) {
             return `
                 ${renderTeamProcess('mission')}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    ${step2TextInput('missionUnit', 'Who: Unit', values.missionUnit, 'e.g., 2nd Platoon,', true)}
-                    ${step2TextInput('missionTime', 'When: Time / Condition', values.missionTime, 'e.g., NLT 2000,', true)}
-                    ${step2TextInput('missionTask', 'What: Tactical Task', values.missionTask, 'e.g., seizes', true, 'Use an OPORD action verb.')}
-                    ${step2TextInput('missionObjective', 'Where: Objective / Location', values.missionObjective, 'e.g., OBJ HWARANG', true)}
-                </div>
-                ${step2TextArea('missionPurpose', 'Why: Purpose', values.missionPurpose, 'e.g., in order to support the company’s main effort.', true, 'Use “in order to …” and finish the sentence.', 2)}
-                <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
-                    <p class="text-[10px] font-black uppercase tracking-wider text-indigo-700">Live mission statement preview</p>
-                    <p id="mission-live-preview" class="mt-1.5 whitespace-pre-wrap text-[12px] font-mono leading-relaxed text-indigo-950">${escapeHtml(renderMissionPreview(values))}</p>
-                </div>
+                ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.mission, 'mission-statement', step2TextArea('missionStatement', 'Mission Statement', values.missionStatement, 'Write one concise mission statement for the fictional scenario ...', true, 'Write one complete operational sentence before asking for a coach check.', 4))}
             `;
         }
 
-        function renderExecutionWriting(values) {
+        function renderExecutionWriting(data, values) {
             return `
                 ${renderTeamProcess('execution')}
-                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing target:</strong> Create a shared plan, not five disconnected sentences. Your intent must guide your concept, tasks, and coordinating instructions.</div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    ${step2TextArea('executionPurpose', 'Commander’s Intent: Purpose', values.executionPurpose, 'Why must this operation happen?', true, '', 2)}
-                    ${step2TextArea('executionKeyTasks', 'Commander’s Intent: Key Tasks', values.executionKeyTasks, 'What must be accomplished?', false, 'Use short task phrases separated by semicolons.', 2)}
-                    ${step2TextArea('executionEndState', 'Commander’s Intent: End State', values.executionEndState, 'What should be true when complete?', true, '', 2)}
-                    ${step2TextArea('executionConcept', 'Concept of Operation', values.executionConcept, 'Describe the overall tactical approach.', true, '', 3)}
-                    ${step2TextArea('executionPhase1', 'Phase I', values.executionPhase1, 'e.g., Move from AA EAGLE to SBF 1.', true, '', 2)}
-                    ${step2TextArea('executionPhase2', 'Phase II', values.executionPhase2, 'e.g., Assault and seize OBJ HWARANG.', false, '', 2)}
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing workflow:</strong> Build Execution through its five first-level OPORD headings. Write the broad plan first; Captain Manhee checks hidden revision requirements only after the team asks.</div>
+                <div class="space-y-3">
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.execution, 'execution-intent', step2TextArea('executionIntent', 'Commander’s Intent', values.executionIntent, 'State the commander’s overall intent for the operation ...', true, 'Write one broad intent entry.', 5))}
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.execution, 'execution-concept', step2TextArea('executionConcept', 'Concept of Operations', values.executionConcept, 'Describe the overall tactical approach ...', true, 'Describe the broad approach, not every individual task.', 5))}
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.execution, 'execution-maneuver', step2TextArea('executionManeuver', 'Scheme of Movement and Maneuver', values.executionManeuver, 'Describe the movement sequence or broad maneuver approach ...', true, 'Make the movement or phase logic visible in one entry.', 5))}
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.execution, 'execution-tasks', step2TextArea('executionTasks', 'Tasks to Subordinate Units', values.executionTasks, '1st Platoon: ...\n3rd Platoon: ...\nWeapons Squad: ...', true, 'Assign usable tasks to relevant units.', 6))}
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.execution, 'execution-coordinating', step2TextArea('executionCoord', 'Coordinating Instructions', values.executionCoord, 'State time, control, reporting, or risk-reduction instructions ...', true, 'Write one broad coordinating entry.', 5))}
                 </div>
-                ${step2TextArea('executionTasks', 'Tasks to Subordinate Units', values.executionTasks, '1st Platoon: ...\n2nd Platoon: ...\nWeapons Squad: ...', true, 'Give each unit a task and purpose where possible.', 5)}
-                ${step2TextArea('executionCoord', 'Coordinating Instructions', values.executionCoord, 'Time / control measure / reporting / risk control: ...', true, 'Use items such as LD, PL, LOA, report when, do not advance beyond.', 4)}
             `;
         }
 
-        function renderSustainmentWriting(values) {
+        function renderSustainmentWriting(data, values) {
             return `
                 ${renderTeamProcess('sustainment')}
-                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing target:</strong> Use the Step 1 company-and-below Sustainment shell. Cover the logistics, personnel-services, and TCCC details the unit can actually use.</div>
-                <div class="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3">
-                    <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-indigo-800">Logistic</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        ${step2TextArea('sustainSupplyFieldServices', 'Supply and Field Services', values.sustainSupplyFieldServices, 'Water / food / ammunition / fuel / battery: ...', true, 'State what is available or how it will be provided.', 3)}
-                        ${step2TextArea('sustainDistributionResupply', 'Distribution and Resupply Operations', values.sustainDistributionResupply, 'Airdrop / drone delivery / foot delivery / on-site exploitation: ...', true, 'State how and when resupply will reach the unit.', 3)}
-                        ${step2TextArea('sustainMaintenance', 'Maintenance', values.sustainMaintenance, 'Weapons / vehicles / communications equipment: ...', false, 'Write “None” when not required.', 3)}
-                        ${step2TextArea('sustainTransportation', 'Transportation (When Required)', values.sustainTransportation, 'Vehicle / CASEVAC vehicle / other transport: ...', false, 'Write “None” when not required.', 3)}
-                    </div>
-                </div>
-                ${step2TextArea('sustainPersonnelServices', 'Personnel Services Support', values.sustainPersonnelServices, 'Accountability / EPW / replacement / reporting instructions: ...', true, 'Use the Step 1 heading exactly; state the personnel-support instructions.', 4)}
-                <div class="rounded-lg border border-rose-100 bg-rose-50/40 p-3">
-                    <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-rose-800">Tactical Combat Casualty Care</p>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        ${step2TextArea('sustainCareUnderFire', 'Care Under Fire', values.sustainCareUnderFire, 'e.g., Return fire, move to cover, apply tourniquet when feasible: ...', true, '', 3)}
-                        ${step2TextArea('sustainTacticalFieldCare', 'Tactical Field Care', values.sustainTacticalFieldCare, 'e.g., Treat at CCP / prepare casualty card / reassess: ...', true, '', 3)}
-                        ${step2TextArea('sustainTacticalEvacuation', 'Tactical Evacuation', values.sustainTacticalEvacuation, 'CASEVAC / MEDEVAC / CCP / HLZ-LZ plan: ...', true, '', 3)}
-                    </div>
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing workflow:</strong> Build Sustainment through its three first-level components. The sub-elements stay hidden during first drafting and become coach-only revision criteria.</div>
+                <div class="space-y-3">
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.sustainment, 'sustain-logistic', step2TextArea('sustainLogistic', 'Logistic', values.sustainLogistic, 'Describe available support and how it reaches the unit ...', true, 'Write one broad logistics entry.', 6))}
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.sustainment, 'sustain-personnel', step2TextArea('sustainPersonnelServices', 'Personnel Services Support', values.sustainPersonnelServices, 'State the personnel-support arrangements for the team ...', true, 'Write one broad personnel-support entry.', 5))}
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.sustainment, 'sustain-tccc', step2TextArea('sustainTccc', 'Tactical Combat Casualty Care', values.sustainTccc, 'Describe casualty-care and evacuation support for the fictional scenario ...', true, 'Write one broad medical-support entry.', 6))}
                 </div>
             `;
         }
 
-        function renderCommandSignalWriting(values) {
+        function renderCommandSignalWriting(data, values) {
             return `
                 ${renderTeamProcess('commandSignal')}
-                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing target:</strong> Use the Step 1 company-and-below Command and Signal shell. Keep locations, communications, passwords, and visual signals immediately usable.</div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    ${step2TextArea('commandLocation', 'Command (Location of Leaders)', values.commandLocation, 'e.g., Platoon leader moves with the main effort ...', true, '', 2)}
-                    ${step2TextArea('commandSuccession', 'Command: Succession of Command', values.commandSuccession, 'e.g., Platoon sergeant assumes command if ...', true, 'Use this supporting detail to make command continuity clear.', 2)}
-                    ${step2TextArea('commandPost', 'Control (Command Post Location)', values.commandPost, 'e.g., Company CP is located at ...', true, '', 2)}
-                </div>
-                <div class="rounded-lg border border-indigo-100 bg-indigo-50/60 p-3 space-y-3">
-                    <p class="text-[10px] font-black uppercase tracking-wider text-indigo-800">Signal</p>
-                    ${step2TextArea('signalRadioFrequencies', 'Radio Frequencies', values.signalRadioFrequencies, 'e.g., Company command net / platoon internal net / CEOI reference: ...', true, 'Identify the net / radio-frequency arrangement or CEOI reference.', 2)}
-                    <div class="rounded border border-indigo-100 bg-white/70 p-3">
-                        <p class="mb-2 text-[10px] font-black uppercase tracking-wider text-indigo-800">PACE Communication Plan</p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            ${step2TextInput('signalPrimary', 'Primary', values.signalPrimary, 'e.g., Company command net', true)}
-                            ${step2TextInput('signalAlternate', 'Alternate', values.signalAlternate, 'e.g., Platoon internal net', false)}
-                            ${step2TextInput('signalContingency', 'Contingency', values.signalContingency, 'e.g., Runner / messenger', false)}
-                            ${step2TextInput('signalEmergency', 'Emergency', values.signalEmergency, 'e.g., Emergency signal / pyrotechnic', false)}
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        ${step2TextArea('signalPasswords', 'Passwords / Running Passwords', values.signalPasswords, 'Number combination / challenge password / running password: ...', true, 'Include only fictional classroom examples.', 3)}
-                        ${step2TextArea('signalPyrotechnic', 'Pyrotechnic Signals', values.signalPyrotechnic, 'Signal / meaning / condition for use: ...', true, 'Write “None” when no pyrotechnic signal is assigned.', 3)}
-                    </div>
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing workflow:</strong> Build Command and Signal through its three first-level components. The detailed signal requirements stay hidden during drafting and guide only the coach check.</div>
+                <div class="space-y-3">
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.commandSignal, 'command-location', step2TextArea('commandCommand', 'Command', values.commandCommand, 'State leader location and command continuity ...', true, 'Write one broad Command entry.', 5))}
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.commandSignal, 'command-control', step2TextArea('commandControl', 'Control', values.commandControl, 'State the command-post location or control arrangements ...', true, 'Write one broad Control entry.', 5))}
+                    ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.commandSignal, 'command-signal', step2TextArea('commandSignal', 'Signal', values.commandSignal, 'Describe the communications plan for the fictional scenario ...', true, 'Write one broad Signal entry.', 6))}
                 </div>
             `;
         }
@@ -2166,7 +2329,7 @@
                 commandSignal: renderCommandSignalWriting
             };
             const renderer = forms[activeParagraphId] || renderMissionWriting;
-            return renderer(values);
+            return renderer(data, values);
         }
 
         function renderStep2(data, drill, step1Complete, complete) {
@@ -2183,7 +2346,7 @@
                 ? '<i class="fa-solid fa-comments mr-1"></i>Step 2: Guided Thinking Prompts'
                 : (activityType === 'lecture'
                     ? '<i class="fa-solid fa-pen-to-square mr-1"></i>Step 2: Lecture Revision Writing'
-                    : '<i class="fa-solid fa-people-group mr-1"></i>Step 2: Code Your Way Team Writing');
+                    : '<i class="fa-solid fa-people-group mr-1"></i>Step 2: Code Your Way · Group Coach Checkpoints');
             step2Slots.innerHTML = '';
 
             if (!step1Complete) {
@@ -2192,7 +2355,7 @@
                     ? 'Step 1의 OPORD shell sequence를 통과하면 영상·스크립트 기반의 두 가지 thinking prompt가 열립니다.'
                     : (activityType === 'lecture'
                         ? 'Step 1의 OPORD shell sequence를 통과하면 팀의 open-ended revision workspace가 열립니다.'
-                        : 'Step 1의 OPORD shell sequence를 통과하면 Code Your Way team writing workspace가 열립니다.');
+                        : 'Step 1의 OPORD shell sequence를 통과하면 팀이 first-level writing chunk를 작성하고, 각 chunk마다 최대 3회의 coach check를 사용할 수 있습니다.');
                 status.className = 'text-[10px] rounded bg-slate-200 px-2 py-1 font-bold text-slate-500';
                 status.innerText = 'Locked until Step 1';
                 step2Slots.innerHTML = `<div class="rounded-lg border border-dashed border-amber-200 bg-white/60 px-4 py-5 text-center text-[11px] text-slate-400"><i class="fa-solid fa-lock mr-1"></i> First construct the OPORD shell.</div>`;
@@ -2224,7 +2387,9 @@
             const values = getStep2SeedValues();
             instruction.innerText = isThinkingPromptActivity
                 ? '영상·스크립트와 phrase bank를 근거로 아래 두 thinking prompt에 짧고 구체적인 팀 답변을 작성하십시오.'
-                : drill.step2Prompt;
+                : (isCaptainManheeScenario(data)
+                    ? '팀이 first-level OPORD chunk를 먼저 작성합니다. 각 chunk는 team discussion 뒤 최대 3회의 Captain Manhee coach check로 revision hint를 받을 수 있습니다.'
+                    : drill.step2Prompt);
             status.className = 'text-[10px] rounded bg-amber-100 px-2 py-1 font-bold text-amber-800';
             status.innerText = isThinkingPromptActivity ? 'Guided thinking responses' : (activityType === 'lecture' ? 'Lecture revision draft' : drill.step2Title);
             verifyBtn.classList.remove('hidden');
@@ -2270,7 +2435,7 @@
                     : (activityType === 'lecture'
                         ? '교관이 입력한 영상 스크립트·예문을 참고하되, Step 2에는 팀의 수정문을 자기 말로 작성하십시오.'
                         : '교관이 제공한 scenario reference를 참고하되, Step 2에서는 팀의 own wording으로 작성하십시오.');
-                pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId) + renderCaptainManheePanel(data, drill, step1Complete);
+                pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
                 return;
             }
 
@@ -2280,7 +2445,7 @@
                 : (activityType === 'lecture'
                     ? '이 paragraph의 shell과 lecture revision draft가 모두 제출되었습니다.'
                     : '이 paragraph의 Step 1 shell과 Step 2 team writing이 모두 완료되었습니다.');
-            pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId) + renderCaptainManheePanel(data, drill, step1Complete);
+            pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
         }
 
         function loadWorkshop() {
@@ -2457,15 +2622,27 @@
         }
 
 
-        // When this prototype is open in another tab of the same browser, reload the relevant view after a scenario edit.
+        // When the prototype is open in another tab of the same browser, keep dashboard,
+        // peer-review, and workshop status synchronized after a scenario, draft, or artifact update.
         window.addEventListener('storage', event => {
-            if (event.key !== 'OPORD_SCENARIOS') return;
+            const syncKeys = new Set([
+                'OPORD_SCENARIOS',
+                'OPORD_ARTIFACTS',
+                'OPORD_COMMENTS',
+                'OPORD_WORKSHOP_PROGRESS',
+                'OPORD_STEP2_GUIDED_DRAFTS'
+            ]);
+            if (!syncKeys.has(event.key)) return;
             if (!currentUser) return;
+
             const teacherVisible = !document.getElementById('screen-teacher').classList.contains('hidden');
             const dashboardVisible = !document.getElementById('screen-dashboard').classList.contains('hidden');
+            const hubVisible = !document.getElementById('screen-hub').classList.contains('hidden');
             const workshopVisible = !document.getElementById('screen-workshop').classList.contains('hidden');
+
             if (teacherVisible && currentUser.role === 'teacher') renderTeacherDashboard();
             if (dashboardVisible) renderStudentDashboard();
+            if (hubVisible) renderSharedHub();
             if (workshopVisible) loadWorkshop();
         });
 
@@ -2474,11 +2651,11 @@
             if (isOpord01ThinkingPromptActivity(activeScenario, paragraphId)) return ['lectureResponse1', 'lectureResponse2'];
             if (activityType === 'lecture') return ['lectureDraft'];
             const required = {
-                situation: ['situationAOI', 'situationAO', 'situationTerrain', 'situationWeather', 'situationEnemy', 'situationTwoLevelsUp', 'situationOneLevelUp', 'situationAdjacent', 'situationAttach'],
-                mission: ['missionUnit', 'missionTime', 'missionTask', 'missionObjective', 'missionPurpose'],
-                execution: ['executionPurpose', 'executionEndState', 'executionConcept', 'executionPhase1', 'executionTasks', 'executionCoord'],
-                sustainment: ['sustainSupplyFieldServices', 'sustainDistributionResupply', 'sustainPersonnelServices', 'sustainCareUnderFire', 'sustainTacticalFieldCare', 'sustainTacticalEvacuation'],
-                commandSignal: ['commandLocation', 'commandSuccession', 'commandPost', 'signalRadioFrequencies', 'signalPrimary', 'signalPasswords', 'signalPyrotechnic']
+                situation: ['situationAOI', 'situationAO', 'situationEnemy', 'situationFriendly', 'situationAttach'],
+                mission: ['missionStatement'],
+                execution: ['executionIntent', 'executionConcept', 'executionManeuver', 'executionTasks', 'executionCoord'],
+                sustainment: ['sustainLogistic', 'sustainPersonnelServices', 'sustainTccc'],
+                commandSignal: ['commandCommand', 'commandControl', 'commandSignal']
             };
             return required[paragraphId] || [];
         }
@@ -2489,8 +2666,8 @@
             return /[.!?]$/.test(value) ? value : `${value}.`;
         }
 
-        function compileStep2Writing(paragraphId, values, activityType = getScenarioActivityType(getScenarioStore()[selectedScenarioCode])) {
-            const activeScenario = getScenarioStore()[selectedScenarioCode];
+        function compileStep2Writing(paragraphId, values, activityType = getScenarioActivityType(getScenarioStore()[selectedScenarioCode]), scenarioData = getScenarioStore()[selectedScenarioCode]) {
+            const activeScenario = scenarioData;
             if (isOpord01ThinkingPromptActivity(activeScenario, paragraphId)) {
                 const prompts = OPORD01_THINKING_PROMPTS[paragraphId] || [];
                 return [
@@ -2504,93 +2681,40 @@
                 ].join('\n').trim();
             }
             if (activityType === 'lecture') return String(values.lectureDraft || '').trim();
-            const line = (label, value) => value && String(value).trim() ? `${label}: ${String(value).trim()}` : '';
+            const value = field => String(values?.[field] || '').trim();
             if (paragraphId === 'situation') {
                 return [
-                    'AREA OF INTEREST',
-                    String(values.situationAOI || '').trim(),
-                    '',
-                    'AREA OF OPERATIONS',
-                    String(values.situationAO || '').trim(),
-                    line('Terrain', values.situationTerrain),
-                    line('Weather', values.situationWeather),
-                    '',
-                    'ENEMY FORCES (LATEST INTELLIGENCE)',
-                    String(values.situationEnemy || '').trim(),
-                    '',
-                    'FRIENDLY FORCES',
-                    line('Two Levels Up', values.situationTwoLevelsUp),
-                    line('One Level Up', values.situationOneLevelUp),
-                    line('Adjacent Units', values.situationAdjacent),
-                    '',
-                    'ATTACHMENTS AND DETACHMENTS',
-                    String(values.situationAttach || '').trim()
-                ].filter(item => item !== undefined && item !== null).join('\n');
+                    'AREA OF INTEREST', value('situationAOI'), '',
+                    'AREA OF OPERATIONS', value('situationAO'), '',
+                    'ENEMY FORCES (LATEST INTELLIGENCE)', value('situationEnemy'), '',
+                    'FRIENDLY FORCES', value('situationFriendly'), '',
+                    'ATTACHMENTS AND DETACHMENTS', value('situationAttach')
+                ].join('\n');
             }
-
-            if (paragraphId === 'mission') {
-                return renderMissionPreview(values);
-            }
-
+            if (paragraphId === 'mission') return value('missionStatement');
             if (paragraphId === 'execution') {
                 return [
-                    'COMMANDER’S INTENT',
-                    line('Purpose', values.executionPurpose),
-                    line('Key Tasks', values.executionKeyTasks),
-                    line('End State', values.executionEndState),
-                    '',
-                    'CONCEPT OF OPERATION',
-                    line('Concept', values.executionConcept),
-                    line('Phase I', values.executionPhase1),
-                    line('Phase II', values.executionPhase2),
-                    '',
-                    'TASKS TO SUBORDINATE UNITS',
-                    String(values.executionTasks || '').trim(),
-                    '',
-                    'COORDINATING INSTRUCTIONS',
-                    String(values.executionCoord || '').trim()
-                ].filter(item => item !== undefined && item !== null).join('\n');
+                    'COMMANDER’S INTENT', value('executionIntent'), '',
+                    'CONCEPT OF OPERATIONS', value('executionConcept'), '',
+                    'SCHEME OF MOVEMENT AND MANEUVER', value('executionManeuver'), '',
+                    'TASKS TO SUBORDINATE UNITS', value('executionTasks'), '',
+                    'COORDINATING INSTRUCTIONS', value('executionCoord')
+                ].join('\n');
             }
-
             if (paragraphId === 'sustainment') {
                 return [
-                    'LOGISTIC',
-                    line('Supply and Field Services', values.sustainSupplyFieldServices),
-                    line('Distribution and Resupply Operations', values.sustainDistributionResupply),
-                    line('Maintenance', values.sustainMaintenance),
-                    line('Transportation (When Required)', values.sustainTransportation),
-                    '',
-                    'PERSONNEL SERVICES SUPPORT',
-                    String(values.sustainPersonnelServices || '').trim(),
-                    '',
-                    'TACTICAL COMBAT CASUALTY CARE',
-                    line('Care Under Fire', values.sustainCareUnderFire),
-                    line('Tactical Field Care', values.sustainTacticalFieldCare),
-                    line('Tactical Evacuation', values.sustainTacticalEvacuation)
-                ].filter(item => item !== undefined && item !== null).join('\n');
+                    'LOGISTIC', value('sustainLogistic'), '',
+                    'PERSONNEL SERVICES SUPPORT', value('sustainPersonnelServices'), '',
+                    'TACTICAL COMBAT CASUALTY CARE', value('sustainTccc')
+                ].join('\n');
             }
-
             if (paragraphId === 'commandSignal') {
                 return [
-                    'COMMAND (LOCATION OF LEADERS)',
-                    String(values.commandLocation || '').trim(),
-                    line('Succession of Command', values.commandSuccession),
-                    '',
-                    'CONTROL (COMMAND POST LOCATION)',
-                    String(values.commandPost || '').trim(),
-                    '',
-                    'SIGNAL',
-                    line('Radio Frequencies', values.signalRadioFrequencies),
-                    'PACE Communication Plan',
-                    line('Primary', values.signalPrimary),
-                    line('Alternate', values.signalAlternate),
-                    line('Contingency', values.signalContingency),
-                    line('Emergency', values.signalEmergency),
-                    line('Passwords / Running Passwords', values.signalPasswords),
-                    line('Pyrotechnic Signals', values.signalPyrotechnic)
-                ].filter(item => item !== undefined && item !== null).join('\n');
+                    'COMMAND', value('commandCommand'), '',
+                    'CONTROL', value('commandControl'), '',
+                    'SIGNAL', value('commandSignal')
+                ].join('\n');
             }
-
             return '';
         }
 
@@ -2613,11 +2737,17 @@
 
         function getReadableStep2FieldName(field) {
             const names = {
-                situationAOI: 'Area of Interest', situationAO: 'Area of Operations', situationTerrain: 'Terrain', situationWeather: 'Weather', situationEnemy: 'Enemy Forces (Latest Intelligence)', situationTwoLevelsUp: 'Two Levels Up', situationOneLevelUp: 'One Level Up', situationAdjacent: 'Adjacent Units', situationAttach: 'Attachments and Detachments',
+                situationAOI: 'Area of Interest', situationAO: 'Area of Operations', situationEnemy: 'Enemy Forces (Latest Intelligence)', situationFriendly: 'Friendly Forces', situationAttach: 'Attachments and Detachments',
+                missionStatement: 'Mission Statement',
+                executionIntent: 'Commander’s Intent', executionConcept: 'Concept of Operations', executionManeuver: 'Scheme of Movement and Maneuver', executionTasks: 'Tasks to Subordinate Units', executionCoord: 'Coordinating Instructions',
+                sustainLogistic: 'Logistic', sustainPersonnelServices: 'Personnel Services Support', sustainTccc: 'Tactical Combat Casualty Care',
+                commandCommand: 'Command', commandControl: 'Control', commandSignal: 'Signal',
+                lectureDraft: 'Team revised paragraph', lectureResponse1: 'Thinking prompt 1 response', lectureResponse2: 'Thinking prompt 2 response',
+                situationTerrain: 'Terrain', situationWeather: 'Weather', situationTwoLevelsUp: 'Two Levels Up', situationOneLevelUp: 'One Level Up', situationAdjacent: 'Adjacent Units',
                 missionUnit: 'Who / Unit', missionTime: 'When / Time', missionTask: 'What / Task', missionObjective: 'Where / Objective', missionPurpose: 'Why / Purpose',
-                executionPurpose: 'Intent: Purpose', executionEndState: 'Intent: End State', executionConcept: 'Concept of Operation', executionPhase1: 'Phase I', executionTasks: 'Tasks to Subordinate Units', executionCoord: 'Coordinating Instructions',
-                sustainSupplyFieldServices: 'Supply and Field Services', sustainDistributionResupply: 'Distribution and Resupply Operations', sustainPersonnelServices: 'Personnel Services Support', sustainCareUnderFire: 'Care Under Fire', sustainTacticalFieldCare: 'Tactical Field Care', sustainTacticalEvacuation: 'Tactical Evacuation',
-                lectureDraft: 'Team revised paragraph', lectureResponse1: 'Thinking prompt 1 response', lectureResponse2: 'Thinking prompt 2 response', commandLocation: 'Location of Leaders', commandSuccession: 'Succession of Command', commandPost: 'Command Post Location', signalRadioFrequencies: 'Radio Frequencies', signalPrimary: 'Primary Signal', signalPasswords: 'Passwords / Running Passwords', signalPyrotechnic: 'Pyrotechnic Signals'
+                executionPurpose: 'Intent: Purpose', executionKeyTasks: 'Intent: Key Tasks', executionEndState: 'Intent: End State', executionPhase1: 'Phase I', executionPhase2: 'Phase II',
+                sustainSupplyFieldServices: 'Supply and Field Services', sustainDistributionResupply: 'Distribution and Resupply Operations', sustainMaintenance: 'Maintenance', sustainTransportation: 'Transportation', sustainCareUnderFire: 'Care Under Fire', sustainTacticalFieldCare: 'Tactical Field Care', sustainTacticalEvacuation: 'Tactical Evacuation',
+                commandLocation: 'Location of Leaders', commandSuccession: 'Succession of Command', commandPost: 'Command Post Location', signalRadioFrequencies: 'Radio Frequencies', signalPrimary: 'Primary Signal', signalAlternate: 'Alternate Signal', signalContingency: 'Contingency Signal', signalEmergency: 'Emergency Signal', signalPasswords: 'Passwords / Running Passwords', signalPyrotechnic: 'Pyrotechnic Signals'
             };
             return names[field] || field;
         }
@@ -2666,7 +2796,7 @@
                 paragraphTitle: `${drill.number}. ${drill.title}`,
                 text: compiledText,
                 formData: values,
-                artifactMode: isOpord01ThinkingPromptActivity(data) ? 'lecture-guided-thinking-v1' : (activityType === 'lecture' ? 'lecture-open-writing-v1' : 'code-guided-writing-v1'),
+                artifactMode: isOpord01ThinkingPromptActivity(data) ? 'lecture-guided-thinking-v1' : (activityType === 'lecture' ? 'lecture-open-writing-v1' : 'code-top-level-chunk-writing-v2'),
                 timestamp: Date.now()
             };
             if (existingIndex > -1) artifacts[existingIndex] = record;
@@ -2674,6 +2804,11 @@
             localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify(artifacts));
 
             markStepComplete(activeParagraphId, 2);
+            // Refresh hidden views too: when the learner moves to Dashboard or Peer Review,
+            // the Code Your Way artifact package is immediately visible without a reload.
+            renderStudentDashboard();
+            renderSharedHub();
+            if (currentUser?.role === 'teacher') renderTeacherDashboard();
             feedback.className = 'text-xs font-bold text-emerald-600';
             feedback.innerText = isOpord01ThinkingPromptActivity(data)
                 ? `🎉 ${drill.title} thinking responses가 저장되고 공유 허브에 제출되었습니다.`
