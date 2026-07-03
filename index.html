@@ -108,6 +108,7 @@
                                 <div>
                                     <p id="scenario-editor-mode" class="text-[11px] font-black text-amber-800">새 시나리오 작성 모드</p>
                                     <p class="mt-0.5 text-[10px] leading-relaxed text-slate-500">기존 활동을 불러와 다섯 paragraph의 reference cards·phrase bank와 활동 유형(Lecture / Code Your Way)을 수정할 수 있습니다.</p>
+                                    <p class="mt-1 text-[9px] leading-relaxed text-rose-600"><i class="fa-solid fa-laptop mr-1"></i>현재 이 편집기는 이 브라우저의 localStorage에만 저장됩니다. 모든 생도에게 즉시 반영되는 시나리오 DB 동기화는 다음 단계입니다.</p>
                                 </div>
                                 <button type="button" onclick="resetScenarioEditor()" class="rounded border border-amber-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100"><i class="fa-solid fa-file-circle-plus mr-1"></i>새 활동</button>
                             </div>
@@ -181,7 +182,7 @@
                             </div>
                             <div class="flex gap-2">
                                 <button id="scenario-save-btn" onclick="saveScenarioEditor()" class="flex-1 bg-amber-600 text-white font-bold py-2 rounded shadow hover:bg-amber-700">
-                                    신규 시나리오 전체 배포
+                                    이 브라우저에 시나리오 저장
                                 </button>
                                 <button type="button" onclick="resetScenarioEditor()" class="border border-slate-200 bg-white px-3 py-2 rounded text-xs font-bold text-slate-600 hover:bg-slate-50">초기화</button>
                             </div>
@@ -483,6 +484,73 @@
         let selectedScenarioCode = 'OPORD-01';
         let sharedArtifacts = [];
         let sharedComments = [];
+
+        // The Shared Peer-Review Hub refreshes from Supabase in the background.
+        // Keep each open card and unsent feedback draft stable across those refreshes.
+        let sharedHubUiState = {
+            openBundleKeys: new Set(),
+            commentDrafts: {},
+            activeDraftKey: '',
+            selectionStart: null,
+            selectionEnd: null
+        };
+        let sharedHubRefreshPending = false;
+
+        function getSharedHubBundleKey(bundle) {
+            return `${bundle.studentId}::${bundle.scenarioCode}`;
+        }
+
+        function captureSharedHubUiState() {
+            const hubGrid = document.getElementById('shared-hub-grid');
+            if (!hubGrid) return;
+
+            const openBundleKeys = new Set();
+            hubGrid.querySelectorAll('details[data-hub-bundle-key]').forEach(details => {
+                if (details.open) openBundleKeys.add(details.dataset.hubBundleKey);
+            });
+
+            const commentDrafts = { ...sharedHubUiState.commentDrafts };
+            hubGrid.querySelectorAll('textarea[data-peer-draft-key]').forEach(textarea => {
+                commentDrafts[textarea.dataset.peerDraftKey] = textarea.value;
+            });
+
+            const active = document.activeElement;
+            const isPeerDraft = active && active.matches && active.matches('#shared-hub-grid textarea[data-peer-draft-key]');
+            sharedHubUiState = {
+                openBundleKeys,
+                commentDrafts,
+                activeDraftKey: isPeerDraft ? active.dataset.peerDraftKey : '',
+                selectionStart: isPeerDraft ? active.selectionStart : null,
+                selectionEnd: isPeerDraft ? active.selectionEnd : null
+            };
+        }
+
+        function rememberPeerCommentDraft(textarea) {
+            const key = textarea?.dataset?.peerDraftKey;
+            if (!key) return;
+            sharedHubUiState.commentDrafts[key] = textarea.value;
+        }
+
+        function hasActivePeerCommentComposer() {
+            const active = document.activeElement;
+            return Boolean(active && active.matches && active.matches('#shared-hub-grid textarea[data-peer-draft-key]'));
+        }
+
+        function restoreSharedHubComposerFocus() {
+            const key = sharedHubUiState.activeDraftKey;
+            if (!key || !document.hasFocus()) return;
+            const textarea = Array.from(document.querySelectorAll('#shared-hub-grid textarea[data-peer-draft-key]'))
+                .find(node => node.dataset.peerDraftKey === key);
+            if (!textarea) return;
+            textarea.focus();
+            const start = Number.isInteger(sharedHubUiState.selectionStart) ? sharedHubUiState.selectionStart : textarea.value.length;
+            const end = Number.isInteger(sharedHubUiState.selectionEnd) ? sharedHubUiState.selectionEnd : start;
+            try {
+                textarea.setSelectionRange(start, end);
+            } catch (error) {
+                // Some browsers may reject selection changes on a non-text input; safe to ignore.
+            }
+        }
 
         function normalizeLoginId(value) {
             return String(value || '').trim().toLowerCase();
@@ -1196,7 +1264,7 @@
             const saveBtn = document.getElementById('scenario-save-btn');
             if (mode) mode.innerText = '새 시나리오 작성 모드';
             if (note) note.innerText = '새 활동은 코드명을 지정하고, 기존 활동은 코드가 고정됩니다.';
-            if (saveBtn) saveBtn.innerHTML = '신규 시나리오 전체 배포';
+            if (saveBtn) saveBtn.innerHTML = '이 브라우저에 시나리오 저장';
             renderScenarioEditorLibrary();
         }
 
@@ -1228,7 +1296,7 @@
             const saveBtn = document.getElementById('scenario-save-btn');
             if (mode) mode.innerText = `[${scenario.code}] 기존 시나리오 수정 모드`;
             if (note) note.innerText = '기존 코드명은 artifact와 진행 기록 연결을 위해 변경할 수 없습니다.';
-            if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i>현재 시나리오 변경 저장';
+            if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i>이 브라우저의 시나리오 변경 저장';
             renderScenarioEditorLibrary();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
@@ -1290,7 +1358,7 @@
             resetScenarioStep2Progress(code);
 
             const actionText = isEditing ? '수정 완료' : '출제 완료';
-            alert(`🎯 [${actionText}] [${code}]의 5개 paragraph scenario reference cards가 저장되었습니다.\n\n기존 artifact는 보관되며, 다음 실습 진입부터 수정한 reference cards가 적용됩니다.`);
+            alert(`🎯 [${actionText}] [${code}]의 5개 paragraph scenario reference cards가 이 브라우저에 저장되었습니다.\n\n기존 artifact는 보관되며, 이 브라우저에서 다음 실습 진입부터 수정한 reference cards가 적용됩니다. 전원 즉시 반영은 시나리오 DB 동기화가 추가된 뒤 가능합니다.`);
             editingScenarioCode = code;
             renderTeacherDashboard();
             loadScenarioForEdit(code);
@@ -1418,6 +1486,8 @@
                 if (error) throw error;
 
                 if (textarea) textarea.value = '';
+                delete sharedHubUiState.commentDrafts[artifactKey];
+                sharedHubUiState.activeDraftKey = '';
                 await refreshSharedData();
                 renderSharedHub();
                 if (!document.getElementById('screen-dashboard').classList.contains('hidden')) renderStudentDashboard();
@@ -1502,14 +1572,17 @@
                     return `<div class="rounded border border-slate-100 bg-white px-2.5 py-2 text-[10px] leading-relaxed text-slate-600"><div class="mb-1 flex items-center justify-between gap-2"><span class="font-bold text-indigo-700"><i class="fa-solid fa-comment-dots mr-1"></i>${escapeHtml(author)}</span><span class="text-slate-400">${commentTime}</span></div><p>${escapeHtml(comment.text)}</p></div>`;
                 }).join('')
                 : `<div class="rounded border border-dashed border-slate-200 bg-white/70 px-2.5 py-2 text-[10px] italic text-slate-400">아직 등록된 동료 피드백이 없습니다.</div>`;
+            const savedDraft = sharedHubUiState.commentDrafts[artifactKey] || '';
             const feedbackComposer = isMe
                 ? `<div class="rounded border border-indigo-100 bg-indigo-50/50 px-2.5 py-2 text-[10px] text-indigo-600"><i class="fa-solid fa-info-circle mr-1"></i>내 artifact입니다. 다른 훈련생의 artifact에 피드백을 남겨보십시오.</div>`
-                : `<div class="space-y-2 rounded border border-emerald-100 bg-emerald-50/40 p-2.5"><label class="block text-[10px] font-bold text-emerald-800">Open-ended peer feedback</label><textarea id="peer-comment-${artifactDomId}" rows="2" maxlength="500" class="w-full resize-y rounded border border-emerald-200 bg-white p-2 text-[10px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" placeholder="One strength is… / One question I have is… / I suggest…"></textarea><div class="flex justify-end"><button onclick='submitPeerComment(${JSON.stringify(artifactKey)})' class="rounded bg-emerald-600 px-2.5 py-1.5 text-[10px] font-bold text-white hover:bg-emerald-700"><i class="fa-solid fa-paper-plane mr-1"></i>피드백 게시</button></div></div>`;
+                : `<div class="space-y-2 rounded border border-emerald-100 bg-emerald-50/40 p-2.5"><label class="block text-[10px] font-bold text-emerald-800">Open-ended peer feedback</label><textarea id="peer-comment-${artifactDomId}" data-peer-draft-key="${escapeHtml(artifactKey)}" oninput="rememberPeerCommentDraft(this)" rows="2" maxlength="500" class="w-full resize-y rounded border border-emerald-200 bg-white p-2 text-[10px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" placeholder="One strength is… / One question I have is… / I suggest…">${escapeHtml(savedDraft)}</textarea><div class="flex justify-end"><button onclick='submitPeerComment(${JSON.stringify(artifactKey)})' class="rounded bg-emerald-600 px-2.5 py-1.5 text-[10px] font-bold text-white hover:bg-emerald-700"><i class="fa-solid fa-paper-plane mr-1"></i>피드백 게시</button></div></div>`;
 
             return `<div class="mt-3 space-y-2 border-t border-slate-100 pt-3"><div class="flex items-center justify-between gap-2"><div class="text-[10px] font-black uppercase tracking-widest text-slate-500">Peer feedback</div><span class="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] text-slate-500">${comments.length} comments</span></div>${commentFeed}${feedbackComposer}</div>`;
         }
 
         function renderSharedHub() {
+            // Snapshot open cards and any unsent comment text before replacing hub HTML.
+            captureSharedHubUiState();
             recoverCompletedCodeActivityArtifacts();
             const hubGrid = document.getElementById('shared-hub-grid');
             hubGrid.innerHTML = '';
@@ -1542,6 +1615,8 @@
                 const latestText = bundle.latestTimestamp
                     ? new Date(bundle.latestTimestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
                     : '';
+                const bundleKey = getSharedHubBundleKey(bundle);
+                const isBundleOpen = sharedHubUiState.openBundleKeys.has(bundleKey);
 
                 const paragraphSections = OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => {
                     const artifact = bundle.artifactIndex[paragraphId];
@@ -1553,7 +1628,7 @@
                 }).join('');
 
                 hubGrid.innerHTML += `
-                    <details class="group rounded-xl border ${isMe ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200 bg-white'} shadow-sm open:shadow-md">
+                    <details data-hub-bundle-key="${escapeHtml(bundleKey)}" ${isBundleOpen ? 'open' : ''} class="group rounded-xl border ${isMe ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200 bg-white'} shadow-sm open:shadow-md">
                         <summary class="cursor-pointer list-none px-4 py-3.5">
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div class="min-w-0 flex items-center gap-2">
@@ -1571,6 +1646,9 @@
                     </details>
                 `;
             });
+
+            // When a periodic refresh happened during typing, restore the same draft and caret.
+            requestAnimationFrame(restoreSharedHubComposerFocus);
         }
 
         function renderStudentDashboard() {
@@ -2835,13 +2913,32 @@
 
         // Cross-device shared data is refreshed every 15 seconds while the app is open.
         // Workshop fields are intentionally not re-rendered here, so a learner's unsaved draft
-        // is never overwritten while typing.
+        // is never overwritten while typing. The peer-review hub also defers a visual re-render
+        // while a reviewer is actively typing a comment, then catches up once they leave the box.
+        document.addEventListener('focusout', event => {
+            if (!event.target?.matches?.('#shared-hub-grid textarea[data-peer-draft-key]')) return;
+            window.setTimeout(() => {
+                const hubVisible = !document.getElementById('screen-hub').classList.contains('hidden');
+                if (sharedHubRefreshPending && hubVisible && !hasActivePeerCommentComposer()) {
+                    sharedHubRefreshPending = false;
+                    renderSharedHub();
+                }
+            }, 0);
+        });
+
         window.setInterval(async () => {
             if (!currentUser || !currentSupabaseUserId) return;
             try {
                 await refreshSharedData();
                 if (!document.getElementById('screen-dashboard').classList.contains('hidden')) renderStudentDashboard();
-                if (!document.getElementById('screen-hub').classList.contains('hidden')) renderSharedHub();
+                if (!document.getElementById('screen-hub').classList.contains('hidden')) {
+                    if (hasActivePeerCommentComposer()) {
+                        sharedHubRefreshPending = true;
+                    } else {
+                        sharedHubRefreshPending = false;
+                        renderSharedHub();
+                    }
+                }
                 if (currentUser.role === 'teacher' && !document.getElementById('screen-teacher').classList.contains('hidden')) renderTeacherDashboard();
             } catch (error) {
                 console.warn('Periodic Supabase refresh skipped:', error);
