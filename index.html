@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OPORD Learning Loop - Shared Peer Hub System</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background-color: #f8fafc; font-family: 'Pretendard', system-ui, sans-serif; }
@@ -50,13 +51,13 @@
                     <label class="block text-xs font-bold text-slate-500 mb-1">PASSWORD</label>
                     <input type="password" id="login-pw" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="비밀번호를 입력하십시오.">
                 </div>
-                <div id="login-error" class="text-xs text-rose-500 font-bold hidden text-center"><i class="fa-solid fa-triangle-exclamation"></i> ID와 PW를 확인하십시오.</div>
-                <button onclick="handleLogin()" class="w-full navy-bg text-white font-bold py-2.5 rounded-lg text-sm shadow hover:bg-slate-800 transition-all">
+                <div id="login-error" class="text-xs text-rose-500 font-bold hidden text-center"><i class="fa-solid fa-triangle-exclamation"></i> ID와 비밀번호를 확인하십시오.</div>
+                <button id="login-submit" onclick="handleLogin()" class="w-full navy-bg text-white font-bold py-2.5 rounded-lg text-sm shadow hover:bg-slate-800 transition-all">
                     시스템 접속
                 </button>
             </div>
             <div class="bg-slate-50 p-3 rounded-lg text-[11px] text-slate-400 border border-slate-100">
-                💡 <strong>안내:</strong> 공유 허브를 통해 전 분대원의 학습 상태와 결과물(Artifact)이 상호 공개됩니다.
+                💡 <strong>안내:</strong> 실제 수업 계정으로 접속하면 전 분대원의 학습 상태와 결과물(Artifact)이 공용 DB를 통해 공유됩니다.
             </div>
         </div>
     </div>
@@ -458,62 +459,229 @@
         if(!localStorage.getItem('OPORD_ARTIFACTS')) localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify([]));
         if(!localStorage.getItem('OPORD_COMMENTS')) localStorage.setItem('OPORD_COMMENTS', JSON.stringify([]));
 
-        // Prototype classroom accounts: cadet01 through cadet20.
-        // Display names intentionally match the login IDs so roster, dashboard,
-        // artifact history, and peer-review cards remain unambiguous.
-        const userDatabase = {
-            "admin": { role: "teacher", name: "admin" },
-            ...Object.fromEntries(
-                Array.from({ length: 20 }, (_, index) => {
-                    const cadetId = `cadet${String(index + 1).padStart(2, '0')}`;
-                    return [cadetId, { role: "student", name: cadetId }];
-                })
-            )
-        };
-
-        // IMPORTANT: Change ONLY the value below before deployment.
-        // This is a temporary client-side password check for a GitHub Pages prototype.
-        // It is not secure against someone who can inspect the published source code.
-        const ADMIN_PASSWORD = "CHANGE_THIS_ADMIN_PASSWORD";
-        const CADET_PASSWORD = "1234";
-
-        let currentUser = null;
-        let currentUserId = "";
-        let selectedScenarioCode = "OPORD-01";
-
-        function handleLogin() {
-            const id = document.getElementById('login-id').value.trim();
-            const pw = document.getElementById('login-pw').value.trim();
-
-            const passwordIsValid =
-                (id === "admin" && pw === ADMIN_PASSWORD) ||
-                (id !== "admin" && pw === CADET_PASSWORD);
-
-            if (userDatabase[id] && passwordIsValid) {
-                currentUser = userDatabase[id];
-                currentUserId = id;
-                document.getElementById('login-error').classList.add('hidden');
-                document.getElementById('screen-login').classList.add('hidden');
-                document.getElementById('main-application').classList.remove('hidden');
-                document.getElementById('user-badge-id').innerText = currentUser.name;
-
-                if (currentUser.role === 'teacher') {
-                    document.getElementById('nav-teacher').classList.remove('hidden');
-                    showScreen('teacher');
-                } else {
-                    document.getElementById('nav-teacher').classList.add('hidden');
-                    showScreen('dashboard');
+        // Supabase Auth + shared database configuration.
+        // The publishable key is intentionally allowed in browser code; Row Level Security
+        // policies in Supabase enforce which data each authenticated user may access.
+        const SUPABASE_URL = 'https://sfcdwqdgmzghnbayexom.supabase.co';
+        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_42Nn7WN5_IKhiiLLHBsB0g_TrZtrlEp';
+        const supabaseClient = window.supabase?.createClient
+            ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+                auth: {
+                    persistSession: true,
+                    autoRefreshToken: true,
+                    detectSessionInUrl: false
                 }
+            })
+            : null;
+
+        // `userDatabase` remains as a roster cache so the existing display layer can render
+        // names without exposing any passwords. It is refreshed from public.profiles after login.
+        let userDatabase = {};
+        let currentUser = null;
+        let currentUserId = '';
+        let currentSupabaseUserId = '';
+        let selectedScenarioCode = 'OPORD-01';
+        let sharedArtifacts = [];
+        let sharedComments = [];
+
+        function normalizeLoginId(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function getInternalAuthEmail(loginId) {
+            return `${loginId}@opord.local`;
+        }
+
+        function setLoginBusy(isBusy) {
+            const button = document.getElementById('login-submit');
+            if (!button) return;
+            button.disabled = isBusy;
+            button.classList.toggle('opacity-60', isBusy);
+            button.classList.toggle('cursor-wait', isBusy);
+            button.innerHTML = isBusy
+                ? '<i class="fa-solid fa-spinner fa-spin mr-1"></i>접속 확인 중…'
+                : '시스템 접속';
+        }
+
+        function showLoginError(message) {
+            const errorBox = document.getElementById('login-error');
+            errorBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${escapeHtml(message)}`;
+            errorBox.classList.remove('hidden');
+        }
+
+        function getArtifactsStore() {
+            return Array.isArray(sharedArtifacts) ? sharedArtifacts : [];
+        }
+
+        async function refreshSharedData() {
+            if (!supabaseClient || !currentSupabaseUserId) {
+                sharedArtifacts = [];
+                sharedComments = [];
+                return { artifacts: sharedArtifacts, comments: sharedComments };
+            }
+
+            const [profilesResult, artifactsResult, commentsResult] = await Promise.all([
+                supabaseClient.from('profiles').select('id, login_id, display_name, role'),
+                supabaseClient.from('artifacts').select('id, owner_id, scenario_code, paragraph_id, paragraph_title, artifact_text, form_data, artifact_mode, created_at, updated_at'),
+                supabaseClient.from('comments').select('id, artifact_id, author_id, comment_text, created_at')
+            ]);
+
+            const firstError = profilesResult.error || artifactsResult.error || commentsResult.error;
+            if (firstError) {
+                console.error('Supabase shared-data load failed:', firstError);
+                throw new Error(firstError.message || '공유 데이터를 불러오지 못했습니다.');
+            }
+
+            const profileMap = new Map();
+            userDatabase = {};
+            (profilesResult.data || []).forEach(profile => {
+                const name = profile.display_name || profile.login_id;
+                profileMap.set(profile.id, profile);
+                userDatabase[profile.login_id] = { role: profile.role, name };
+            });
+
+            sharedArtifacts = (artifactsResult.data || []).map(row => {
+                const owner = profileMap.get(row.owner_id);
+                return {
+                    id: row.id,
+                    ownerId: row.owner_id,
+                    studentId: owner?.login_id || row.owner_id,
+                    studentName: owner?.display_name || owner?.login_id || row.owner_id,
+                    scenarioCode: row.scenario_code,
+                    paragraphId: row.paragraph_id,
+                    paragraphTitle: row.paragraph_title,
+                    text: row.artifact_text,
+                    formData: row.form_data || {},
+                    artifactMode: row.artifact_mode || '',
+                    timestamp: new Date(row.updated_at || row.created_at).getTime(),
+                    createdAt: row.created_at,
+                    updatedAt: row.updated_at
+                };
+            });
+
+            sharedComments = (commentsResult.data || []).map(row => {
+                const author = profileMap.get(row.author_id);
+                return {
+                    id: row.id,
+                    artifactKey: row.artifact_id,
+                    artifactId: row.artifact_id,
+                    authorId: author?.login_id || row.author_id,
+                    authorName: author?.display_name || author?.login_id || row.author_id,
+                    text: row.comment_text,
+                    timestamp: new Date(row.created_at).getTime(),
+                    createdAt: row.created_at
+                };
+            });
+
+            return { artifacts: sharedArtifacts, comments: sharedComments };
+        }
+
+        async function completeAuthenticatedSession(authUser) {
+            if (!authUser || !supabaseClient) return;
+            const { data: profile, error } = await supabaseClient
+                .from('profiles')
+                .select('id, login_id, display_name, role')
+                .eq('id', authUser.id)
+                .single();
+
+            if (error || !profile) {
+                console.error('Supabase profile load failed:', error);
+                await supabaseClient.auth.signOut();
+                throw new Error('이 계정의 수업 프로필을 찾을 수 없습니다. 교관에게 문의하십시오.');
+            }
+
+            currentSupabaseUserId = authUser.id;
+            currentUserId = profile.login_id;
+            currentUser = {
+                role: profile.role,
+                name: profile.display_name || profile.login_id
+            };
+
+            await refreshSharedData();
+
+            document.getElementById('login-error').classList.add('hidden');
+            document.getElementById('screen-login').classList.add('hidden');
+            document.getElementById('main-application').classList.remove('hidden');
+            document.getElementById('user-badge-id').innerText = currentUser.name;
+
+            if (currentUser.role === 'teacher') {
+                document.getElementById('nav-teacher').classList.remove('hidden');
+                showScreen('teacher');
             } else {
-                document.getElementById('login-error').classList.remove('hidden');
+                document.getElementById('nav-teacher').classList.add('hidden');
+                showScreen('dashboard');
             }
         }
 
-        function handleLogout() {
-            currentUser = null; currentUserId = "";
+        async function handleLogin() {
+            const id = normalizeLoginId(document.getElementById('login-id').value);
+            const pw = document.getElementById('login-pw').value;
+
+            if (!supabaseClient) {
+                showLoginError('인증 모듈을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 새로고침하십시오.');
+                return;
+            }
+            if (!/^(admin|cadet(?:0[1-9]|1[0-9]|20))$/.test(id)) {
+                showLoginError('admin 또는 cadet01 ~ cadet20 ID를 입력하십시오.');
+                return;
+            }
+            if (!pw) {
+                showLoginError('비밀번호를 입력하십시오.');
+                return;
+            }
+
+            setLoginBusy(true);
+            document.getElementById('login-error').classList.add('hidden');
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({
+                    email: getInternalAuthEmail(id),
+                    password: pw
+                });
+                if (error || !data?.user) {
+                    throw new Error('ID 또는 비밀번호를 확인하십시오.');
+                }
+                await completeAuthenticatedSession(data.user);
+            } catch (error) {
+                console.error('Supabase sign-in failed:', error);
+                showLoginError(error.message || '로그인에 실패했습니다.');
+            } finally {
+                setLoginBusy(false);
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                if (supabaseClient) await supabaseClient.auth.signOut();
+            } catch (error) {
+                console.warn('Supabase sign-out warning:', error);
+            }
+            currentUser = null;
+            currentUserId = '';
+            currentSupabaseUserId = '';
+            sharedArtifacts = [];
+            sharedComments = [];
+            userDatabase = {};
+            document.getElementById('login-pw').value = '';
             document.getElementById('main-application').classList.add('hidden');
             document.getElementById('screen-login').classList.remove('hidden');
         }
+
+        async function restoreSupabaseSession() {
+            if (!supabaseClient) return;
+            try {
+                const { data, error } = await supabaseClient.auth.getSession();
+                if (error) throw error;
+                if (data?.session?.user) {
+                    await completeAuthenticatedSession(data.session.user);
+                }
+            } catch (error) {
+                console.warn('Supabase session restore failed:', error);
+                handleLogout();
+            }
+        }
+
+        // Restore a real authenticated session after a browser refresh.
+        restoreSupabaseSession();
 
         // 교관 전용 화면/기능 접근을 한곳에서 확인합니다.
         function requireTeacherAccess(showMessage = true) {
@@ -1152,7 +1320,7 @@
 
             const rows = document.getElementById('teacher-tracker-rows');
             rows.innerHTML = '';
-            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+            const artifacts = getArtifactsStore();
 
             if (artifacts.length === 0) {
                 rows.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 italic">아직 학생들이 제출한 과제가 없습니다.</td></tr>`;
@@ -1185,15 +1353,12 @@
         }
 
         function getCommentsStore() {
-            try {
-                return JSON.parse(localStorage.getItem('OPORD_COMMENTS')) || [];
-            } catch (error) {
-                return [];
-            }
+            return Array.isArray(sharedComments) ? sharedComments : [];
         }
 
         function saveCommentsStore(comments) {
-            localStorage.setItem('OPORD_COMMENTS', JSON.stringify(comments));
+            // Compatibility function for older UI calls. Real writes go through submitPeerComment.
+            sharedComments = Array.isArray(comments) ? comments : [];
         }
 
         function getArtifactComments(artifact) {
@@ -1212,15 +1377,15 @@
                 .replace(/'/g, '&#039;');
         }
 
-        function submitPeerComment(artifactKey) {
-            if (!currentUser) return;
-            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+        async function submitPeerComment(artifactKey) {
+            if (!currentUser || !currentSupabaseUserId || !supabaseClient) return;
+            const artifacts = getArtifactsStore();
             const artifact = artifacts.find(item => getArtifactKey(item) === artifactKey);
             if (!artifact) {
                 alert('해당 artifact를 찾을 수 없습니다. 화면을 새로고침한 뒤 다시 시도하십시오.');
                 return;
             }
-            if (artifact.studentId === currentUserId && currentUser.role !== 'teacher') {
+            if (artifact.studentId === currentUserId) {
                 alert('본인의 artifact에는 동료 피드백을 남길 수 없습니다. 다른 훈련생의 artifact를 검토하십시오.');
                 return;
             }
@@ -1236,16 +1401,35 @@
                 return;
             }
 
-            const comments = getCommentsStore();
-            comments.push({
-                id: `comment-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-                artifactKey,
-                authorId: currentUserId,
-                text,
-                timestamp: Date.now()
-            });
-            saveCommentsStore(comments);
-            renderSharedHub();
+            const button = textarea?.closest('div')?.querySelector('button');
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>게시 중…';
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('comments')
+                    .insert({
+                        artifact_id: artifact.id,
+                        author_id: currentSupabaseUserId,
+                        comment_text: text
+                    });
+                if (error) throw error;
+
+                if (textarea) textarea.value = '';
+                await refreshSharedData();
+                renderSharedHub();
+                if (!document.getElementById('screen-dashboard').classList.contains('hidden')) renderStudentDashboard();
+                if (currentUser?.role === 'teacher' && !document.getElementById('screen-teacher').classList.contains('hidden')) renderTeacherDashboard();
+            } catch (error) {
+                console.error('Supabase peer-comment save failed:', error);
+                alert(`피드백을 저장하지 못했습니다. ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fa-solid fa-paper-plane mr-1"></i>피드백 게시';
+                }
+            }
         }
 
         const OPORD_PARAGRAPH_SEQUENCE = ['situation', 'mission', 'execution', 'sustainment', 'commandSignal'];
@@ -1313,12 +1497,12 @@
             const comments = getArtifactComments(artifact);
             const commentFeed = comments.length
                 ? comments.map(comment => {
-                    const author = userDatabase[comment.authorId] ? userDatabase[comment.authorId].name : comment.authorId;
+                    const author = comment.authorName || (userDatabase[comment.authorId] ? userDatabase[comment.authorId].name : comment.authorId);
                     const commentTime = new Date(comment.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
                     return `<div class="rounded border border-slate-100 bg-white px-2.5 py-2 text-[10px] leading-relaxed text-slate-600"><div class="mb-1 flex items-center justify-between gap-2"><span class="font-bold text-indigo-700"><i class="fa-solid fa-comment-dots mr-1"></i>${escapeHtml(author)}</span><span class="text-slate-400">${commentTime}</span></div><p>${escapeHtml(comment.text)}</p></div>`;
                 }).join('')
                 : `<div class="rounded border border-dashed border-slate-200 bg-white/70 px-2.5 py-2 text-[10px] italic text-slate-400">아직 등록된 동료 피드백이 없습니다.</div>`;
-            const feedbackComposer = (isMe && currentUser?.role !== 'teacher')
+            const feedbackComposer = isMe
                 ? `<div class="rounded border border-indigo-100 bg-indigo-50/50 px-2.5 py-2 text-[10px] text-indigo-600"><i class="fa-solid fa-info-circle mr-1"></i>내 artifact입니다. 다른 훈련생의 artifact에 피드백을 남겨보십시오.</div>`
                 : `<div class="space-y-2 rounded border border-emerald-100 bg-emerald-50/40 p-2.5"><label class="block text-[10px] font-bold text-emerald-800">Open-ended peer feedback</label><textarea id="peer-comment-${artifactDomId}" rows="2" maxlength="500" class="w-full resize-y rounded border border-emerald-200 bg-white p-2 text-[10px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" placeholder="One strength is… / One question I have is… / I suggest…"></textarea><div class="flex justify-end"><button onclick='submitPeerComment(${JSON.stringify(artifactKey)})' class="rounded bg-emerald-600 px-2.5 py-1.5 text-[10px] font-bold text-white hover:bg-emerald-700"><i class="fa-solid fa-paper-plane mr-1"></i>피드백 게시</button></div></div>`;
 
@@ -1330,7 +1514,7 @@
             const hubGrid = document.getElementById('shared-hub-grid');
             hubGrid.innerHTML = '';
             hubGrid.className = 'space-y-3';
-            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+            const artifacts = getArtifactsStore();
 
             if (artifacts.length === 0) {
                 hubGrid.innerHTML = `<div class="text-center py-12 text-slate-400 italic text-xs border border-dashed rounded-xl">현재 공유 허브 플랫폼에 등록된 동료의 전술 산출물이 존재하지 않습니다. 먼저 첫 과제를 해결해 보십시오!</div>`;
@@ -1396,7 +1580,7 @@
             listContainer.innerHTML = ''; historyContainer.innerHTML = '';
 
             const scenarios = getScenarioStore();
-            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+            const artifacts = getArtifactsStore();
             const paragraphCount = OPORD_PARAGRAPH_SEQUENCE.length;
             const groups = { lecture: [], code: [] };
             Object.values(scenarios).forEach(scenario => groups[getScenarioActivityType(scenario)].push(scenario));
@@ -1970,6 +2154,9 @@
         // Step 2 progress flag and a saved draft without an artifact package. Rebuild the
         // missing package once so the Code Your Way activity appears in Dashboard and Peer Review.
         function recoverCompletedCodeActivityArtifacts() {
+            // Real shared submissions are stored in Supabase. Do not resurrect legacy browser-only
+            // artifacts into a live classroom database. Drafts remain local until the learner submits.
+            if (supabaseClient && currentSupabaseUserId) return false;
             const scenarios = getScenarioStore();
             const progress = getProgressStore();
             const drafts = getStep2DraftStore();
@@ -2042,7 +2229,7 @@
         }
 
         function getCurrentStep2Artifact(paragraphId = activeParagraphId) {
-            const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
+            const artifacts = getArtifactsStore();
             return artifacts.find(artifact =>
                 artifact.studentId === currentUserId &&
                 artifact.scenarioCode === selectedScenarioCode &&
@@ -2622,8 +2809,8 @@
         }
 
 
-        // When the prototype is open in another tab of the same browser, keep dashboard,
-        // peer-review, and workshop status synchronized after a scenario, draft, or artifact update.
+        // Keep local scenario and draft UX synchronized between same-browser tabs.
+        // Shared artifacts/comments themselves are refreshed from Supabase above.
         window.addEventListener('storage', event => {
             const syncKeys = new Set([
                 'OPORD_SCENARIOS',
@@ -2645,6 +2832,21 @@
             if (hubVisible) renderSharedHub();
             if (workshopVisible) loadWorkshop();
         });
+
+        // Cross-device shared data is refreshed every 15 seconds while the app is open.
+        // Workshop fields are intentionally not re-rendered here, so a learner's unsaved draft
+        // is never overwritten while typing.
+        window.setInterval(async () => {
+            if (!currentUser || !currentSupabaseUserId) return;
+            try {
+                await refreshSharedData();
+                if (!document.getElementById('screen-dashboard').classList.contains('hidden')) renderStudentDashboard();
+                if (!document.getElementById('screen-hub').classList.contains('hidden')) renderSharedHub();
+                if (currentUser.role === 'teacher' && !document.getElementById('screen-teacher').classList.contains('hidden')) renderTeacherDashboard();
+            } catch (error) {
+                console.warn('Periodic Supabase refresh skipped:', error);
+            }
+        }, 15000);
 
         function getRequiredStep2Fields(paragraphId, activityType = getScenarioActivityType(getScenarioStore()[selectedScenarioCode])) {
             const activeScenario = getScenarioStore()[selectedScenarioCode];
@@ -2752,7 +2954,7 @@
             return names[field] || field;
         }
 
-        function verifyStep2() {
+        async function verifyStep2() {
             const values = getStep2FormValues();
             const data = getScenarioStore()[selectedScenarioCode] || defaultScenarios['OPORD-01'];
             const activityType = getScenarioActivityType(data);
@@ -2781,43 +2983,66 @@
             draftStore[step2DraftKey()] = values;
             saveStep2DraftStore(draftStore);
 
-            let artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
-            const existingIndex = artifacts.findIndex(artifact =>
-                artifact.studentId === currentUserId &&
-                artifact.scenarioCode === selectedScenarioCode &&
-                getArtifactParagraphId(artifact) === activeParagraphId
-            );
-            const existingArtifact = existingIndex > -1 ? artifacts[existingIndex] : null;
-            const record = {
-                id: existingArtifact?.id || `artifact-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-                studentId: currentUserId,
-                scenarioCode: selectedScenarioCode,
-                paragraphId: activeParagraphId,
-                paragraphTitle: `${drill.number}. ${drill.title}`,
-                text: compiledText,
-                formData: values,
-                artifactMode: isOpord01ThinkingPromptActivity(data) ? 'lecture-guided-thinking-v1' : (activityType === 'lecture' ? 'lecture-open-writing-v1' : 'code-top-level-chunk-writing-v2'),
-                timestamp: Date.now()
-            };
-            if (existingIndex > -1) artifacts[existingIndex] = record;
-            else artifacts.push(record);
-            localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify(artifacts));
 
-            markStepComplete(activeParagraphId, 2);
-            // Refresh hidden views too: when the learner moves to Dashboard or Peer Review,
-            // the Code Your Way artifact package is immediately visible without a reload.
-            renderStudentDashboard();
-            renderSharedHub();
-            if (currentUser?.role === 'teacher') renderTeacherDashboard();
-            feedback.className = 'text-xs font-bold text-emerald-600';
-            feedback.innerText = isOpord01ThinkingPromptActivity(data)
-                ? `🎉 ${drill.title} thinking responses가 저장되고 공유 허브에 제출되었습니다.`
-                : (activityType === 'lecture'
-                    ? `🎉 ${drill.title} revised paragraph가 저장되고 공유 허브에 제출되었습니다.`
-                    : `🎉 ${drill.title} team writing artifact가 저장되고 공유 허브에 제출되었습니다.`);
-            document.getElementById('hint-box').classList.add('hidden');
-            loadWorkshop();
+            if (!supabaseClient || !currentSupabaseUserId) {
+                feedback.className = 'text-xs font-bold text-rose-500';
+                feedback.innerText = '⚠️ 인증 세션을 찾지 못했습니다. 다시 로그인한 뒤 제출하십시오.';
+                return;
+            }
+
+            const submitButton = document.querySelector('#step2-slots button[onclick*="verifyStep2"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.classList.add('opacity-60', 'cursor-wait');
+                submitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>공유 DB 저장 중…';
+            }
+
+            try {
+                const artifactMode = isOpord01ThinkingPromptActivity(data)
+                    ? 'lecture-guided-thinking-v1'
+                    : (activityType === 'lecture' ? 'lecture-open-writing-v1' : 'code-top-level-chunk-writing-v2');
+
+                const { error } = await supabaseClient
+                    .from('artifacts')
+                    .upsert({
+                        owner_id: currentSupabaseUserId,
+                        scenario_code: selectedScenarioCode,
+                        paragraph_id: activeParagraphId,
+                        paragraph_title: `${drill.number}. ${drill.title}`,
+                        artifact_text: compiledText,
+                        form_data: values,
+                        artifact_mode: artifactMode
+                    }, {
+                        onConflict: 'owner_id,scenario_code,paragraph_id'
+                    });
+                if (error) throw error;
+
+                markStepComplete(activeParagraphId, 2);
+                await refreshSharedData();
+                renderStudentDashboard();
+                renderSharedHub();
+                if (currentUser?.role === 'teacher') renderTeacherDashboard();
+                feedback.className = 'text-xs font-bold text-emerald-600';
+                feedback.innerText = isOpord01ThinkingPromptActivity(data)
+                    ? `🎉 ${drill.title} thinking responses가 실제 공유 DB에 제출되었습니다.`
+                    : (activityType === 'lecture'
+                        ? `🎉 ${drill.title} revised paragraph가 실제 공유 DB에 제출되었습니다.`
+                        : `🎉 ${drill.title} team writing artifact가 실제 공유 DB에 제출되었습니다.`);
+                document.getElementById('hint-box').classList.add('hidden');
+                loadWorkshop();
+            } catch (error) {
+                console.error('Supabase artifact save failed:', error);
+                feedback.className = 'text-xs font-bold text-rose-500';
+                feedback.innerText = `⚠️ 공유 DB에 저장하지 못했습니다. ${error.message || '잠시 뒤 다시 시도하십시오.'}`;
+            } finally {
+                if (submitButton) {
+                    submitButton.disabled = false;
+                    submitButton.classList.remove('opacity-60', 'cursor-wait');
+                    submitButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>Team Writing 제출 및 공유';
+                }
+            }
         }
+
 
     </script>
 </body>
