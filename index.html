@@ -108,10 +108,12 @@
                                 <div>
                                     <p id="scenario-editor-mode" class="text-[11px] font-black text-amber-800">새 시나리오 작성 모드</p>
                                     <p class="mt-0.5 text-[10px] leading-relaxed text-slate-500">기존 활동을 불러와 다섯 paragraph의 reference cards·phrase bank와 활동 유형(Lecture / Code Your Way)을 수정할 수 있습니다.</p>
-                                    <p class="mt-1 text-[9px] leading-relaxed text-rose-600"><i class="fa-solid fa-laptop mr-1"></i>현재 이 편집기는 이 브라우저의 localStorage에만 저장됩니다. 모든 생도에게 즉시 반영되는 시나리오 DB 동기화는 다음 단계입니다.</p>
+                                    <p class="mt-1 text-[9px] leading-relaxed text-emerald-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>이제 reference cards·phrase bank는 Supabase 공유 DB에 저장됩니다. 저장 후 전 생도 화면에 동기화됩니다.</p>
                                 </div>
                                 <button type="button" onclick="resetScenarioEditor()" class="rounded border border-amber-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100"><i class="fa-solid fa-file-circle-plus mr-1"></i>새 활동</button>
                             </div>
+                            <div id="scenario-db-status" class="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[10px] text-slate-500">공유 시나리오 DB 상태를 확인 중입니다…</div>
+                            <button id="scenario-db-seed-btn" type="button" onclick="seedScenarioDatabaseFromLocal()" class="hidden w-full rounded bg-emerald-600 px-3 py-2 text-[10px] font-bold text-white shadow hover:bg-emerald-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>현재 교관 자료를 공유 DB에 최초 배포</button>
                             <div id="teacher-scenario-library" class="max-h-40 space-y-1.5 overflow-y-auto pr-1"></div>
                         </div>
 
@@ -182,7 +184,7 @@
                             </div>
                             <div class="flex gap-2">
                                 <button id="scenario-save-btn" onclick="saveScenarioEditor()" class="flex-1 bg-amber-600 text-white font-bold py-2 rounded shadow hover:bg-amber-700">
-                                    이 브라우저에 시나리오 저장
+                                    <i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB에 시나리오 저장
                                 </button>
                                 <button type="button" onclick="resetScenarioEditor()" class="border border-slate-200 bg-white px-3 py-2 rounded text-xs font-bold text-slate-600 hover:bg-slate-50">초기화</button>
                             </div>
@@ -485,6 +487,14 @@
         let sharedArtifacts = [];
         let sharedComments = [];
 
+        // Course materials are also shared through Supabase. Before the teacher performs
+        // the one-time first publish, the existing local browser materials remain a safe fallback.
+        let sharedScenarioStore = {};
+        let sharedScenariosLoaded = false;
+        let scenarioDatabaseHasRows = false;
+        let scenarioDatabaseFingerprint = '';
+        let scenarioDatabaseLastSyncAt = 0;
+
         // The Shared Peer-Review Hub refreshes from Supabase in the background.
         // Keep each open card and unsent feedback draft stable across those refreshes.
         let sharedHubUiState = {
@@ -581,6 +591,216 @@
             return Array.isArray(sharedArtifacts) ? sharedArtifacts : [];
         }
 
+        function cloneCourseMaterialObject(value, fallback = {}) {
+            if (!value || typeof value !== 'object') return fallback;
+            try {
+                return JSON.parse(JSON.stringify(value));
+            } catch (error) {
+                return fallback;
+            }
+        }
+
+        function mapScenarioDatabaseRow(row) {
+            return {
+                code: String(row.code || '').toUpperCase(),
+                title: row.title || `${row.code} 훈련 시나리오`,
+                activityType: normalizeActivityType(row.activity_type),
+                step2Blocks: cloneCourseMaterialObject(row.step2_blocks, {}),
+                phraseBanks: cloneCourseMaterialObject(row.phrase_banks, {}),
+                isActive: row.is_active !== false,
+                createdBy: row.created_by || '',
+                updatedBy: row.updated_by || '',
+                createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+                updatedAt: row.updated_at ? new Date(row.updated_at).getTime() : Date.now(),
+                scenarioVersion: 'scenario-db-v1'
+            };
+        }
+
+        function scenarioStoreFingerprint(store) {
+            try {
+                return JSON.stringify(Object.keys(store || {}).sort().map(code => store[code]));
+            } catch (error) {
+                return '';
+            }
+        }
+
+        function ensureSelectedScenarioAvailable() {
+            const scenarios = getScenarioStore();
+            const codes = Object.keys(scenarios).sort();
+            if (!codes.length) return;
+            if (!scenarios[selectedScenarioCode]) selectedScenarioCode = codes[0];
+        }
+
+        async function refreshSharedScenarios() {
+            if (!supabaseClient || !currentSupabaseUserId) {
+                sharedScenariosLoaded = false;
+                scenarioDatabaseHasRows = false;
+                return {};
+            }
+
+            const { data, error } = await supabaseClient
+                .from('scenarios')
+                .select('code, title, activity_type, step2_blocks, phrase_banks, is_active, created_by, updated_by, created_at, updated_at')
+                .order('code', { ascending: true });
+
+            if (error) {
+                console.error('Supabase scenario-material load failed:', error);
+                throw new Error(error.message || '공유 시나리오 자료를 불러오지 못했습니다.');
+            }
+
+            const nextStore = {};
+            (data || []).forEach(row => {
+                const scenario = mapScenarioDatabaseRow(row);
+                if (scenario.code) nextStore[scenario.code] = scenario;
+            });
+
+            const nextFingerprint = scenarioStoreFingerprint(nextStore);
+            const changed = nextFingerprint !== scenarioDatabaseFingerprint;
+            sharedScenarioStore = nextStore;
+            sharedScenariosLoaded = true;
+            scenarioDatabaseHasRows = Object.keys(nextStore).length > 0;
+            scenarioDatabaseFingerprint = nextFingerprint;
+            scenarioDatabaseLastSyncAt = Date.now();
+
+            // Keep a cached copy so a temporary browser/network outage does not erase the
+            // teacher's previous materials. When DB rows exist, they remain the source of truth.
+            if (scenarioDatabaseHasRows) {
+                localStorage.setItem('OPORD_SCENARIOS', JSON.stringify(nextStore));
+            }
+
+            ensureSelectedScenarioAvailable();
+            return { scenarios: nextStore, changed };
+        }
+
+        function renderScenarioDatabaseStatus() {
+            const status = document.getElementById('scenario-db-status');
+            const seedButton = document.getElementById('scenario-db-seed-btn');
+            if (!status || !seedButton) return;
+
+            if (!supabaseClient || !currentSupabaseUserId) {
+                status.className = 'rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-[10px] text-rose-700';
+                status.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>공유 DB 인증 세션을 찾지 못했습니다. 다시 로그인하십시오.';
+                seedButton.classList.add('hidden');
+                return;
+            }
+
+            if (!sharedScenariosLoaded) {
+                status.className = 'rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[10px] text-slate-500';
+                status.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>공유 시나리오 DB 상태를 확인 중입니다…';
+                seedButton.classList.add('hidden');
+                return;
+            }
+
+            if (!scenarioDatabaseHasRows) {
+                status.className = 'rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[10px] leading-relaxed text-amber-800';
+                status.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i><strong>공유 시나리오 DB가 아직 비어 있습니다.</strong> 아래 버튼을 한 번 눌러 현재 교관 브라우저의 OPORD 자료를 최초 배포하십시오.';
+                seedButton.classList.remove('hidden');
+                return;
+            }
+
+            const count = Object.keys(sharedScenarioStore).length;
+            status.className = 'rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[10px] leading-relaxed text-emerald-800';
+            status.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i><strong>공유 DB 동기화 완료.</strong> 현재 ${count}개 활동이 저장되어 있습니다. 아래 저장 버튼은 전 생도에게 배포됩니다.`;
+            seedButton.classList.add('hidden');
+        }
+
+        function setScenarioSaveBusy(isBusy, label = '') {
+            const button = document.getElementById('scenario-save-btn');
+            if (!button) return;
+            button.disabled = isBusy;
+            button.classList.toggle('opacity-60', isBusy);
+            button.classList.toggle('cursor-wait', isBusy);
+            if (isBusy) {
+                button.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i>${label || '공유 DB 저장 중…'}`;
+            }
+        }
+
+        async function writeScenarioToDatabase(scenario) {
+            if (!supabaseClient || !currentSupabaseUserId) {
+                throw new Error('공유 DB 인증 세션을 찾지 못했습니다. 다시 로그인하십시오.');
+            }
+
+            const payload = {
+                code: scenario.code,
+                title: scenario.title,
+                activity_type: getScenarioActivityType(scenario),
+                step2_blocks: scenario.step2Blocks || {},
+                phrase_banks: scenario.phraseBanks || {},
+                is_active: scenario.isActive !== false,
+                created_by: scenario.createdBy || currentSupabaseUserId,
+                updated_by: currentSupabaseUserId
+            };
+
+            const { error } = await supabaseClient
+                .from('scenarios')
+                .upsert(payload, { onConflict: 'code' });
+
+            if (error) throw error;
+        }
+
+        async function seedScenarioDatabaseFromLocal() {
+            if (!requireTeacherAccess()) return;
+            if (!supabaseClient || !currentSupabaseUserId) {
+                alert('공유 DB 인증 세션을 찾지 못했습니다. 다시 로그인하십시오.');
+                return;
+            }
+            if (scenarioDatabaseHasRows) {
+                alert('공유 시나리오 DB에 이미 자료가 있습니다. 최초 배포는 한 번만 필요합니다. 이후에는 일반 저장 버튼을 사용하십시오.');
+                return;
+            }
+
+            const localScenarios = getScenarioStore();
+            const payload = Object.values(localScenarios).map(scenario => ({
+                code: scenario.code,
+                title: scenario.title,
+                activity_type: getScenarioActivityType(scenario),
+                step2_blocks: scenario.step2Blocks || {},
+                phrase_banks: scenario.phraseBanks || {},
+                is_active: scenario.isActive !== false,
+                created_by: currentSupabaseUserId,
+                updated_by: currentSupabaseUserId
+            }));
+
+            if (!payload.length) {
+                alert('최초 배포할 로컬 시나리오 자료를 찾지 못했습니다.');
+                return;
+            }
+            if (!confirm(`현재 교관 브라우저의 ${payload.length}개 시나리오를 공유 DB에 최초 배포할까요?
+
+이후에는 교관 저장 버튼으로 전원 자료를 수정·배포하게 됩니다.`)) return;
+
+            const seedButton = document.getElementById('scenario-db-seed-btn');
+            if (seedButton) {
+                seedButton.disabled = true;
+                seedButton.classList.add('opacity-60', 'cursor-wait');
+                seedButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>공유 DB 최초 배포 중…';
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('scenarios')
+                    .upsert(payload, { onConflict: 'code' });
+                if (error) throw error;
+
+                await refreshSharedScenarios();
+                renderTeacherDashboard();
+                alert(`✅ ${payload.length}개 시나리오가 공유 DB에 최초 배포되었습니다.
+
+이제 이 화면에서 수정 후 저장하면 전 생도에게 동기화됩니다.`);
+            } catch (error) {
+                console.error('Initial scenario DB publish failed:', error);
+                alert(`공유 DB 최초 배포에 실패했습니다.
+${error.message || '잠시 뒤 다시 시도하십시오.'}`);
+            } finally {
+                if (seedButton) {
+                    seedButton.disabled = false;
+                    seedButton.classList.remove('opacity-60', 'cursor-wait');
+                    seedButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>현재 교관 자료를 공유 DB에 최초 배포';
+                }
+                renderScenarioDatabaseStatus();
+            }
+        }
+
         async function refreshSharedData() {
             if (!supabaseClient || !currentSupabaseUserId) {
                 sharedArtifacts = [];
@@ -666,6 +886,13 @@
             };
 
             await refreshSharedData();
+            try {
+                await refreshSharedScenarios();
+            } catch (error) {
+                // Keep the last local course-material cache available if the shared course table
+                // is temporarily unavailable; artifacts/comments still remain independently shared.
+                console.warn('Supabase scenario-material load skipped:', error);
+            }
 
             document.getElementById('login-error').classList.add('hidden');
             document.getElementById('screen-login').classList.add('hidden');
@@ -728,6 +955,11 @@
             currentSupabaseUserId = '';
             sharedArtifacts = [];
             sharedComments = [];
+            sharedScenarioStore = {};
+            sharedScenariosLoaded = false;
+            scenarioDatabaseHasRows = false;
+            scenarioDatabaseFingerprint = '';
+            scenarioDatabaseLastSyncAt = 0;
             userDatabase = {};
             document.getElementById('login-pw').value = '';
             document.getElementById('main-application').classList.add('hidden');
@@ -1106,12 +1338,19 @@
         }
 
         function getScenarioStore() {
+            const hasSharedScenarioSource = sharedScenariosLoaded && Object.keys(sharedScenarioStore || {}).length > 0;
             let rawStore = {};
-            try {
-                rawStore = JSON.parse(localStorage.getItem('OPORD_SCENARIOS')) || {};
-            } catch (error) {
-                rawStore = {};
+
+            if (hasSharedScenarioSource) {
+                rawStore = cloneCourseMaterialObject(sharedScenarioStore, {});
+            } else {
+                try {
+                    rawStore = JSON.parse(localStorage.getItem('OPORD_SCENARIOS')) || {};
+                } catch (error) {
+                    rawStore = {};
+                }
             }
+
             if (!Object.keys(rawStore).length) rawStore = JSON.parse(JSON.stringify(defaultScenarios));
 
             const normalized = {};
@@ -1264,7 +1503,7 @@
             const saveBtn = document.getElementById('scenario-save-btn');
             if (mode) mode.innerText = '새 시나리오 작성 모드';
             if (note) note.innerText = '새 활동은 코드명을 지정하고, 기존 활동은 코드가 고정됩니다.';
-            if (saveBtn) saveBtn.innerHTML = '이 브라우저에 시나리오 저장';
+            if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB에 시나리오 저장';
             renderScenarioEditorLibrary();
         }
 
@@ -1296,12 +1535,12 @@
             const saveBtn = document.getElementById('scenario-save-btn');
             if (mode) mode.innerText = `[${scenario.code}] 기존 시나리오 수정 모드`;
             if (note) note.innerText = '기존 코드명은 artifact와 진행 기록 연결을 위해 변경할 수 없습니다.';
-            if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-1"></i>이 브라우저의 시나리오 변경 저장';
+            if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB의 시나리오 변경 저장';
             renderScenarioEditorLibrary();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function saveScenarioEditor() {
+        async function saveScenarioEditor() {
             if (!requireTeacherAccess()) return;
             const codeInput = document.getElementById('new-sci-code');
             const titleInput = document.getElementById('new-sci-title');
@@ -1332,7 +1571,9 @@
                 phraseBanks[paragraphId] = phrases;
             });
             if (missing.length) {
-                alert(`Full OPORD scenario에는 5개 paragraph의 Step 2 blocks가 모두 필요합니다.\n\n입력이 필요한 문단: ${missing.join(', ')}`);
+                alert(`Full OPORD scenario에는 5개 paragraph의 Step 2 blocks가 모두 필요합니다.
+
+입력이 필요한 문단: ${missing.join(', ')}`);
                 return;
             }
 
@@ -1341,27 +1582,51 @@
             const isEditing = Boolean(editingScenarioCode);
             if (!isEditing && scenarios[code] && !confirm(`[${code}] 시나리오가 이미 있습니다. 기존 자료를 새 OPORD 자료로 덮어쓰겠습니까?`)) return;
 
-            scenarios[code] = {
+            const scenarioToSave = {
                 ...existing,
                 code,
                 title,
                 activityType,
                 step2Blocks,
                 phraseBanks,
-                createdBy: existing.createdBy || currentUserId,
+                isActive: existing.isActive !== false,
+                createdBy: existing.createdBy || currentSupabaseUserId,
                 createdAt: existing.createdAt || Date.now(),
-                updatedBy: currentUserId,
+                updatedBy: currentSupabaseUserId,
                 updatedAt: Date.now(),
-                scenarioVersion: 'lecture-code-v1'
+                scenarioVersion: 'scenario-db-v1'
             };
-            saveScenarioStore(scenarios);
-            resetScenarioStep2Progress(code);
 
-            const actionText = isEditing ? '수정 완료' : '출제 완료';
-            alert(`🎯 [${actionText}] [${code}]의 5개 paragraph scenario reference cards가 이 브라우저에 저장되었습니다.\n\n기존 artifact는 보관되며, 이 브라우저에서 다음 실습 진입부터 수정한 reference cards가 적용됩니다. 전원 즉시 반영은 시나리오 DB 동기화가 추가된 뒤 가능합니다.`);
-            editingScenarioCode = code;
-            renderTeacherDashboard();
-            loadScenarioForEdit(code);
+            setScenarioSaveBusy(true);
+            try {
+                await writeScenarioToDatabase(scenarioToSave);
+                await refreshSharedScenarios();
+
+                // Keep a local cache only as a resilient fallback; DB is now the shared source of truth.
+                const refreshed = getScenarioStore();
+                saveScenarioStore(refreshed);
+                resetScenarioStep2Progress(code);
+
+                const actionText = isEditing ? '수정·배포 완료' : '출제·배포 완료';
+                alert(`✅ [${actionText}] [${code}]의 scenario reference cards와 phrase bank가 공유 DB에 저장되었습니다.
+
+전 생도 화면은 다음 자동 동기화 또는 새로고침 때 최신 자료를 받습니다. 기존 제출 artifact는 보관됩니다.`);
+                editingScenarioCode = code;
+                renderTeacherDashboard();
+                loadScenarioForEdit(code);
+            } catch (error) {
+                console.error('Supabase scenario save failed:', error);
+                alert(`공유 DB에 시나리오를 저장하지 못했습니다.
+${error.message || '잠시 뒤 다시 시도하십시오.'}`);
+            } finally {
+                setScenarioSaveBusy(false);
+                const saveBtn = document.getElementById('scenario-save-btn');
+                if (saveBtn) {
+                    saveBtn.innerHTML = isEditing
+                        ? '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB의 시나리오 변경 저장'
+                        : '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB에 시나리오 저장';
+                }
+            }
         }
 
         // Backward compatibility for earlier buttons or copied versions of the page.
@@ -1380,6 +1645,7 @@
                 return;
             }
 
+            renderScenarioDatabaseStatus();
             if (!editingScenarioCode && !document.getElementById('new-sci-code').value) {
                 resetScenarioEditor();
             } else {
@@ -2929,7 +3195,13 @@
         window.setInterval(async () => {
             if (!currentUser || !currentSupabaseUserId) return;
             try {
-                await refreshSharedData();
+                const [sharedResult, scenarioResult] = await Promise.all([
+                    refreshSharedData(),
+                    refreshSharedScenarios().catch(error => {
+                        console.warn('Periodic scenario-material refresh skipped:', error);
+                        return { changed: false };
+                    })
+                ]);
                 if (!document.getElementById('screen-dashboard').classList.contains('hidden')) renderStudentDashboard();
                 if (!document.getElementById('screen-hub').classList.contains('hidden')) {
                     if (hasActivePeerCommentComposer()) {
@@ -2939,6 +3211,8 @@
                         renderSharedHub();
                     }
                 }
+                // Do not auto-re-render the Workshop while learners are typing. Updated course
+                // materials are applied the next time they enter/reopen an activity, protecting drafts.
                 if (currentUser.role === 'teacher' && !document.getElementById('screen-teacher').classList.contains('hidden')) renderTeacherDashboard();
             } catch (error) {
                 console.warn('Periodic Supabase refresh skipped:', error);
