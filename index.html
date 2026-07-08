@@ -470,7 +470,7 @@
         const supabaseClient = window.supabase?.createClient
             ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
                 auth: {
-                    persistSession: true,
+                    persistSession: false,
                     autoRefreshToken: true,
                     detectSessionInUrl: false
                 }
@@ -498,13 +498,36 @@
         // The Shared Peer-Review Hub refreshes from Supabase in the background.
         // Keep each open card and unsent feedback draft stable across those refreshes.
         let sharedHubUiState = {
+            openScenarioCodes: new Set(),
             openBundleKeys: new Set(),
             commentDrafts: {},
             activeDraftKey: '',
             selectionStart: null,
-            selectionEnd: null
+            selectionEnd: null,
+            hasCapturedLayout: false
         };
         let sharedHubRefreshPending = false;
+
+        // Keep the user's open activity cards stable on the personal dashboard too.
+        let studentDashboardUiState = {
+            openScenarioCodes: new Set(),
+            hasCapturedLayout: false
+        };
+
+        function captureStudentDashboardUiState() {
+            const historyContainer = document.getElementById('student-artifact-history');
+            if (!historyContainer) return;
+            const scenarioDetails = historyContainer.querySelectorAll('details[data-student-scenario-code]');
+            if (!scenarioDetails.length && !studentDashboardUiState.hasCapturedLayout) return;
+            const openScenarioCodes = new Set();
+            scenarioDetails.forEach(details => {
+                if (details.open) openScenarioCodes.add(details.dataset.studentScenarioCode);
+            });
+            studentDashboardUiState = {
+                openScenarioCodes,
+                hasCapturedLayout: true
+            };
+        }
 
         function getSharedHubBundleKey(bundle) {
             return `${bundle.studentId}::${bundle.scenarioCode}`;
@@ -514,8 +537,17 @@
             const hubGrid = document.getElementById('shared-hub-grid');
             if (!hubGrid) return;
 
+            const scenarioDetails = hubGrid.querySelectorAll('details[data-hub-scenario-code]');
+            const bundleDetails = hubGrid.querySelectorAll('details[data-hub-bundle-key]');
+            if (!scenarioDetails.length && !bundleDetails.length && !sharedHubUiState.hasCapturedLayout) return;
+
+            const openScenarioCodes = new Set();
+            scenarioDetails.forEach(details => {
+                if (details.open) openScenarioCodes.add(details.dataset.hubScenarioCode);
+            });
+
             const openBundleKeys = new Set();
-            hubGrid.querySelectorAll('details[data-hub-bundle-key]').forEach(details => {
+            bundleDetails.forEach(details => {
                 if (details.open) openBundleKeys.add(details.dataset.hubBundleKey);
             });
 
@@ -527,11 +559,13 @@
             const active = document.activeElement;
             const isPeerDraft = active && active.matches && active.matches('#shared-hub-grid textarea[data-peer-draft-key]');
             sharedHubUiState = {
+                openScenarioCodes,
                 openBundleKeys,
                 commentDrafts,
                 activeDraftKey: isPeerDraft ? active.dataset.peerDraftKey : '',
                 selectionStart: isPeerDraft ? active.selectionStart : null,
-                selectionEnd: isPeerDraft ? active.selectionEnd : null
+                selectionEnd: isPeerDraft ? active.selectionEnd : null,
+                hasCapturedLayout: true
             };
         }
 
@@ -1028,8 +1062,10 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             }
         }
 
-        // Restore a real authenticated session after a browser refresh.
-        restoreSupabaseSession();
+        // Classroom/shared-device mode: do not auto-restore a previous browser session.
+        // Students must intentionally log in each time the page is opened.
+        try { localStorage.removeItem('sb-sfcdwqdgmzghnbayexom-auth-token'); } catch (error) { console.warn('Stored auth cleanup skipped:', error); }
+        // restoreSupabaseSession();
 
         // 교관 전용 화면/기능 접근을 한곳에서 확인합니다.
         function requireTeacherAccess(showMessage = true) {
@@ -1882,6 +1918,113 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             });
         }
 
+        function getCommentDomId(comment) {
+            return `comment-${String(comment?.id || `${comment?.artifactKey || 'comment'}-${comment?.timestamp || Date.now()}`).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+        }
+
+        function isOwnPeerComment(comment) {
+            return Boolean(comment && comment.authorId === currentUserId);
+        }
+
+        function startPeerCommentEdit(commentId) {
+            const domId = `comment-${String(commentId || '').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            const display = document.getElementById(`${domId}-display`);
+            const editor = document.getElementById(`${domId}-editor`);
+            if (display) display.classList.add('hidden');
+            if (editor) {
+                editor.classList.remove('hidden');
+                const textarea = editor.querySelector('textarea');
+                if (textarea) {
+                    textarea.focus();
+                    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+                }
+            }
+        }
+
+        function cancelPeerCommentEdit(commentId) {
+            const domId = `comment-${String(commentId || '').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            const display = document.getElementById(`${domId}-display`);
+            const editor = document.getElementById(`${domId}-editor`);
+            if (editor) editor.classList.add('hidden');
+            if (display) display.classList.remove('hidden');
+        }
+
+        async function updatePeerComment(commentId) {
+            if (!currentUser || !currentSupabaseUserId || !supabaseClient) return;
+            const comment = getCommentsStore().find(item => item.id === commentId);
+            if (!comment || !isOwnPeerComment(comment)) {
+                alert('본인이 작성한 피드백만 수정할 수 있습니다.');
+                return;
+            }
+
+            const domId = `comment-${String(commentId || '').replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+            const textarea = document.getElementById(`${domId}-textarea`);
+            const text = textarea ? textarea.value.trim() : '';
+            if (!text) {
+                alert('피드백 내용을 입력하십시오.');
+                return;
+            }
+            if (text.length > 500) {
+                alert('피드백은 500자 이내로 작성하십시오.');
+                return;
+            }
+
+            const button = document.getElementById(`${domId}-save-btn`);
+            if (button) {
+                button.disabled = true;
+                button.classList.add('opacity-60', 'cursor-wait');
+                button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>수정 중…';
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('comments')
+                    .update({ comment_text: text })
+                    .eq('id', commentId);
+                if (error) throw error;
+
+                await refreshSharedData();
+                renderSharedHub();
+                if (!document.getElementById('screen-dashboard').classList.contains('hidden')) renderStudentDashboard();
+                if (currentUser?.role === 'teacher' && !document.getElementById('screen-teacher').classList.contains('hidden')) renderTeacherDashboard();
+            } catch (error) {
+                console.error('Supabase peer-comment update failed:', error);
+                alert(`피드백을 수정하지 못했습니다.
+${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
+                if (button) {
+                    button.disabled = false;
+                    button.classList.remove('opacity-60', 'cursor-wait');
+                    button.innerHTML = '<i class="fa-solid fa-check mr-1"></i>수정 저장';
+                }
+            }
+        }
+
+        async function deletePeerComment(commentId) {
+            if (!currentUser || !currentSupabaseUserId || !supabaseClient) return;
+            const comment = getCommentsStore().find(item => item.id === commentId);
+            if (!comment || !isOwnPeerComment(comment)) {
+                alert('본인이 작성한 피드백만 삭제할 수 있습니다.');
+                return;
+            }
+            if (!confirm('이 피드백을 삭제할까요? 삭제 후에는 복구할 수 없습니다.')) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('comments')
+                    .delete()
+                    .eq('id', commentId);
+                if (error) throw error;
+
+                await refreshSharedData();
+                renderSharedHub();
+                if (!document.getElementById('screen-dashboard').classList.contains('hidden')) renderStudentDashboard();
+                if (currentUser?.role === 'teacher' && !document.getElementById('screen-teacher').classList.contains('hidden')) renderTeacherDashboard();
+            } catch (error) {
+                console.error('Supabase peer-comment delete failed:', error);
+                alert(`피드백을 삭제하지 못했습니다. ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
+            }
+        }
+
         function renderArtifactFeedbackSection(artifact, isMe) {
             if (!artifact) return '';
             const artifactKey = getArtifactKey(artifact);
@@ -1891,79 +2034,313 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 ? comments.map(comment => {
                     const author = comment.authorName || (userDatabase[comment.authorId] ? userDatabase[comment.authorId].name : comment.authorId);
                     const commentTime = new Date(comment.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                    return `<div class="rounded border border-slate-100 bg-white px-2.5 py-2 text-[10px] leading-relaxed text-slate-600"><div class="mb-1 flex items-center justify-between gap-2"><span class="font-bold text-indigo-700"><i class="fa-solid fa-comment-dots mr-1"></i>${escapeHtml(author)}</span><span class="text-slate-400">${commentTime}</span></div><p>${escapeHtml(comment.text)}</p></div>`;
+                    const ownComment = isOwnPeerComment(comment);
+                    const commentDomId = getCommentDomId(comment);
+                    const actions = ownComment
+                        ? `<div class="flex items-center gap-1"><button type="button" onclick='startPeerCommentEdit(${JSON.stringify(comment.id)})' class="rounded border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-bold text-slate-500 hover:bg-slate-50"><i class="fa-solid fa-pen mr-1"></i>수정</button><button type="button" onclick='deletePeerComment(${JSON.stringify(comment.id)})' class="rounded border border-rose-200 bg-white px-2 py-0.5 text-[9px] font-bold text-rose-500 hover:bg-rose-50"><i class="fa-solid fa-trash mr-1"></i>삭제</button></div>`
+                        : '';
+                    return `
+                        <div class="ml-10 rounded-r-xl border-l-[6px] border-sky-300 bg-sky-50/75 px-4 py-3 text-[10px] leading-relaxed text-slate-600 shadow-sm">
+                            <div id="${commentDomId}-display">
+                                <div class="mb-1.5 flex flex-wrap items-center justify-between gap-2"><span class="font-black text-sky-800"><i class="fa-solid fa-comment-dots mr-1"></i>Peer comment · ${escapeHtml(author)}</span><div class="flex items-center gap-2"><span class="text-[9px] text-slate-400">${commentTime}</span>${actions}</div></div>
+                                <p class="whitespace-pre-wrap break-words text-[10px] leading-relaxed text-slate-600">${escapeHtml(comment.text)}</p>
+                            </div>
+                            ${ownComment ? `<div id="${commentDomId}-editor" class="hidden space-y-2"><div class="mb-1 flex items-center justify-between gap-2"><span class="font-bold text-indigo-700"><i class="fa-solid fa-pen-to-square mr-1"></i>${escapeHtml(author)} · 피드백 수정</span><span class="text-slate-400">${commentTime}</span></div><textarea id="${commentDomId}-textarea" rows="3" maxlength="500" class="w-full resize-y rounded border border-indigo-200 bg-indigo-50/20 p-2 text-[10px] leading-relaxed text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">${escapeHtml(comment.text)}</textarea><div class="flex justify-end gap-1.5"><button type="button" onclick='cancelPeerCommentEdit(${JSON.stringify(comment.id)})' class="rounded border border-slate-200 bg-white px-2.5 py-1.5 text-[9px] font-bold text-slate-500 hover:bg-slate-50">취소</button><button id="${commentDomId}-save-btn" type="button" onclick='updatePeerComment(${JSON.stringify(comment.id)})' class="rounded bg-indigo-600 px-2.5 py-1.5 text-[9px] font-bold text-white hover:bg-indigo-700"><i class="fa-solid fa-check mr-1"></i>수정 저장</button></div></div>` : ''}
+                        </div>
+                    `;
                 }).join('')
-                : `<div class="rounded border border-dashed border-slate-200 bg-white/70 px-2.5 py-2 text-[10px] italic text-slate-400">아직 등록된 동료 피드백이 없습니다.</div>`;
+                : `<div class="ml-10 rounded-r-xl border-l-[6px] border-dashed border-slate-200 bg-white/70 px-4 py-2 text-[10px] italic text-slate-400">아직 등록된 동료 피드백이 없습니다.</div>`;
             const savedDraft = sharedHubUiState.commentDrafts[artifactKey] || '';
             const feedbackComposer = isMe
                 ? `<div class="rounded border border-indigo-100 bg-indigo-50/50 px-2.5 py-2 text-[10px] text-indigo-600"><i class="fa-solid fa-info-circle mr-1"></i>내 artifact입니다. 다른 훈련생의 artifact에 피드백을 남겨보십시오.</div>`
                 : `<div class="space-y-2 rounded border border-emerald-100 bg-emerald-50/40 p-2.5"><label class="block text-[10px] font-bold text-emerald-800">Open-ended peer feedback</label><textarea id="peer-comment-${artifactDomId}" data-peer-draft-key="${escapeHtml(artifactKey)}" oninput="rememberPeerCommentDraft(this)" rows="2" maxlength="500" class="w-full resize-y rounded border border-emerald-200 bg-white p-2 text-[10px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" placeholder="One strength is… / One question I have is… / I suggest…">${escapeHtml(savedDraft)}</textarea><div class="flex justify-end"><button onclick='submitPeerComment(${JSON.stringify(artifactKey)})' class="rounded bg-emerald-600 px-2.5 py-1.5 text-[10px] font-bold text-white hover:bg-emerald-700"><i class="fa-solid fa-paper-plane mr-1"></i>피드백 게시</button></div></div>`;
 
-            return `<div class="mt-3 space-y-2 border-t border-slate-100 pt-3"><div class="flex items-center justify-between gap-2"><div class="text-[10px] font-black uppercase tracking-widest text-slate-500">Peer feedback</div><span class="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] text-slate-500">${comments.length} comments</span></div>${commentFeed}${feedbackComposer}</div>`;
+            return `<div class="mt-4 space-y-3 border-t border-sky-100 pt-3"><div class="flex items-center justify-between gap-2 pl-10"><div class="text-[10px] font-black uppercase tracking-widest text-sky-700"><i class="fa-solid fa-reply-all mr-1"></i>Peer feedback</div><span class="rounded bg-sky-50 px-1.5 py-0.5 text-[9px] text-sky-600">${comments.length} comments</span></div>${commentFeed}<div class="ml-10">${feedbackComposer}</div></div>`;
+        }
+
+        function getSortedScenarioPackagesForExport(scenarioCode) {
+            const artifacts = getArtifactsStore().filter(artifact => artifact.scenarioCode === scenarioCode);
+            return groupArtifactsByStudentAndScenario(artifacts)
+                .sort((a, b) => {
+                    const aMine = a.studentId === currentUserId ? 0 : 1;
+                    const bMine = b.studentId === currentUserId ? 0 : 1;
+                    if (aMine !== bMine) return aMine - bMine;
+                    const recentCompare = Number(b.latestTimestamp || 0) - Number(a.latestTimestamp || 0);
+                    if (recentCompare !== 0) return recentCompare;
+                    const aName = userDatabase[a.studentId]?.name || a.studentId;
+                    const bName = userDatabase[b.studentId]?.name || b.studentId;
+                    return String(aName).localeCompare(String(bName), 'ko');
+                });
+        }
+
+        function getExportModeLabel(mode) {
+            if (mode === 'opord') return 'OPORD only';
+            if (mode === 'feedback') return 'Peer feedback only';
+            return 'OPORD + Peer feedback';
+        }
+
+        function getExportModeFileSuffix(mode) {
+            if (mode === 'opord') return 'opord_only';
+            if (mode === 'feedback') return 'peer_feedback_only';
+            return 'opord_with_peer_feedback';
+        }
+
+        function appendMinimalBundleExport(lines, bundle, mode = 'full', options = {}) {
+            const includeOpord = mode !== 'feedback';
+            const includeFeedback = mode !== 'opord';
+            const showCadetHeader = Boolean(options.showCadetHeader);
+            const studentName = userDatabase[bundle.studentId]?.name || bundle.studentId;
+
+            if (showCadetHeader) {
+                if (lines.length) lines.push('');
+                lines.push(`=== ${studentName} (${bundle.studentId}) ===`);
+            }
+
+            let wroteAnything = false;
+
+            OPORD_PARAGRAPH_SEQUENCE.forEach(paragraphId => {
+                const artifact = bundle.artifactIndex[paragraphId];
+                if (!artifact) return;
+
+                const opordText = String(artifact.text || '').trim();
+                const comments = includeFeedback ? getArtifactComments(artifact) : [];
+                const hasOpord = includeOpord && opordText;
+                const hasFeedback = includeFeedback && comments.length;
+
+                if (!hasOpord && !hasFeedback) return;
+
+                if (wroteAnything || (showCadetHeader && lines[lines.length - 1] !== `=== ${studentName} (${bundle.studentId}) ===`)) {
+                    lines.push('');
+                }
+
+                lines.push(`[${getOpordParagraphLabel(paragraphId)}]`);
+
+                if (hasOpord) {
+                    lines.push(opordText);
+                }
+
+                if (hasFeedback) {
+                    comments.forEach(comment => {
+                        const author = comment.authorName || (userDatabase[comment.authorId]?.name || comment.authorId || 'unknown');
+                        const commentText = String(comment.text || '').trim();
+                        if (commentText) lines.push(`  - ${author}: ${commentText}`);
+                    });
+                }
+
+                wroteAnything = true;
+            });
+
+            if (!wroteAnything && showCadetHeader) {
+                lines.push('(아직 복사할 제출문/피드백이 없습니다.)');
+            }
+
+            return wroteAnything;
+        }
+
+        function formatScenarioForSlides(scenarioCode, mode = 'full') {
+            const packages = getSortedScenarioPackagesForExport(scenarioCode);
+            const lines = [];
+
+            if (!packages.length) {
+                return 'No submitted OPORD packages yet.';
+            }
+
+            packages.forEach(bundle => {
+                appendMinimalBundleExport(lines, bundle, mode, { showCadetHeader: true });
+            });
+
+            return lines.join('\n').trim() || 'No exportable text yet.';
+        }
+
+        function formatBundleForSlides(scenarioCode, studentId, mode = 'full') {
+            const bundle = getSortedScenarioPackagesForExport(scenarioCode)
+                .find(item => item.studentId === studentId);
+            const lines = [];
+
+            if (!bundle) {
+                return 'No submitted OPORD package for this cadet yet.';
+            }
+
+            appendMinimalBundleExport(lines, bundle, mode, { showCadetHeader: false });
+            return lines.join('\n').trim() || 'No exportable text yet.';
+        }
+
+        async function copyBundleForSlides(scenarioCode, studentId, mode = 'full') {
+            const text = formatBundleForSlides(scenarioCode, studentId, mode);
+            const cadetName = userDatabase[studentId]?.name || studentId;
+            try {
+                await navigator.clipboard.writeText(text);
+                alert(`${scenarioCode} / ${cadetName}의 ${getExportModeLabel(mode)} export를 클립보드에 복사했습니다.`);
+            } catch (error) {
+                console.error('Cadet clipboard export failed:', error);
+                window.prompt('자동 복사가 막혔습니다. 아래 텍스트를 Ctrl+C로 복사하십시오.', text);
+            }
+        }
+
+        async function copyScenarioForSlides(scenarioCode, mode = 'full') {
+            const text = formatScenarioForSlides(scenarioCode, mode);
+            try {
+                await navigator.clipboard.writeText(text);
+                alert(`${scenarioCode} 활동의 ${getExportModeLabel(mode)} export를 클립보드에 복사했습니다. Google Slides 텍스트 박스에 붙여넣으면 됩니다.`);
+            } catch (error) {
+                console.error('Clipboard export failed:', error);
+                const fallback = window.prompt('자동 복사가 막혔습니다. 아래 텍스트를 Ctrl+C로 복사하십시오.', text);
+            }
+        }
+
+        function downloadScenarioForSlides(scenarioCode, mode = 'full') {
+            const text = formatScenarioForSlides(scenarioCode, mode);
+            const safeName = String(scenarioCode || 'opord-export').replace(/[^a-zA-Z0-9_-]/g, '_');
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${safeName}_${getExportModeFileSuffix(mode)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
         }
 
         function renderSharedHub() {
-            // Snapshot open cards and any unsent comment text before replacing hub HTML.
+            // Snapshot open activity groups, open cadet cards, and any unsent comment text before replacing hub HTML.
             captureSharedHubUiState();
             recoverCompletedCodeActivityArtifacts();
             const hubGrid = document.getElementById('shared-hub-grid');
             hubGrid.innerHTML = '';
-            hubGrid.className = 'space-y-3';
+            hubGrid.className = 'space-y-4';
             const artifacts = getArtifactsStore();
+            const scenarios = getScenarioStore();
 
             if (artifacts.length === 0) {
                 hubGrid.innerHTML = `<div class="text-center py-12 text-slate-400 italic text-xs border border-dashed rounded-xl">현재 공유 허브 플랫폼에 등록된 동료의 전술 산출물이 존재하지 않습니다. 먼저 첫 과제를 해결해 보십시오!</div>`;
                 return;
             }
 
-            const scenarios = getScenarioStore();
-            const packages = groupArtifactsByStudentAndScenario(artifacts)
-                .sort((a, b) => {
-                    const scenarioCompare = String(a.scenarioCode).localeCompare(String(b.scenarioCode));
-                    if (scenarioCompare !== 0) return scenarioCompare;
-                    const aMine = a.studentId === currentUserId ? 0 : 1;
-                    const bMine = b.studentId === currentUserId ? 0 : 1;
-                    if (aMine !== bMine) return aMine - bMine;
-                    const aName = userDatabase[a.studentId]?.name || a.studentId;
-                    const bName = userDatabase[b.studentId]?.name || b.studentId;
-                    return String(aName).localeCompare(String(bName), 'ko');
-                });
-
+            const packages = groupArtifactsByStudentAndScenario(artifacts);
+            const packagesByScenario = new Map();
             packages.forEach(bundle => {
-                const sName = userDatabase[bundle.studentId] ? userDatabase[bundle.studentId].name : bundle.studentId;
-                const isMe = bundle.studentId === currentUserId;
-                const scenario = scenarios[bundle.scenarioCode];
-                const scenarioTitle = scenario?.title || `${bundle.scenarioCode} activity`;
-                const latestText = bundle.latestTimestamp
-                    ? new Date(bundle.latestTimestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
-                    : '';
-                const bundleKey = getSharedHubBundleKey(bundle);
-                const isBundleOpen = sharedHubUiState.openBundleKeys.has(bundleKey);
+                if (!packagesByScenario.has(bundle.scenarioCode)) packagesByScenario.set(bundle.scenarioCode, []);
+                packagesByScenario.get(bundle.scenarioCode).push(bundle);
+            });
 
-                const paragraphSections = OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => {
-                    const artifact = bundle.artifactIndex[paragraphId];
-                    const label = getOpordParagraphLabel(paragraphId);
-                    if (!artifact) {
-                        return `<section class="rounded-lg border border-dashed border-slate-200 bg-slate-50/70 px-3 py-2.5"><div class="text-[10px] font-black text-slate-500">${escapeHtml(label)}</div><div class="mt-1 text-[10px] italic text-slate-400">Not submitted yet.</div></section>`;
-                    }
-                    return `<section class="rounded-lg border border-indigo-100 bg-indigo-50/20 p-3"><div class="mb-2 flex flex-wrap items-center justify-between gap-2"><span class="rounded bg-amber-50 border border-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">${escapeHtml(label)}</span><span class="text-[9px] text-emerald-600"><i class="fa-solid fa-circle-check mr-1"></i>Submitted</span></div><pre class="whitespace-pre-wrap break-words rounded-lg border border-slate-100 bg-white p-3 text-[11px] font-mono leading-relaxed text-slate-700 select-all">${escapeHtml(artifact.text)}</pre>${renderArtifactFeedbackSection(artifact, isMe)}</section>`;
+            const scenarioCodes = [...new Set([
+                ...Object.values(scenarios).map(scenario => scenario.code),
+                ...packages.map(bundle => bundle.scenarioCode)
+            ])].filter(Boolean).sort((a, b) => String(a).localeCompare(String(b)));
+
+            const firstScenarioWithSubmissions = scenarioCodes.find(code => (packagesByScenario.get(code) || []).length) || scenarioCodes[0] || '';
+
+            scenarioCodes.forEach(scenarioCode => {
+                const scenario = scenarios[scenarioCode] || {
+                    code: scenarioCode,
+                    title: `${scenarioCode} activity`,
+                    activityType: 'lecture'
+                };
+                const activity = getActivityMeta(getScenarioActivityType(scenario));
+                const scenarioPackages = (packagesByScenario.get(scenarioCode) || [])
+                    .sort((a, b) => {
+                        const aMine = a.studentId === currentUserId ? 0 : 1;
+                        const bMine = b.studentId === currentUserId ? 0 : 1;
+                        if (aMine !== bMine) return aMine - bMine;
+                        const recentCompare = Number(b.latestTimestamp || 0) - Number(a.latestTimestamp || 0);
+                        if (recentCompare !== 0) return recentCompare;
+                        const aName = userDatabase[a.studentId]?.name || a.studentId;
+                        const bName = userDatabase[b.studentId]?.name || b.studentId;
+                        return String(aName).localeCompare(String(bName), 'ko');
+                    });
+
+                const isScenarioOpen = sharedHubUiState.openScenarioCodes.has(scenarioCode);
+                const latestTimestamp = Math.max(0, ...scenarioPackages.map(bundle => Number(bundle.latestTimestamp || 0)));
+                const latestText = latestTimestamp
+                    ? new Date(latestTimestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+                    : '제출 없음';
+                const totalParagraphs = scenarioPackages.reduce((sum, bundle) => sum + bundle.completedCount, 0);
+                const totalComments = scenarioPackages.reduce((sum, bundle) => sum + bundle.commentCount, 0);
+                const paragraphStats = OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => {
+                    const count = scenarioPackages.filter(bundle => bundle.artifactIndex[paragraphId]).length;
+                    const drill = PARAGRAPH_DRILLS[paragraphId];
+                    return `<span class="rounded border px-2 py-1 text-center text-[9px] font-bold ${count ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}">${drill.number}. ${count}/${scenarioPackages.length || 0}</span>`;
                 }).join('');
 
-                hubGrid.innerHTML += `
-                    <details data-hub-bundle-key="${escapeHtml(bundleKey)}" ${isBundleOpen ? 'open' : ''} class="group rounded-xl border ${isMe ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200 bg-white'} shadow-sm open:shadow-md">
-                        <summary class="cursor-pointer list-none px-4 py-3.5">
-                            <div class="flex flex-wrap items-center justify-between gap-3">
-                                <div class="min-w-0 flex items-center gap-2">
-                                    <i class="fa-solid ${isMe ? 'fa-user-circle text-indigo-500' : 'fa-user-astronaut text-emerald-500'}"></i>
-                                    <div class="min-w-0"><div class="truncate text-xs font-black text-slate-800">${escapeHtml(sName)} ${isMe ? '<span class="ml-1 rounded bg-indigo-100 px-1 py-0.5 text-[9px] font-normal text-indigo-700">나의 OPORD</span>' : ''}</div><div class="mt-0.5 truncate text-[10px] text-slate-500">${escapeHtml(scenarioTitle)}</div></div>
+                const cadetCards = scenarioPackages.length
+                    ? scenarioPackages.map(bundle => {
+                        const sName = userDatabase[bundle.studentId] ? userDatabase[bundle.studentId].name : bundle.studentId;
+                        const isMe = bundle.studentId === currentUserId;
+                        const bundleLatestText = bundle.latestTimestamp
+                            ? new Date(bundle.latestTimestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+                            : '';
+                        const bundleKey = getSharedHubBundleKey(bundle);
+                        const isBundleOpen = sharedHubUiState.openBundleKeys.has(bundleKey);
+
+                        const paragraphSections = OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => {
+                            const artifact = bundle.artifactIndex[paragraphId];
+                            const label = getOpordParagraphLabel(paragraphId);
+                            if (!artifact) {
+                                return `<section class="rounded-lg border border-dashed border-slate-200 bg-slate-50/70 px-3 py-2.5"><div class="text-[10px] font-black text-slate-500">${escapeHtml(label)}</div><div class="mt-1 text-[10px] italic text-slate-400">Not submitted yet.</div></section>`;
+                            }
+                            return `<section class="rounded-xl border border-indigo-100 bg-indigo-50/20 p-3 shadow-sm"><div class="mb-2 flex flex-wrap items-center justify-between gap-2"><span class="rounded bg-amber-50 border border-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">${escapeHtml(label)}</span><span class="text-[9px] text-emerald-600"><i class="fa-solid fa-circle-check mr-1"></i>Submitted</span></div><div class="rounded-xl border-2 border-indigo-200 bg-white p-5 shadow-md"><div class="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-600"><i class="fa-solid fa-file-lines text-indigo-500"></i>Student OPORD statement</div><div class="whitespace-pre-wrap break-words text-[14px] font-black leading-relaxed text-slate-950 select-all">${escapeHtml(artifact.text)}</div></div>${renderArtifactFeedbackSection(artifact, isMe)}</section>`;
+                        }).join('');
+
+                        return `
+                            <details data-hub-bundle-key="${escapeHtml(bundleKey)}" ${isBundleOpen ? 'open' : ''} class="group rounded-xl border ${isMe ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200 bg-white'} shadow-sm open:shadow-md">
+                                <summary class="cursor-pointer list-none px-4 py-3.5">
+                                    <div class="flex flex-wrap items-center justify-between gap-3">
+                                        <div class="min-w-0 flex items-center gap-2">
+                                            <i class="fa-solid ${isMe ? 'fa-user-circle text-indigo-500' : 'fa-user-astronaut text-emerald-500'}"></i>
+                                            <div class="min-w-0"><div class="truncate text-xs font-black text-slate-800">${escapeHtml(sName)} ${isMe ? '<span class="ml-1 rounded bg-indigo-100 px-1 py-0.5 text-[9px] font-normal text-indigo-700">나의 OPORD</span>' : ''}</div><div class="mt-0.5 truncate text-[10px] text-slate-500">${escapeHtml(scenario.title)}</div></div>
+                                        </div>
+                                        <div class="flex items-center gap-2"><span class="rounded bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">${bundle.completedCount}/5 paragraphs</span><span class="rounded bg-slate-100 px-2 py-1 text-[10px] text-slate-500">${bundle.commentCount} comments</span><span class="text-[10px] text-slate-400">${bundleLatestText}</span><i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform group-open:rotate-180"></i></div>
+                                    </div>
+                                    <div class="mt-3 grid grid-cols-5 gap-1.5">${OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => `<span class="rounded border px-1.5 py-1 text-center text-[9px] font-bold ${bundle.artifactIndex[paragraphId] ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}">${PARAGRAPH_DRILLS[paragraphId].number}. ${bundle.artifactIndex[paragraphId] ? '✓' : '—'}</span>`).join('')}</div>
+                                </summary>
+                                <div class="border-t border-slate-100 px-4 pb-4 pt-3">
+                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">OPORD package · 1 → 5</p>
+                                        <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                            <span class="rounded bg-slate-100 px-2 py-0.5 text-[9px] text-slate-500">${bundle.commentCount} total comments</span>
+                                            <button type="button" title="이 cadet의 OPORD 본문만 복사" onclick='copyBundleForSlides(${JSON.stringify(scenarioCode)}, ${JSON.stringify(bundle.studentId)}, "opord")' class="rounded-lg border border-emerald-200 bg-white px-2 py-1 text-[9px] font-black text-emerald-700 hover:bg-emerald-50"><i class="fa-solid fa-file-lines mr-1"></i>OPORD만</button>
+                                            <button type="button" title="이 cadet의 OPORD와 peer feedback 함께 복사" onclick='copyBundleForSlides(${JSON.stringify(scenarioCode)}, ${JSON.stringify(bundle.studentId)}, "full")' class="rounded-lg border border-indigo-200 bg-white px-2 py-1 text-[9px] font-black text-indigo-700 hover:bg-indigo-50"><i class="fa-solid fa-copy mr-1"></i>OPORD+Peer</button>
+                                            <button type="button" title="이 cadet의 peer feedback만 복사" onclick='copyBundleForSlides(${JSON.stringify(scenarioCode)}, ${JSON.stringify(bundle.studentId)}, "feedback")' class="rounded-lg border border-amber-200 bg-white px-2 py-1 text-[9px] font-black text-amber-700 hover:bg-amber-50"><i class="fa-solid fa-comments mr-1"></i>Peer만</button>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-3">${paragraphSections}</div>
                                 </div>
-                                <div class="flex items-center gap-2"><span class="rounded border border-indigo-100 bg-indigo-50 px-2 py-1 font-mono text-[10px] font-bold text-indigo-700">${escapeHtml(bundle.scenarioCode)}</span><span class="rounded bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">${bundle.completedCount}/5 paragraphs</span><span class="text-[10px] text-slate-400">${latestText}</span><i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform group-open:rotate-180"></i></div>
+                            </details>
+                        `;
+                    }).join('')
+                    : `<div class="rounded-lg border border-dashed border-slate-200 bg-slate-50/70 px-4 py-6 text-center text-xs italic text-slate-400">이 활동에는 아직 제출된 OPORD package가 없습니다.</div>`;
+
+                hubGrid.innerHTML += `
+                    <details data-hub-scenario-code="${escapeHtml(scenarioCode)}" ${isScenarioOpen ? 'open' : ''} class="group rounded-2xl border border-slate-200 bg-white shadow-sm open:border-emerald-200 open:shadow-md">
+                        <summary class="cursor-pointer list-none px-5 py-4">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div class="min-w-0 flex items-start gap-3">
+                                    <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 font-mono text-xs font-black text-indigo-700">${escapeHtml(scenarioCode)}</span>
+                                    <div class="min-w-0">
+                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4><span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
+                                        <p class="mt-1 text-[10px] leading-relaxed text-slate-500">이 활동을 열면 생도별 OPORD package가 최근 제출 순으로 정리됩니다.</p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                    <span class="rounded bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">${scenarioPackages.length} teams</span>
+                                    <span class="rounded bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-indigo-700">${totalParagraphs} paragraphs</span>
+                                    <span class="rounded bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">${totalComments} comments</span>
+                                    <span class="text-[10px] text-slate-400">${latestText}</span>
+                                    <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform group-open:rotate-180"></i>
+                                </div>
                             </div>
-                            <div class="mt-3 grid grid-cols-5 gap-1.5">${OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => `<span class="rounded border px-1.5 py-1 text-center text-[9px] font-bold ${bundle.artifactIndex[paragraphId] ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}">${PARAGRAPH_DRILLS[paragraphId].number}. ${bundle.artifactIndex[paragraphId] ? '✓' : '—'}</span>`).join('')}</div>
+                            <div class="mt-3 grid grid-cols-5 gap-1.5">${paragraphStats}</div>
                         </summary>
-                        <div class="border-t border-slate-100 px-4 pb-4 pt-3">
-                            <div class="mb-3 flex items-center justify-between gap-2"><p class="text-[10px] font-black uppercase tracking-widest text-slate-500">OPORD package · 1 → 5</p><span class="rounded bg-slate-100 px-2 py-0.5 text-[9px] text-slate-500">${bundle.commentCount} total comments</span></div>
-                            <div class="space-y-3">${paragraphSections}</div>
+                        <div class="border-t border-slate-100 bg-slate-50/40 px-4 py-4">
+                            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">Cadet OPORD packages · latest first</p>
+                                <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                    <span class="rounded bg-white px-2 py-0.5 text-[9px] text-slate-500">${scenarioPackages.length ? '내 OPORD는 맨 위에 고정됩니다.' : 'No submissions yet'}</span>
+                                    ${scenarioPackages.length ? `<button type="button" title="학생 OPORD 본문만 복사" onclick='copyScenarioForSlides(${JSON.stringify(scenarioCode)}, "opord")' class="rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-emerald-700 hover:bg-emerald-50"><i class="fa-solid fa-file-lines mr-1"></i>OPORD만 복사</button><button type="button" title="OPORD 본문과 peer feedback을 함께 복사" onclick='copyScenarioForSlides(${JSON.stringify(scenarioCode)}, "full")' class="rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-indigo-700 hover:bg-indigo-50"><i class="fa-solid fa-copy mr-1"></i>OPORD+Peer 복사</button><button type="button" title="Peer feedback만 복사" onclick='copyScenarioForSlides(${JSON.stringify(scenarioCode)}, "feedback")' class="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-amber-700 hover:bg-amber-50"><i class="fa-solid fa-comments mr-1"></i>Peer만 복사</button><button type="button" onclick='downloadScenarioForSlides(${JSON.stringify(scenarioCode)}, "full")' class="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-slate-600 hover:bg-slate-50"><i class="fa-solid fa-download mr-1"></i>TXT 저장</button>` : ''}
+                                </div>
+                            </div>
+                            <div class="space-y-3">${cadetCards}</div>
                         </div>
                     </details>
                 `;
@@ -1975,15 +2352,17 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
 
         function renderStudentDashboard() {
             recoverCompletedCodeActivityArtifacts();
+            captureStudentDashboardUiState();
             const listContainer = document.getElementById('dash-scenario-list');
             const historyContainer = document.getElementById('student-artifact-history');
             listContainer.innerHTML = ''; historyContainer.innerHTML = '';
 
             const scenarios = getScenarioStore();
+            const scenarioEntries = Object.values(scenarios).sort((a, b) => a.code.localeCompare(b.code));
             const artifacts = getArtifactsStore();
             const paragraphCount = OPORD_PARAGRAPH_SEQUENCE.length;
             const groups = { lecture: [], code: [] };
-            Object.values(scenarios).forEach(scenario => groups[getScenarioActivityType(scenario)].push(scenario));
+            scenarioEntries.forEach(scenario => groups[getScenarioActivityType(scenario)].push(scenario));
 
             ['lecture', 'code'].forEach(activityType => {
                 const entries = groups[activityType];
@@ -2000,7 +2379,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                     </div>
                 `;
                 const groupContainer = document.getElementById(`dash-group-${activityType}`);
-                entries.sort((a,b) => a.code.localeCompare(b.code)).forEach(sci => {
+                entries.forEach(sci => {
                     const submittedParagraphs = new Set(
                         artifacts
                             .filter(a => a.studentId === currentUserId && a.scenarioCode === sci.code)
@@ -2032,32 +2411,93 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 });
             });
 
-            const myArtifacts = artifacts.filter(a => a.studentId === currentUserId);
-            if (myArtifacts.length === 0) {
-                historyContainer.innerHTML = `<div class="text-xs text-slate-400 italic p-6 border border-dashed rounded-lg text-center">보관된 개인 산출물이 없습니다. 시나리오에 진입하여 paragraph 실습을 시작하십시오.</div>`;
+            if (!scenarioEntries.length) {
+                historyContainer.innerHTML = `<div class="text-xs text-slate-400 italic p-6 border border-dashed rounded-lg text-center">등록된 활동이 없습니다. 교관이 시나리오를 공유 DB에 배포해야 합니다.</div>`;
                 return;
             }
 
-            const scenarioPackages = groupArtifactsByStudentAndScenario(myArtifacts)
-                .sort((a, b) => String(a.scenarioCode).localeCompare(String(b.scenarioCode)));
-
-            scenarioPackages.forEach(bundle => {
-                const scenario = scenarios[bundle.scenarioCode];
-                const scenarioTitle = scenario?.title || `${bundle.scenarioCode} activity`;
+            const myArtifacts = artifacts.filter(a => a.studentId === currentUserId);
+            const packages = groupArtifactsByStudentAndScenario(myArtifacts);
+            const packageMap = new Map(packages.map(bundle => [bundle.scenarioCode, bundle]));
+            scenarioEntries.forEach(scenario => {
+                const bundle = packageMap.get(scenario.code) || {
+                    scenarioCode: scenario.code,
+                    studentId: currentUserId,
+                    artifactIndex: {},
+                    orderedArtifacts: [],
+                    completedCount: 0,
+                    latestTimestamp: 0,
+                    commentCount: 0
+                };
+                const activity = getActivityMeta(getScenarioActivityType(scenario));
+                const progress = getProgressStore();
+                const submittedParagraphs = new Set(
+                    myArtifacts
+                        .filter(a => a.scenarioCode === scenario.code)
+                        .map(getArtifactParagraphId)
+                );
+                const completedParagraphs = new Set(submittedParagraphs);
+                OPORD_PARAGRAPH_SEQUENCE.forEach(paragraphId => {
+                    if (progress[`${currentUserId}::${scenario.code}::${paragraphId}::step2`]) completedParagraphs.add(paragraphId);
+                });
+                const completeCount = completedParagraphs.size;
+                const submittedCount = submittedParagraphs.size;
+                const isComplete = completeCount === paragraphCount;
+                const isScenarioOpen = studentDashboardUiState.openScenarioCodes.has(scenario.code);
+                const latestText = bundle.latestTimestamp
+                    ? new Date(bundle.latestTimestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+                    : '제출 없음';
+                const statusDetail = submittedCount === completeCount
+                    ? `${completeCount}/${paragraphCount} paragraphs`
+                    : `${completeCount}/${paragraphCount} complete · ${submittedCount} shared`;
+                const paragraphStats = OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => {
+                    const artifact = bundle.artifactIndex[paragraphId];
+                    const locallyComplete = completedParagraphs.has(paragraphId);
+                    const drill = PARAGRAPH_DRILLS[paragraphId];
+                    const classes = artifact
+                        ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
+                        : (locallyComplete ? 'border-amber-100 bg-amber-50 text-amber-700' : 'border-slate-200 bg-slate-50 text-slate-400');
+                    const mark = artifact ? '✓' : (locallyComplete ? 'local' : '—');
+                    return `<span class="rounded border px-1.5 py-1 text-center text-[9px] font-bold ${classes}">${drill.number}. ${mark}</span>`;
+                }).join('');
                 const paragraphRows = OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => {
                     const artifact = bundle.artifactIndex[paragraphId];
                     const label = getOpordParagraphLabel(paragraphId);
+                    const locallyComplete = completedParagraphs.has(paragraphId);
                     if (!artifact) {
-                        return `<div class="rounded-lg border border-dashed border-slate-200 bg-slate-50/60 p-3"><div class="text-[10px] font-black text-slate-500">${escapeHtml(label)}</div><p class="mt-1 text-[10px] italic text-slate-400">Not submitted yet.</p></div>`;
+                        return `<div class="rounded-lg border border-dashed ${locallyComplete ? 'border-amber-200 bg-amber-50/50' : 'border-slate-200 bg-slate-50/60'} p-3"><div class="text-[10px] font-black ${locallyComplete ? 'text-amber-700' : 'text-slate-500'}">${escapeHtml(label)}</div><p class="mt-1 text-[10px] italic ${locallyComplete ? 'text-amber-600' : 'text-slate-400'}">${locallyComplete ? 'Local progress exists, but no shared artifact was found. Re-enter and submit if needed.' : 'Not submitted yet.'}</p></div>`;
                     }
                     return `<div class="rounded-lg border border-indigo-100 bg-indigo-50/30 p-3"><div class="mb-1.5 flex flex-wrap items-center justify-between gap-2"><span class="rounded bg-amber-50 border border-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">${escapeHtml(label)}</span><span class="text-[9px] font-bold text-emerald-600"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>저장 및 공유됨</span></div><pre class="whitespace-pre-wrap break-words rounded border border-indigo-100/70 bg-white p-2.5 text-[10px] font-mono leading-relaxed text-slate-700">${escapeHtml(artifact.text)}</pre></div>`;
                 }).join('');
+                const actionLabel = isComplete ? '복습 · 수정하러 가기' : (completeCount > 0 ? '이어 하기' : '활동 시작');
 
                 historyContainer.innerHTML += `
-                    <section class="rounded-xl border border-indigo-200 bg-indigo-50/30 p-4 space-y-3">
-                        <div class="flex flex-wrap items-start justify-between gap-2 border-b border-indigo-100 pb-3"><div><p class="text-[10px] font-mono font-black text-indigo-700">${escapeHtml(bundle.scenarioCode)} · OPORD ACTIVITY PACKAGE</p><h4 class="mt-1 text-xs font-black text-slate-800">${escapeHtml(scenarioTitle)}</h4></div><span class="rounded bg-emerald-50 border border-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-700">${bundle.completedCount}/5 paragraphs complete</span></div>
-                        <div class="space-y-2">${paragraphRows}</div>
-                    </section>
+                    <details data-student-scenario-code="${escapeHtml(scenario.code)}" ${isScenarioOpen ? 'open' : ''} class="group rounded-2xl border ${submittedCount ? 'border-indigo-200 bg-indigo-50/20' : 'border-slate-200 bg-white'} shadow-sm open:shadow-md">
+                        <summary class="cursor-pointer list-none px-4 py-3.5">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div class="min-w-0 flex items-start gap-3">
+                                    <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 font-mono text-xs font-black text-indigo-700">${escapeHtml(scenario.code)}</span>
+                                    <div class="min-w-0">
+                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4><span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
+                                        <p class="mt-1 text-[10px] leading-relaxed text-slate-500">이 활동을 열면 내가 제출한 1–5 paragraph 산출물이 정리됩니다.</p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                    <span class="rounded ${isComplete ? 'bg-emerald-50 text-emerald-700' : 'bg-indigo-50 text-indigo-700'} px-2.5 py-1 text-[10px] font-black">${statusDetail}</span>
+                                    <span class="rounded bg-slate-100 px-2.5 py-1 text-[10px] text-slate-500">${latestText}</span>
+                                    <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform group-open:rotate-180"></i>
+                                </div>
+                            </div>
+                            <div class="mt-3 grid grid-cols-5 gap-1.5">${paragraphStats}</div>
+                        </summary>
+                        <div class="border-t border-slate-100 bg-slate-50/40 px-4 py-4">
+                            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">My activity package · 1 → 5</p>
+                                <button onclick="startTraining('${escapeHtml(scenario.code)}')" class="rounded ${isComplete ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'} px-3 py-1.5 text-[10px] font-bold text-white shadow"><i class="fa-solid fa-arrow-right mr-1"></i>${actionLabel}</button>
+                            </div>
+                            <div class="space-y-2">${paragraphRows}</div>
+                        </div>
+                    </details>
                 `;
             });
         }
