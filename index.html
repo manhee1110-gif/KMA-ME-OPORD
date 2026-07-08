@@ -107,7 +107,7 @@
                             <div class="flex flex-wrap items-start justify-between gap-2">
                                 <div>
                                     <p id="scenario-editor-mode" class="text-[11px] font-black text-amber-800">새 시나리오 작성 모드</p>
-                                    <p class="mt-0.5 text-[10px] leading-relaxed text-slate-500">기존 활동을 불러와 다섯 paragraph의 reference cards·phrase bank와 활동 유형(Lecture / Code Your Way)을 수정할 수 있습니다.</p>
+                                    <p class="mt-0.5 text-[10px] leading-relaxed text-slate-500">기존 활동을 불러와 다섯 paragraph의 reference cards·phrase bank·Step 2 questions와 활동 유형(Lecture / Code Your Way)을 수정하거나 삭제할 수 있습니다.</p>
                                     <p class="mt-1 text-[9px] leading-relaxed text-emerald-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>이제 reference cards·phrase bank는 Supabase 공유 DB에 저장됩니다. 저장 후 전 생도 화면에 동기화됩니다.</p>
                                 </div>
                                 <button type="button" onclick="resetScenarioEditor()" class="rounded border border-amber-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100"><i class="fa-solid fa-file-circle-plus mr-1"></i>새 활동</button>
@@ -119,9 +119,9 @@
 
                         <div class="space-y-3 text-xs">
                             <div>
-                                <label class="block font-bold text-slate-600 mb-1">시나리오 코드명 (대문자)</label>
-                                <input type="text" id="new-sci-code" class="w-full border rounded p-2" placeholder="예: OPORD-03">
-                                <p id="scenario-code-note" class="mt-1 text-[10px] text-slate-400">새 활동은 코드명을 지정하고, 기존 활동은 코드가 고정됩니다.</p>
+                                <label class="block font-bold text-slate-600 mb-1">활동 코드명 / 짧은 이름</label>
+                                <input type="text" id="new-sci-code" class="w-full border rounded p-2" placeholder="예: Defense basics / 야간 방어 실습 1">
+                                <p id="scenario-code-note" class="mt-1 text-[10px] text-slate-400">새 활동은 자유로운 코드명/짧은 이름을 사용할 수 있고, 기존 활동은 기록 연결을 위해 코드가 고정됩니다.</p>
                             </div>
                             <div>
                                 <label class="block font-bold text-slate-600 mb-1">시나리오 제목 및 상황 설명</label>
@@ -138,7 +138,7 @@
                             <div class="rounded-lg border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
                                 <div>
                                     <span class="font-bold text-indigo-700 block text-[11px]">Full OPORD Teacher Feed</span>
-                                    <p class="mt-1 text-[10px] leading-relaxed text-slate-500">각 paragraph의 <strong>reference는 한 줄이 하나의 scenario card</strong>, <strong>phrase bank도 한 줄이 하나의 phrase chip</strong>이 됩니다. Step 1은 OPORD shell을 공통으로 연습하고, Step 2에서는 학생들이 아래 reference와 phrase bank를 바탕으로 자기 팀의 문단을 직접 작성합니다.</p>
+                                    <p class="mt-1 text-[10px] leading-relaxed text-slate-500">각 paragraph의 <strong>reference는 한 줄이 하나의 scenario card</strong>, <strong>phrase bank는 한 줄이 하나의 phrase chip</strong>, <strong>Step 2 question은 한 줄이 하나의 guided prompt</strong>가 됩니다. Step 1은 OPORD shell을 공통으로 연습하고, Step 2에서는 학생들이 아래 자료와 질문을 바탕으로 자기 팀의 답변/문단을 작성합니다.</p>
                                 </div>
 
                                 <details open class="rounded border border-slate-200 bg-white p-2">
@@ -147,6 +147,11 @@
                                     <div class="mt-2 border-t border-indigo-100 pt-2">
                                         <label class="block text-[10px] font-bold text-indigo-700">Teacher Phrase Bank <span class="font-normal text-slate-400">(optional · one phrase per line)</span></label>
                                         <textarea id="new-sci-phrases-situation" rows="3" class="mt-1 w-full rounded border border-indigo-100 bg-indigo-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="limited visibility&#10;provides observation&#10;likely avenue of approach"></textarea>
+                                        <div class="mt-2 border-t border-violet-100 pt-2">
+                                            <label class="block text-[10px] font-bold text-violet-700">Step 2 Questions / Guided Prompts <span class="font-normal text-slate-400">(optional · one question per line)</span></label>
+                                            <textarea id="new-sci-questions-situation" rows="3" class="mt-1 w-full rounded border border-violet-100 bg-violet-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="What is the terrain/weather effect?&#10;What enemy/friendly detail needs clarification?"></textarea>
+                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문들은 Lecture와 Code Your Way 모두의 Step 2 입력칸에 나타납니다. 비워두면 해당 활동은 기존 Step 2 방식으로 진행됩니다.</p>
+                                        </div>
                                     </div>
                                 </details>
                                 <details class="rounded border border-slate-200 bg-white p-2">
@@ -155,6 +160,11 @@
                                     <div class="mt-2 border-t border-indigo-100 pt-2">
                                         <label class="block text-[10px] font-bold text-indigo-700">Teacher Phrase Bank <span class="font-normal text-slate-400">(optional · one phrase per line)</span></label>
                                         <textarea id="new-sci-phrases-mission" rows="3" class="mt-1 w-full rounded border border-indigo-100 bg-indigo-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="at / NLT / on order&#10;seize OBJ&#10;in order to ..."></textarea>
+                                        <div class="mt-2 border-t border-violet-100 pt-2">
+                                            <label class="block text-[10px] font-bold text-violet-700">Step 2 Questions / Guided Prompts <span class="font-normal text-slate-400">(optional · one question per line)</span></label>
+                                            <textarea id="new-sci-questions-mission" rows="3" class="mt-1 w-full rounded border border-violet-100 bg-violet-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="What is incomplete in the mission statement?&#10;Which 5W detail must be added?"></textarea>
+                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문들은 Lecture와 Code Your Way 모두의 Step 2 입력칸에 나타납니다. 비워두면 해당 활동은 기존 Step 2 방식으로 진행됩니다.</p>
+                                        </div>
                                     </div>
                                 </details>
                                 <details class="rounded border border-slate-200 bg-white p-2">
@@ -163,6 +173,11 @@
                                     <div class="mt-2 border-t border-indigo-100 pt-2">
                                         <label class="block text-[10px] font-bold text-indigo-700">Teacher Phrase Bank <span class="font-normal text-slate-400">(optional · one phrase per line)</span></label>
                                         <textarea id="new-sci-phrases-execution" rows="4" class="mt-1 w-full rounded border border-indigo-100 bg-indigo-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="support by fire&#10;be prepared to&#10;report when crossing&#10;do not advance beyond"></textarea>
+                                        <div class="mt-2 border-t border-violet-100 pt-2">
+                                            <label class="block text-[10px] font-bold text-violet-700">Step 2 Questions / Guided Prompts <span class="font-normal text-slate-400">(optional · one question per line)</span></label>
+                                            <textarea id="new-sci-questions-execution" rows="3" class="mt-1 w-full rounded border border-violet-100 bg-violet-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="What is the commander's intent?&#10;Which execution element needs more detail?"></textarea>
+                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문들은 Lecture와 Code Your Way 모두의 Step 2 입력칸에 나타납니다. 비워두면 해당 활동은 기존 Step 2 방식으로 진행됩니다.</p>
+                                        </div>
                                     </div>
                                 </details>
                                 <details class="rounded border border-slate-200 bg-white p-2">
@@ -171,6 +186,11 @@
                                     <div class="mt-2 border-t border-indigo-100 pt-2">
                                         <label class="block text-[10px] font-bold text-indigo-700">Teacher Phrase Bank <span class="font-normal text-slate-400">(optional · one phrase per line)</span></label>
                                         <textarea id="new-sci-phrases-sustainment" rows="3" class="mt-1 w-full rounded border border-indigo-100 bg-indigo-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Class V resupply&#10;LOGPAC&#10;CCP&#10;CASEVAC"></textarea>
+                                        <div class="mt-2 border-t border-violet-100 pt-2">
+                                            <label class="block text-[10px] font-bold text-violet-700">Step 2 Questions / Guided Prompts <span class="font-normal text-slate-400">(optional · one question per line)</span></label>
+                                            <textarea id="new-sci-questions-sustainment" rows="3" class="mt-1 w-full rounded border border-violet-100 bg-violet-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="What support does the unit need?&#10;How will resupply or casualty evacuation work?"></textarea>
+                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문들은 Lecture와 Code Your Way 모두의 Step 2 입력칸에 나타납니다. 비워두면 해당 활동은 기존 Step 2 방식으로 진행됩니다.</p>
+                                        </div>
                                     </div>
                                 </details>
                                 <details class="rounded border border-slate-200 bg-white p-2">
@@ -179,6 +199,11 @@
                                     <div class="mt-2 border-t border-indigo-100 pt-2">
                                         <label class="block text-[10px] font-bold text-indigo-700">Teacher Phrase Bank <span class="font-normal text-slate-400">(optional · one phrase per line)</span></label>
                                         <textarea id="new-sci-phrases-commandSignal" rows="3" class="mt-1 w-full rounded border border-indigo-100 bg-indigo-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="assumes command&#10;SITREP&#10;primary / alternate / contingency / emergency"></textarea>
+                                        <div class="mt-2 border-t border-violet-100 pt-2">
+                                            <label class="block text-[10px] font-bold text-violet-700">Step 2 Questions / Guided Prompts <span class="font-normal text-slate-400">(optional · one question per line)</span></label>
+                                            <textarea id="new-sci-questions-commandSignal" rows="3" class="mt-1 w-full rounded border border-violet-100 bg-violet-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="What command relationship is clear or unclear?&#10;What signal method or PACE detail should be added?"></textarea>
+                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문들은 Lecture와 Code Your Way 모두의 Step 2 입력칸에 나타납니다. 비워두면 해당 활동은 기존 Step 2 방식으로 진행됩니다.</p>
+                                        </div>
                                     </div>
                                 </details>
                             </div>
@@ -635,11 +660,13 @@
         }
 
         function mapScenarioDatabaseRow(row) {
+            const step2Blocks = cloneCourseMaterialObject(row.step2_blocks, {});
             return {
                 code: String(row.code || '').toUpperCase(),
                 title: row.title || `${row.code} 훈련 시나리오`,
                 activityType: normalizeActivityType(row.activity_type),
-                step2Blocks: cloneCourseMaterialObject(row.step2_blocks, {}),
+                step2Blocks,
+                step2Questions: normalizeStep2QuestionMap(step2Blocks[STEP2_QUESTIONS_KEY] || {}),
                 phraseBanks: cloneCourseMaterialObject(row.phrase_banks, {}),
                 isActive: row.is_active !== false,
                 createdBy: row.created_by || '',
@@ -758,7 +785,7 @@
                 code: scenario.code,
                 title: scenario.title,
                 activity_type: getScenarioActivityType(scenario),
-                step2_blocks: scenario.step2Blocks || {},
+                step2_blocks: buildStep2BlocksForDatabase(scenario),
                 phrase_banks: scenario.phraseBanks || {},
                 is_active: scenario.isActive !== false,
                 created_by: scenario.createdBy || currentSupabaseUserId,
@@ -770,6 +797,50 @@
                 .upsert(payload, { onConflict: 'code' });
 
             if (error) throw error;
+        }
+
+        async function deleteScenarioEditor(code) {
+            if (!requireTeacherAccess()) return;
+            const scenarioCode = String(code || '').trim();
+            if (!scenarioCode) return;
+            const scenarios = getScenarioStore();
+            const scenario = scenarios[scenarioCode];
+            const submissionCount = getArtifactsStore().filter(artifact => artifact.scenarioCode === scenarioCode).length;
+            const warning = submissionCount
+                ? `\n\n참고: 이 활동에 연결된 학생 제출물 ${submissionCount}개는 artifact DB에 보존됩니다. 활동 카드와 교관 자료만 삭제되어 학생 화면/리뷰 허브에서는 더 이상 기본 표시되지 않습니다.`
+                : '';
+            if (!confirm(`[${scenarioCode}] 활동을 삭제할까요?\n\n제목: ${scenario?.title || scenarioCode}${warning}`)) return;
+
+            try {
+                if (!supabaseClient || !currentSupabaseUserId) {
+                    throw new Error('공유 DB 인증 세션을 찾지 못했습니다. 다시 로그인하십시오.');
+                }
+                const { error } = await supabaseClient
+                    .from('scenarios')
+                    .delete()
+                    .eq('code', scenarioCode);
+                if (error) throw error;
+
+                try {
+                    const local = JSON.parse(localStorage.getItem('OPORD_SCENARIOS')) || {};
+                    delete local[scenarioCode];
+                    localStorage.setItem('OPORD_SCENARIOS', JSON.stringify(local));
+                } catch (localError) {
+                    console.warn('Local scenario cache cleanup skipped:', localError);
+                }
+                if (sharedScenarioStore && typeof sharedScenarioStore === 'object') delete sharedScenarioStore[scenarioCode];
+                sharedHubUiState.openScenarioCodes.delete(scenarioCode);
+                studentDashboardUiState.openScenarioCodes.delete(scenarioCode);
+                if (editingScenarioCode === scenarioCode) resetScenarioEditor();
+                await refreshSharedScenarios().catch(error => console.warn('Scenario refresh after delete skipped:', error));
+                renderTeacherDashboard();
+                if (!document.getElementById('screen-dashboard').classList.contains('hidden')) renderStudentDashboard();
+                if (!document.getElementById('screen-hub').classList.contains('hidden')) renderSharedHub();
+                alert(`✅ [${scenarioCode}] 활동이 삭제되었습니다. 기존 학생 제출물은 보존됩니다.`);
+            } catch (error) {
+                console.error('Scenario delete failed:', error);
+                alert(`활동을 삭제하지 못했습니다.\n${error.message || '잠시 뒤 다시 시도하십시오.'}`);
+            }
         }
 
         async function seedScenarioDatabaseFromLocal() {
@@ -787,28 +858,39 @@
 
             // If the teacher typed changes into the editor before the first DB publish,
             // include that visible editor draft in the initial seed payload as well.
-            const editorCode = (editingScenarioCode || document.getElementById('new-sci-code')?.value.trim().toUpperCase() || '').trim();
+            const editorCode = editingScenarioCode || normalizeScenarioCodeInput(document.getElementById('new-sci-code')?.value || '');
             const editorTitle = (document.getElementById('new-sci-title')?.value || '').trim();
             const editorActivityType = normalizeActivityType(document.getElementById('new-sci-activity-type')?.value);
             const editorHasAnyMaterial = TEACHER_PARAGRAPH_IDS.some(paragraphId => {
                 const referenceText = document.getElementById(`new-sci-${paragraphId}`)?.value || '';
                 const phraseText = document.getElementById(`new-sci-phrases-${paragraphId}`)?.value || '';
-                return referenceText.trim() || phraseText.trim();
+                const questionText = document.getElementById(`new-sci-questions-${paragraphId}`)?.value || '';
+                return referenceText.trim() || phraseText.trim() || questionText.trim();
             });
 
             if (editorCode && editorTitle && editorHasAnyMaterial) {
+                const editorCodeError = getScenarioCodeValidationError(editorCode);
+                if (editorCodeError) {
+                    alert(editorCodeError);
+                    return;
+                }
                 const step2Blocks = {};
                 const phraseBanks = {};
+                const step2Questions = {};
                 const missing = [];
                 TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
                     const field = document.getElementById(`new-sci-${paragraphId}`);
                     const phraseField = document.getElementById(`new-sci-phrases-${paragraphId}`);
+                    const questionField = document.getElementById(`new-sci-questions-${paragraphId}`);
                     const blocks = parseTeacherBlocks(field ? field.value : '');
                     const phrases = parseTeacherBlocks(phraseField ? phraseField.value : '');
-                    if (!blocks.length && !phrases.length) missing.push(`${PARAGRAPH_DRILLS[paragraphId].number}. ${PARAGRAPH_DRILLS[paragraphId].title}`);
+                    const questions = parseTeacherBlocks(questionField ? questionField.value : '');
+                    if (!blocks.length && !phrases.length && !questions.length) missing.push(`${PARAGRAPH_DRILLS[paragraphId].number}. ${PARAGRAPH_DRILLS[paragraphId].title}`);
                     step2Blocks[paragraphId] = blocks;
                     phraseBanks[paragraphId] = phrases;
+                    step2Questions[paragraphId] = questions;
                 });
+                step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
                 if (missing.length) {
                     alert(`편집기에 입력 중인 시나리오가 있습니다. 최초 배포 전에 5개 paragraph를 모두 채우거나, 편집기를 초기화하십시오.
 
@@ -821,6 +903,7 @@
                     title: editorTitle,
                     activityType: editorActivityType,
                     step2Blocks,
+                    step2Questions,
                     phraseBanks,
                     isActive: localScenarios[editorCode]?.isActive !== false,
                     createdBy: localScenarios[editorCode]?.createdBy || currentSupabaseUserId,
@@ -836,7 +919,7 @@
                 code: scenario.code,
                 title: scenario.title,
                 activity_type: getScenarioActivityType(scenario),
-                step2_blocks: scenario.step2Blocks || {},
+                step2_blocks: buildStep2BlocksForDatabase(scenario),
                 phrase_banks: scenario.phraseBanks || {},
                 is_active: scenario.isActive !== false,
                 created_by: currentSupabaseUserId,
@@ -1310,9 +1393,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         };
 
         function isOpord01ThinkingPromptActivity(data, paragraphId = activeParagraphId) {
-            return data?.code === 'OPORD-01'
-                && getScenarioActivityType(data) === 'lecture'
-                && Array.isArray(OPORD01_THINKING_PROMPTS[paragraphId]);
+            return getScenarioActivityType(data) === 'lecture'
+                && getScenarioStep2Questions(data, paragraphId).length > 0;
         }
 
         // One-time course-content refresh. It updates only OPORD-01 in a browser that
@@ -1421,6 +1503,70 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             return Array.isArray(list) ? list.map(item => String(item)) : [];
         }
 
+        // Stored inside scenarios.step2_blocks to avoid a new Supabase column.
+        // { __step2Questions: { situation: [...], mission: [...], ... } }
+        const STEP2_QUESTIONS_KEY = '__step2Questions';
+
+        function normalizeStep2QuestionMap(value) {
+            const output = {};
+            const source = value && typeof value === 'object' ? value : {};
+            TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
+                output[paragraphId] = cloneBlockList(source[paragraphId]).filter(Boolean);
+            });
+            return output;
+        }
+
+        function getScenarioStep2QuestionMap(scenario) {
+            if (!scenario || typeof scenario !== 'object') return {};
+            return normalizeStep2QuestionMap(
+                scenario.step2Questions || scenario.step2Blocks?.[STEP2_QUESTIONS_KEY] || {}
+            );
+        }
+
+        function getScenarioStep2Questions(data, paragraphId) {
+            const custom = getScenarioStep2QuestionMap(data)[paragraphId] || [];
+            if (custom.length) return custom;
+            if (data?.code === 'OPORD-01' && getScenarioActivityType(data) === 'lecture') {
+                return cloneBlockList(OPORD01_THINKING_PROMPTS[paragraphId]).filter(Boolean);
+            }
+            return [];
+        }
+
+        function buildStep2BlocksForDatabase(scenario) {
+            const blocks = cloneCourseMaterialObject(scenario?.step2Blocks || {}, {});
+            const questionMap = getScenarioStep2QuestionMap(scenario);
+            if (Object.values(questionMap).some(list => Array.isArray(list) && list.length)) {
+                blocks[STEP2_QUESTIONS_KEY] = questionMap;
+            } else {
+                delete blocks[STEP2_QUESTIONS_KEY];
+            }
+            return blocks;
+        }
+
+        function getLectureResponseField(index) {
+            return `lectureResponse${index + 1}`;
+        }
+
+        function getLectureResponseCount(data, paragraphId) {
+            return getScenarioStep2Questions(data, paragraphId).length;
+        }
+
+        function formatPromptCount(count) {
+            return `${count || 0} prompt${count === 1 ? '' : 's'}`;
+        }
+
+        function normalizeScenarioCodeInput(value) {
+            return String(value || '').trim().replace(/\s+/g, ' ');
+        }
+
+        function getScenarioCodeValidationError(code) {
+            if (!code) return '활동 코드명/짧은 이름을 입력하십시오.';
+            if (code.length > 80) return '활동 코드명은 80자 이내로 입력하십시오.';
+            if (/[<>\r\n]/.test(code)) return '활동 코드명에는 줄바꿈, <, > 문자를 사용할 수 없습니다.';
+            if (code.includes('::')) return '활동 코드명에는 :: 기호 조합을 사용할 수 없습니다.';
+            return '';
+        }
+
 
         function parseTeacherBlocks(value) {
             return String(value || '')
@@ -1450,10 +1596,12 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 const raw = rawStore[code] || {};
                 const existingBlocks = raw.step2Blocks && typeof raw.step2Blocks === 'object' ? raw.step2Blocks : {};
                 const existingPhraseBanks = raw.phraseBanks && typeof raw.phraseBanks === 'object' ? raw.phraseBanks : {};
+                const existingQuestionMap = normalizeStep2QuestionMap(raw.step2Questions || existingBlocks[STEP2_QUESTIONS_KEY] || {});
                 const builtIn = BUILT_IN_SCENARIO_STEP2_BLOCKS[code] || {};
                 const builtInPhraseBanks = BUILT_IN_SCENARIO_PHRASE_BANKS[code] || {};
                 const step2Blocks = {};
                 const phraseBanks = {};
+                const step2Questions = {};
 
                 TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
                     const hasTeacherReference = Object.prototype.hasOwnProperty.call(existingBlocks, paragraphId);
@@ -1475,13 +1623,17 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                         : (hasBuiltInPhraseBank
                             ? cloneBlockList(builtInPhraseBanks[paragraphId]).filter(Boolean)
                             : cloneBlockList(DEFAULT_PHRASE_BANKS[paragraphId]).filter(Boolean));
+
+                    step2Questions[paragraphId] = cloneBlockList(existingQuestionMap[paragraphId]).filter(Boolean);
                 });
+                step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
 
                 normalized[code] = {
                     ...raw,
                     code: raw.code || code,
                     title: raw.title || `${code} 훈련 시나리오`,
                     step2Blocks,
+                    step2Questions,
                     phraseBanks,
                     activityType: normalizeActivityType(raw.activityType || (code === 'OPORD-02' ? 'code' : 'lecture')),
                     scenarioVersion: 'lecture-code-v1'
@@ -1568,8 +1720,9 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             library.innerHTML = entries.map(scenario => {
                 const blockCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + (scenario.step2Blocks?.[id]?.length || 0), 0);
                 const phraseCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + (scenario.phraseBanks?.[id]?.length || 0), 0);
+                const questionCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + getScenarioStep2Questions(scenario, id).length, 0);
                 const activity = getActivityMeta(getScenarioActivityType(scenario));
-                return `<div class="flex items-center justify-between gap-2 rounded border ${editingScenarioCode === scenario.code ? 'border-amber-400 bg-white' : 'border-amber-100 bg-white/70'} px-2 py-1.5"><div class="min-w-0"><p class="font-mono text-[10px] font-black text-indigo-700">${escapeHtml(scenario.code)}</p><p class="truncate text-[10px] text-slate-600">${escapeHtml(scenario.title)}</p><p class="mt-0.5"><span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></p><p class="mt-1 text-[9px] text-slate-400">${blockCount} reference cards · ${phraseCount} phrase cues</p></div><button type="button" onclick='loadScenarioForEdit(${JSON.stringify(scenario.code)})' class="shrink-0 rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-200"><i class="fa-solid fa-pen mr-1"></i>수정</button></div>`;
+                return `<div class="flex items-center justify-between gap-2 rounded border ${editingScenarioCode === scenario.code ? 'border-amber-400 bg-white' : 'border-amber-100 bg-white/70'} px-2 py-1.5"><div class="min-w-0"><p class="font-mono text-[10px] font-black text-indigo-700">${escapeHtml(scenario.code)}</p><p class="truncate text-[10px] text-slate-600">${escapeHtml(scenario.title)}</p><p class="mt-0.5"><span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></p><p class="mt-1 text-[9px] text-slate-400">${blockCount} reference cards · ${phraseCount} phrase cues · ${questionCount} prompts</p></div><div class="flex shrink-0 flex-col gap-1"><button type="button" onclick='loadScenarioForEdit(${JSON.stringify(scenario.code)})' class="rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-200"><i class="fa-solid fa-pen mr-1"></i>수정</button><button type="button" onclick='deleteScenarioEditor(${JSON.stringify(scenario.code)})' class="rounded bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"><i class="fa-solid fa-trash-can mr-1"></i>삭제</button></div></div>`;
             }).join('');
         }
 
@@ -1587,14 +1740,16 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
                 const field = document.getElementById(`new-sci-${paragraphId}`);
                 const phraseField = document.getElementById(`new-sci-phrases-${paragraphId}`);
+                const questionField = document.getElementById(`new-sci-questions-${paragraphId}`);
                 if (field) field.value = '';
                 if (phraseField) phraseField.value = '';
+                if (questionField) questionField.value = '';
             });
             const mode = document.getElementById('scenario-editor-mode');
             const note = document.getElementById('scenario-code-note');
             const saveBtn = document.getElementById('scenario-save-btn');
             if (mode) mode.innerText = '새 시나리오 작성 모드';
-            if (note) note.innerText = '새 활동은 코드명을 지정하고, 기존 활동은 코드가 고정됩니다.';
+            if (note) note.innerText = '새 활동은 자유로운 코드명/짧은 이름을 사용할 수 있고, 기존 활동은 기록 연결을 위해 코드가 고정됩니다.';
             if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB에 시나리오 저장';
             renderScenarioEditorLibrary();
         }
@@ -1616,17 +1771,20 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             titleInput.value = scenarioTitleForEditor(scenario.title);
             const activityTypeInput = document.getElementById('new-sci-activity-type');
             if (activityTypeInput) activityTypeInput.value = getScenarioActivityType(scenario);
+            const questionMap = getScenarioStep2QuestionMap(scenario);
             TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
                 const field = document.getElementById(`new-sci-${paragraphId}`);
                 const phraseField = document.getElementById(`new-sci-phrases-${paragraphId}`);
+                const questionField = document.getElementById(`new-sci-questions-${paragraphId}`);
                 if (field) field.value = (scenario.step2Blocks?.[paragraphId] || []).join('\n');
                 if (phraseField) phraseField.value = (scenario.phraseBanks?.[paragraphId] || []).join('\n');
+                if (questionField) questionField.value = getScenarioStep2Questions(scenario, paragraphId).join('\n');
             });
             const mode = document.getElementById('scenario-editor-mode');
             const note = document.getElementById('scenario-code-note');
             const saveBtn = document.getElementById('scenario-save-btn');
             if (mode) mode.innerText = `[${scenario.code}] 기존 시나리오 수정 모드`;
-            if (note) note.innerText = '기존 코드명은 artifact와 진행 기록 연결을 위해 변경할 수 없습니다.';
+            if (note) note.innerText = '기존 코드명은 artifact와 진행 기록 연결을 위해 변경할 수 없습니다. 새 활동은 평문 코드명을 사용할 수 있습니다.';
             if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB의 시나리오 변경 저장';
             renderScenarioEditorLibrary();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1636,32 +1794,34 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             if (!requireTeacherAccess()) return;
             const codeInput = document.getElementById('new-sci-code');
             const titleInput = document.getElementById('new-sci-title');
-            const requestedCode = codeInput.value.trim().toUpperCase();
+            const requestedCode = normalizeScenarioCodeInput(codeInput.value);
             const title = titleInput.value.trim();
             const activityType = normalizeActivityType(document.getElementById('new-sci-activity-type')?.value);
             const code = editingScenarioCode || requestedCode;
 
-            if (!code || !title) {
-                alert('시나리오 코드명과 제목을 입력하십시오.');
-                return;
-            }
-            if (!/^[A-Z0-9-]+$/.test(code)) {
-                alert('시나리오 코드명은 영문 대문자, 숫자, 하이픈(-)만 사용하십시오.');
+            const codeError = getScenarioCodeValidationError(code);
+            if (codeError || !title) {
+                alert(codeError || '시나리오 제목을 입력하십시오.');
                 return;
             }
 
             const step2Blocks = {};
             const phraseBanks = {};
+            const step2Questions = {};
             const missing = [];
             TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
                 const field = document.getElementById(`new-sci-${paragraphId}`);
                 const phraseField = document.getElementById(`new-sci-phrases-${paragraphId}`);
+                const questionField = document.getElementById(`new-sci-questions-${paragraphId}`);
                 const blocks = parseTeacherBlocks(field ? field.value : '');
                 const phrases = parseTeacherBlocks(phraseField ? phraseField.value : '');
-                if (!blocks.length && !phrases.length) missing.push(`${PARAGRAPH_DRILLS[paragraphId].number}. ${PARAGRAPH_DRILLS[paragraphId].title}`);
+                const questions = parseTeacherBlocks(questionField ? questionField.value : '');
+                if (!blocks.length && !phrases.length && !questions.length) missing.push(`${PARAGRAPH_DRILLS[paragraphId].number}. ${PARAGRAPH_DRILLS[paragraphId].title}`);
                 step2Blocks[paragraphId] = blocks;
                 phraseBanks[paragraphId] = phrases;
+                step2Questions[paragraphId] = questions;
             });
+            step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
             if (missing.length) {
                 alert(`Full OPORD scenario에는 5개 paragraph의 Step 2 blocks가 모두 필요합니다.
 
@@ -1680,6 +1840,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 title,
                 activityType,
                 step2Blocks,
+                step2Questions,
                 phraseBanks,
                 isActive: existing.isActive !== false,
                 createdBy: existing.createdBy || currentSupabaseUserId,
@@ -1700,7 +1861,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 resetScenarioStep2Progress(code);
 
                 const actionText = isEditing ? '수정·배포 완료' : '출제·배포 완료';
-                alert(`✅ [${actionText}] [${code}]의 scenario reference cards와 phrase bank가 공유 DB에 저장되었습니다.
+                alert(`✅ [${actionText}] [${code}]의 scenario reference cards, phrase bank, Step 2 questions가 공유 DB에 저장되었습니다.
 
 전 생도 화면은 다음 자동 동기화 또는 새로고침 때 최신 자료를 받습니다. 기존 제출 artifact는 보관됩니다.`);
                 editingScenarioCode = code;
@@ -2502,7 +2663,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             });
         }
 
-        let activeParagraphId = 'mission';
+        let activeParagraphId = 'situation';
         let activeBuildStep = 1;
 
         function getProgressStore() {
@@ -2542,7 +2703,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
         function startTraining(code) {
             selectedScenarioCode = code;
-            activeParagraphId = 'mission';
+            activeParagraphId = 'situation';
             activeBuildStep = isStepComplete(activeParagraphId, 1) ? 2 : 1;
             showScreen('workshop');
         }
@@ -3318,16 +3479,25 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             return prompts[paragraphId] || 'Write your revised OPORD paragraph here.';
         }
 
-        function renderLectureThinkingPrompts(data, drill, values) {
-            const prompts = OPORD01_THINKING_PROMPTS[activeParagraphId] || [];
-            const [prompt1 = 'What did you notice?', prompt2 = 'How would you improve it?'] = prompts;
+        function renderTeacherStep2QuestionResponses(data, values, mode = 'standalone') {
+            const prompts = getScenarioStep2Questions(data, activeParagraphId);
+            if (!prompts.length) return '';
+            const promptInputs = prompts.map((prompt, index) =>
+                step2TextArea(getLectureResponseField(index), `Teacher question ${index + 1}`, values[getLectureResponseField(index)] || '', prompt, true, prompt, 4)
+            ).join('');
+            const guidance = mode === 'prewrite'
+                ? 'Answer the teacher questions first, then use those notes to complete the OPORD writing chunks below.'
+                : 'Read or watch the reference together, then answer the teacher questions below in short team notes.';
             return `
-                <div class="rounded-lg border border-violet-100 bg-violet-50/70 px-3 py-2 text-[10px] leading-relaxed text-violet-900"><i class="fa-solid fa-comments mr-1"></i><strong>Lecture-in-class thinking workflow:</strong> Read or watch the reference together. After completing the Step 1 shell, answer the two questions below in short team notes. <strong>Do not draft the full OPORD paragraph yet;</strong> that full construction belongs to OPORD-02.</div>
-                <div class="grid grid-cols-1 gap-3">
-                    ${step2TextArea('lectureResponse1', 'Thinking prompt 1', values.lectureResponse1 || '', prompt1, true, prompt1, 4)}
-                    ${step2TextArea('lectureResponse2', 'Thinking prompt 2', values.lectureResponse2 || '', prompt2, true, prompt2, 4)}
-                </div>
-                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Quick self-check:</strong> Did the team answer both questions with evidence from the video/script and phrase bank? Keep the notes short and specific; full OPORD drafting comes next in OPORD-02.</div>
+                <div class="rounded-lg border border-violet-100 bg-violet-50/70 px-3 py-2 text-[10px] leading-relaxed text-violet-900"><i class="fa-solid fa-comments mr-1"></i><strong>Teacher Step 2 questions:</strong> ${guidance}</div>
+                <div class="grid grid-cols-1 gap-3">${promptInputs}</div>
+            `;
+        }
+
+        function renderLectureThinkingPrompts(data, drill, values) {
+            return `
+                ${renderTeacherStep2QuestionResponses(data, values, 'standalone')}
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Quick self-check:</strong> Did the team answer each question with evidence from the reference cards and phrase bank? Keep the notes short and specific.</div>
             `;
         }
 
@@ -3342,10 +3512,12 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
         }
 
         function renderStep2WritingForm(data, drill, values) {
-            if (isOpord01ThinkingPromptActivity(data)) {
+            const activityType = getScenarioActivityType(data);
+            const hasTeacherQuestions = getScenarioStep2Questions(data, activeParagraphId).length > 0;
+            if (activityType === 'lecture' && hasTeacherQuestions) {
                 return renderLectureThinkingPrompts(data, drill, values);
             }
-            if (getScenarioActivityType(data) === 'lecture') {
+            if (activityType === 'lecture') {
                 return renderLectureOpenWriting(data, drill, values);
             }
             const forms = {
@@ -3356,7 +3528,8 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 commandSignal: renderCommandSignalWriting
             };
             const renderer = forms[activeParagraphId] || renderMissionWriting;
-            return renderer(data, values);
+            const questionBlock = hasTeacherQuestions ? renderTeacherStep2QuestionResponses(data, values, 'prewrite') : '';
+            return `${questionBlock}${questionBlock ? '<div class="h-2"></div>' : ''}${renderer(data, values)}`;
         }
 
         function renderStep2(data, drill, step1Complete, complete) {
@@ -3379,7 +3552,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             if (!step1Complete) {
                 panel.classList.add('step-locked');
                 instruction.innerText = isThinkingPromptActivity
-                    ? 'Step 1의 OPORD shell sequence를 통과하면 영상·스크립트 기반의 두 가지 thinking prompt가 열립니다.'
+                    ? 'Step 1의 OPORD shell sequence를 통과하면 교관이 설정한 Step 2 question prompt가 열립니다.'
                     : (activityType === 'lecture'
                         ? 'Step 1의 OPORD shell sequence를 통과하면 팀의 open-ended revision workspace가 열립니다.'
                         : 'Step 1의 OPORD shell sequence를 통과하면 팀이 first-level writing chunk를 작성하고, 각 chunk마다 최대 3회의 coach check를 사용할 수 있습니다.');
@@ -3413,7 +3586,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
             const values = getStep2SeedValues();
             instruction.innerText = isThinkingPromptActivity
-                ? '영상·스크립트와 phrase bank를 근거로 아래 두 thinking prompt에 짧고 구체적인 팀 답변을 작성하십시오.'
+                ? '영상·스크립트, reference cards, phrase bank를 근거로 아래 Step 2 question prompt에 짧고 구체적인 팀 답변을 작성하십시오.'
                 : (isCaptainManheeScenario(data)
                     ? '팀이 first-level OPORD chunk를 먼저 작성합니다. 각 chunk는 team discussion 뒤 최대 3회의 Captain Manhee coach check로 revision hint를 받을 수 있습니다.'
                     : drill.step2Prompt);
@@ -3717,7 +3890,8 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
         function getRequiredStep2Fields(paragraphId, activityType = getScenarioActivityType(getScenarioStore()[selectedScenarioCode])) {
             const activeScenario = getScenarioStore()[selectedScenarioCode];
-            if (isOpord01ThinkingPromptActivity(activeScenario, paragraphId)) return ['lectureResponse1', 'lectureResponse2'];
+            const teacherQuestionFields = getScenarioStep2Questions(activeScenario, paragraphId).map((_, index) => getLectureResponseField(index));
+            if (activityType === 'lecture' && teacherQuestionFields.length) return teacherQuestionFields;
             if (activityType === 'lecture') return ['lectureDraft'];
             const required = {
                 situation: ['situationAOI', 'situationAO', 'situationEnemy', 'situationFriendly', 'situationAttach'],
@@ -3726,7 +3900,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 sustainment: ['sustainLogistic', 'sustainPersonnelServices', 'sustainTccc'],
                 commandSignal: ['commandCommand', 'commandControl', 'commandSignal']
             };
-            return required[paragraphId] || [];
+            return [...teacherQuestionFields, ...(required[paragraphId] || [])];
         }
 
         function normalizeSentence(text) {
@@ -3735,54 +3909,55 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             return /[.!?]$/.test(value) ? value : `${value}.`;
         }
 
+        function compileGuidedQuestionResponses(paragraphId, values, scenarioData = getScenarioStore()[selectedScenarioCode]) {
+            const prompts = getScenarioStep2Questions(scenarioData, paragraphId);
+            if (!prompts.length) return '';
+            const lines = ['GUIDED THINKING RESPONSES'];
+            prompts.forEach((prompt, index) => {
+                lines.push('', `${index + 1}. ${prompt}`, String(values[getLectureResponseField(index)] || '').trim());
+            });
+            return lines.join('\n').trim();
+        }
+
         function compileStep2Writing(paragraphId, values, activityType = getScenarioActivityType(getScenarioStore()[selectedScenarioCode]), scenarioData = getScenarioStore()[selectedScenarioCode]) {
             const activeScenario = scenarioData;
-            if (isOpord01ThinkingPromptActivity(activeScenario, paragraphId)) {
-                const prompts = OPORD01_THINKING_PROMPTS[paragraphId] || [];
-                return [
-                    'GUIDED THINKING RESPONSES',
-                    '',
-                    `1. ${prompts[0] || 'Thinking prompt 1'}`,
-                    String(values.lectureResponse1 || '').trim(),
-                    '',
-                    `2. ${prompts[1] || 'Thinking prompt 2'}`,
-                    String(values.lectureResponse2 || '').trim()
-                ].join('\n').trim();
-            }
+            const guidedResponses = compileGuidedQuestionResponses(paragraphId, values, activeScenario);
+            if (activityType === 'lecture' && guidedResponses) return guidedResponses;
             if (activityType === 'lecture') return String(values.lectureDraft || '').trim();
+            const withGuidedResponses = opordText => [guidedResponses, opordText].filter(Boolean).join('\n\nTEAM OPORD WRITING\n').trim();
             const value = field => String(values?.[field] || '').trim();
             if (paragraphId === 'situation') {
-                return [
+                return withGuidedResponses([
                     'AREA OF INTEREST', value('situationAOI'), '',
                     'AREA OF OPERATIONS', value('situationAO'), '',
                     'ENEMY FORCES (LATEST INTELLIGENCE)', value('situationEnemy'), '',
                     'FRIENDLY FORCES', value('situationFriendly'), '',
                     'ATTACHMENTS AND DETACHMENTS', value('situationAttach')
-                ].join('\n');
+                ].join('\n'));
             }
-            if (paragraphId === 'mission') return value('missionStatement');
+            if (paragraphId === 'mission') return withGuidedResponses(value('missionStatement'));
             if (paragraphId === 'execution') {
-                return [
+                return withGuidedResponses([
                     'COMMANDER’S INTENT', value('executionIntent'), '',
                     'CONCEPT OF OPERATIONS', value('executionConcept'), '',
                     'SCHEME OF MOVEMENT AND MANEUVER', value('executionManeuver'), '',
                     'TASKS TO SUBORDINATE UNITS', value('executionTasks'), '',
                     'COORDINATING INSTRUCTIONS', value('executionCoord')
-                ].join('\n');
+                ].join('\n'));
             }
             if (paragraphId === 'sustainment') {
-                return [
+                return withGuidedResponses([
                     'LOGISTIC', value('sustainLogistic'), '',
                     'PERSONNEL SERVICES SUPPORT', value('sustainPersonnelServices'), '',
                     'TACTICAL COMBAT CASUALTY CARE', value('sustainTccc')
-                ].join('\n');
+                ].join('\n'));
             }
             if (paragraphId === 'commandSignal') {
-                return [
+                return withGuidedResponses([
                     'COMMAND', value('commandCommand'), '',
                     'CONTROL', value('commandControl'), '',
                     'SIGNAL', value('commandSignal')
-                ].join('\n');
+                ].join('\n'));
             }
             return '';
         }
@@ -3805,6 +3980,8 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
         }
 
         function getReadableStep2FieldName(field) {
+            const lectureMatch = String(field || '').match(/^lectureResponse(\d+)$/);
+            if (lectureMatch) return `Thinking prompt ${lectureMatch[1]} response`;
             const names = {
                 situationAOI: 'Area of Interest', situationAO: 'Area of Operations', situationEnemy: 'Enemy Forces (Latest Intelligence)', situationFriendly: 'Friendly Forces', situationAttach: 'Attachments and Detachments',
                 missionStatement: 'Mission Statement',
@@ -3865,9 +4042,12 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             }
 
             try {
-                const artifactMode = isOpord01ThinkingPromptActivity(data)
+                const hasTeacherQuestions = getScenarioStep2Questions(data, activeParagraphId).length > 0;
+                const artifactMode = activityType === 'lecture' && hasTeacherQuestions
                     ? 'lecture-guided-thinking-v1'
-                    : (activityType === 'lecture' ? 'lecture-open-writing-v1' : 'code-top-level-chunk-writing-v2');
+                    : (activityType === 'lecture'
+                        ? 'lecture-open-writing-v1'
+                        : (hasTeacherQuestions ? 'code-guided-chunk-writing-v1' : 'code-top-level-chunk-writing-v2'));
 
                 const { error } = await supabaseClient
                     .from('artifacts')
