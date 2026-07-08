@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OPORD Learning Loop - Shared Peer Hub System</title>
+    <title>KMA Military English Practice Program</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -38,14 +38,13 @@
                 <div class="inline-flex p-3 bg-indigo-50 text-indigo-600 rounded-xl text-2xl mb-1">
                     <i class="fa-solid fa-users-gear"></i>
                 </div>
-                <h2 class="text-xl font-black text-slate-800 tracking-tight">OPORD 상호 공유 및 누적 통제소</h2>
-                <p class="text-xs text-slate-400">배정받은 ID와 비밀번호를 입력하십시오.</p>
+                <h2 class="text-xl font-black text-slate-800 tracking-tight">KMA Military English Practice Program</h2>
             </div>
             
             <div class="space-y-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1">USER ID</label>
-                    <input type="text" id="login-id" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="교관: admin / 학생: cadet01 ~ cadet20">
+                    <input type="text" id="login-id" class="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" placeholder="교수: admin / 생도: cadet01 ~ cadet20">
                 </div>
                 <div>
                     <label class="block text-xs font-bold text-slate-500 mb-1">PASSWORD</label>
@@ -57,7 +56,7 @@
                 </button>
             </div>
             <div class="bg-slate-50 p-3 rounded-lg text-[11px] text-slate-400 border border-slate-100">
-                💡 <strong>안내:</strong> 실제 수업 계정으로 접속하면 전 분대원의 학습 상태와 결과물(Artifact)이 공용 DB를 통해 공유됩니다.
+                💡 <strong>안내:</strong> 대위 이만희, 연구강의용 시제 프로그램
             </div>
         </div>
     </div>
@@ -66,7 +65,7 @@
         <nav class="navy-bg text-white px-8 py-3 flex justify-between items-center shadow-md text-sm">
             <div class="flex items-center space-x-6">
                 <span class="font-bold text-lg tracking-wide flex items-center gap-2">
-                    🪖 OPORD <span class="text-indigo-400 font-medium">Shared Loop</span>
+                    🪖 <span>KMA-Military English</span>
                 </span>
                 <div class="flex space-x-1.5">
                     <button onclick="showScreen('dashboard')" id="nav-dashboard" class="bg-indigo-600 text-white px-3 py-1.5 rounded-md font-medium text-xs transition-all flex items-center gap-1.5">
@@ -76,10 +75,10 @@
                         <i class="fa-solid fa-hubspot text-emerald-400"></i> 전원 공유 허브 (Peer-Review)
                     </button>
                     <button onclick="showScreen('workshop')" id="nav-workshop" class="bg-slate-800 text-slate-300 hover:text-white px-3 py-1.5 rounded-md font-medium text-xs transition-all flex items-center gap-1.5">
-                        <i class="fa-solid fa-puzzle-piece"></i> 훈련 실습실
+                        <i class="fa-solid fa-puzzle-piece"></i> activities
                     </button>
                     <button onclick="showScreen('teacher')" id="nav-teacher" class="hidden bg-slate-800 text-amber-400 hover:text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-md font-bold text-xs transition-all flex items-center gap-1.5">
-                        <i class="fa-solid fa-user-shield"></i> 교관 통제탑
+                        <i class="fa-solid fa-user-shield"></i> 교수 대시보드
                     </button>
                 </div>
             </div>
@@ -93,8 +92,8 @@
 
             <div id="screen-teacher" class="space-y-6 hidden">
                 <div class="bg-gradient-to-r from-amber-900 to-slate-900 text-white p-5 rounded-xl shadow-lg">
-                    <h1 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-tower-observation text-amber-400"></i> Tactical Command Center</h1>
-                    <p class="text-slate-300 text-xs mt-1">홈워크 과제를 추가 출제하고 전체 분대원들의 시나리오별 최종 결과물을 한눈에 추적 관리하세요.</p>
+                    <h1 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-tower-observation text-amber-400"></i> Professor Dashboard</h1>
+                    <p class="text-slate-300 text-xs mt-1">액티비티를 출제·수정하고, 생도들의 제출 현황과 피드백을 한눈에 확인하십시오.</p>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -113,7 +112,7 @@
                                 <button type="button" onclick="resetScenarioEditor()" class="rounded border border-amber-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100"><i class="fa-solid fa-file-circle-plus mr-1"></i>새 활동</button>
                             </div>
                             <div id="scenario-db-status" class="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[10px] text-slate-500">공유 시나리오 DB 상태를 확인 중입니다…</div>
-                            <button id="scenario-db-seed-btn" type="button" onclick="seedScenarioDatabaseFromLocal()" class="hidden w-full rounded bg-emerald-600 px-3 py-2 text-[10px] font-bold text-white shadow hover:bg-emerald-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>현재 교관 자료를 공유 DB에 최초 배포</button>
+                            <button id="scenario-db-seed-btn" type="button" onclick="seedScenarioDatabaseFromLocal()" class="hidden w-full rounded bg-emerald-600 px-3 py-2 text-[10px] font-bold text-white shadow hover:bg-emerald-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>현재 교수 자료를 공유 DB에 최초 배포</button>
                             <div id="teacher-scenario-library" class="max-h-40 space-y-1.5 overflow-y-auto pr-1"></div>
                         </div>
 
@@ -133,7 +132,7 @@
                                     <option value="lecture">Lecture-In-Class Activity — 강의 직후 구조 확인·수정 작성</option>
                                     <option value="code">Code Your Way Activity — 팀 기반 본격 OPORD 작성</option>
                                 </select>
-                                <p class="mt-1 text-[10px] leading-relaxed text-slate-400">Lecture 모드는 Step 2에서 하나의 open-ended revision draft를 작성합니다. Code Your Way 모드는 first-level OPORD chunk별 scaffolded team writing을 사용하며, 각 chunk에 최대 3회의 Captain Manhee coach check를 적용합니다.</p>
+                                <p class="mt-1 text-[10px] leading-relaxed text-slate-400">Lecture 모드는 교수 질문에 대한 답변 또는 수정문을 작성합니다. Code Your Way 모드는 paragraph별 조별 초안을 작성하고, 필요한 경우 최대 3회의 Captain Manhee coach check를 활용합니다.</p>
                             </div>
                             <div class="rounded-lg border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
                                 <div>
@@ -218,7 +217,7 @@
                     <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 lg:col-span-2 space-y-4">
                         <div class="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
                             <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                                <i class="fa-solid fa-list-check text-indigo-500"></i> 📊 교관용 과제 제출 현황 트래커
+                                <i class="fa-solid fa-list-check text-indigo-500"></i> 📊 교수용 과제 제출 현황 트래커
                             </h3>
                             <span class="rounded bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-600">Activity-first view</span>
                         </div>
@@ -272,12 +271,12 @@
             <div id="screen-hub" class="space-y-6 hidden">
                 <div class="bg-gradient-to-r from-slate-800 to-indigo-950 text-white p-5 rounded-xl shadow-lg">
                     <h1 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-hubspot text-emerald-400"></i> Shared Peer-Review Hub</h1>
-                    <p class="text-slate-300 text-xs mt-1">훈련생별 OPORD 묶음을 클릭해 1–5 paragraph를 순서대로 확인하고, paragraph별 동료 피드백을 남기세요.</p>
+                    <p class="text-slate-300 text-xs mt-1">생도별 activity 묶음을 클릭해 1–5 paragraph를 순서대로 확인하고, paragraph별 동료 피드백을 남기세요.</p>
                 </div>
 
                 <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100 space-y-4">
                     <div class="flex justify-between items-center border-b pb-3">
-                        <h3 class="text-sm font-bold text-slate-800"><i class="fa-solid fa-globe text-slate-400 mr-1"></i> 전 실습생 작성 산출물 상황판</h3>
+                        <h3 class="text-sm font-bold text-slate-800"><i class="fa-solid fa-globe text-slate-400 mr-1"></i> 전 생도 작성 산출물 상황판</h3>
                         <span class="text-[11px] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-medium">Assessment as Learning</span>
                     </div>
                     
@@ -289,19 +288,19 @@
             <div id="screen-dashboard" class="space-y-6">
                 <div class="navy-bg text-white p-5 rounded-xl shadow-lg flex justify-between items-center">
                     <div>
-                        <h1 class="text-xl font-bold flex items-center gap-2">🎖️ OPORD 영문 작성 학습 루프</h1>
-                        <p class="text-slate-300 text-xs mt-1">배정된 전술 과제를 선택하여 실습을 완료하십시오. 데이터는 자동 누적됩니다.</p>
+                        <h1 class="text-xl font-bold flex items-center gap-2">Chapter 5 · OPORD</h1>
+                        <p class="text-slate-300 text-xs mt-1">아래 액티비티를 완료하고, 동기들과 공유하며 상호 feedback을 통해 수정·보완합시다.</p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 md:col-span-1 space-y-3">
-                        <span class="text-xs font-bold text-slate-400 uppercase block">1. 훈련 시나리오 선택</span>
+                        <span class="text-xs font-bold text-slate-400 uppercase block">1. 액티비티 선택</span>
                         <div class="space-y-2" id="dash-scenario-list"></div>
                     </div>
 
                     <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 md:col-span-2 space-y-3">
-                        <span class="text-xs font-bold text-slate-400 uppercase block">2. 내 OPORD 활동 묶음 (Activity Package)</span>
+                        <span class="text-xs font-bold text-slate-400 uppercase block">2. 내 액티비티 활동 현황</span>
                         <div class="space-y-2" id="student-artifact-history"></div>
                     </div>
                 </div>
@@ -313,14 +312,14 @@
                         <span class="bg-indigo-700 text-emerald-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded" id="work-active-code">OPORD-01</span>
                         <h2 class="text-base font-bold mt-1" id="work-active-title">시나리오 로딩 중</h2>
                     </div>
-                    <button onclick="showScreen('dashboard')" class="bg-indigo-800 text-xs px-3 py-1 rounded font-bold hover:bg-indigo-700">과제 목록으로 탈출</button>
+                    <button onclick="showScreen('dashboard')" class="bg-indigo-800 text-xs px-3 py-1 rounded font-bold hover:bg-indigo-700">내 대시보드로 복귀</button>
                 </div>
 
                 <section class="bg-white p-5 rounded-xl card-shadow border border-slate-100 space-y-4">
                     <div class="flex flex-wrap items-end justify-between gap-3">
                         <div>
                             <h3 class="font-black text-slate-800 text-base flex items-center gap-2"><i class="fa-solid fa-layer-group text-indigo-600"></i> OPORD Paragraph Workshops</h3>
-                            <p class="text-xs text-slate-500 mt-1">아래의 다섯 paragraph 중 하나를 선택하여, <strong>Step 1: OPORD shell</strong>과 <strong>Step 2: guided team writing</strong>을 순서대로 실습합니다.</p>
+                            <p class="text-xs text-slate-500 mt-1">아래의 다섯 paragraph 중 하나를 선택하여, <strong>Step 1: OPORD shell</strong>과 <strong>Step 2: teacher questions</strong>를 순서대로 실습합니다.</p>
                         </div>
                         <span class="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-1 rounded-full">Choose one paragraph at a time</span>
                     </div>
@@ -357,7 +356,7 @@
                             <div id="step2-slots" class="space-y-2"></div>
                             <div class="flex flex-wrap justify-between gap-2 pt-2 border-t border-amber-100/70">
                                 <button id="step2-reset-btn" onclick="resetActiveParagraphStep(2)" class="hidden border border-amber-200 bg-white text-amber-700 font-bold py-2 px-3 rounded-lg text-xs hover:bg-amber-50">Step 2 수정 · 재작성</button>
-                                <button id="step2-verify-btn" onclick="verifyStep2()" class="ml-auto bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg text-xs shadow transition-all"><i class="fa-solid fa-cloud-arrow-up"></i> Team Writing 제출 및 공유</button>
+                                <button id="step2-verify-btn" onclick="verifyStep2()" class="ml-auto bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg text-xs shadow transition-all"><i class="fa-solid fa-cloud-arrow-up"></i> 조별 작성안 제출 및 공유</button>
                             </div>
                         </section>
 
@@ -818,7 +817,7 @@
 
             if (!scenarioDatabaseHasRows) {
                 status.className = 'rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[10px] leading-relaxed text-amber-800';
-                status.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i><strong>공유 시나리오 DB가 아직 비어 있습니다.</strong> 아래 버튼을 한 번 눌러 현재 교관 브라우저의 OPORD 자료를 최초 배포하십시오.';
+                status.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i><strong>공유 시나리오 DB가 아직 비어 있습니다.</strong> 아래 버튼을 한 번 눌러 현재 교수자 브라우저의 OPORD 자료를 최초 배포하십시오.';
                 seedButton.classList.remove('hidden');
                 return;
             }
@@ -871,7 +870,7 @@
             const scenario = scenarios[scenarioCode];
             const submissionCount = getArtifactsStore().filter(artifact => artifact.scenarioCode === scenarioCode).length;
             const warning = submissionCount
-                ? `\n\n참고: 이 활동에 연결된 학생 제출물 ${submissionCount}개는 artifact DB에 보존됩니다. 활동 카드와 교관 자료만 삭제되어 학생 화면/리뷰 허브에서는 더 이상 기본 표시되지 않습니다.`
+                ? `\n\n참고: 이 활동에 연결된 학생 제출물 ${submissionCount}개는 artifact DB에 보존됩니다. 활동 카드와 교수 자료만 삭제되어 학생 화면/리뷰 허브에서는 더 이상 기본 표시되지 않습니다.`
                 : '';
             if (!confirm(`[${scenarioCode}] 활동을 삭제할까요?\n\n제목: ${scenario?.title || scenarioCode}${warning}`)) return;
 
@@ -994,9 +993,9 @@
                 alert('최초 배포할 로컬 시나리오 자료를 찾지 못했습니다.');
                 return;
             }
-            if (!confirm(`현재 교관 브라우저의 ${payload.length}개 시나리오를 공유 DB에 최초 배포할까요?
+            if (!confirm(`현재 교수자 브라우저의 ${payload.length}개 시나리오를 공유 DB에 최초 배포할까요?
 
-이후에는 교관 저장 버튼으로 전원 자료를 수정·배포하게 됩니다.`)) return;
+이후에는 교수 대시보드의 저장 버튼으로 전체 자료를 수정·배포하게 됩니다.`)) return;
 
             const seedButton = document.getElementById('scenario-db-seed-btn');
             if (seedButton) {
@@ -1024,7 +1023,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 if (seedButton) {
                     seedButton.disabled = false;
                     seedButton.classList.remove('opacity-60', 'cursor-wait');
-                    seedButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>현재 교관 자료를 공유 DB에 최초 배포';
+                    seedButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>현재 교수 자료를 공유 DB에 최초 배포';
                 }
                 renderScenarioDatabaseStatus();
             }
@@ -1104,7 +1103,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             if (error || !profile) {
                 console.error('Supabase profile load failed:', error);
                 await supabaseClient.auth.signOut();
-                throw new Error('이 계정의 수업 프로필을 찾을 수 없습니다. 교관에게 문의하십시오.');
+                throw new Error('이 계정의 수업 프로필을 찾을 수 없습니다. 교수자에게 문의하십시오.');
             }
 
             currentSupabaseUserId = authUser.id;
@@ -1214,11 +1213,11 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         try { localStorage.removeItem('sb-sfcdwqdgmzghnbayexom-auth-token'); } catch (error) { console.warn('Stored auth cleanup skipped:', error); }
         // restoreSupabaseSession();
 
-        // 교관 전용 화면/기능 접근을 한곳에서 확인합니다.
+        // 교수자 전용 화면/기능 접근을 한곳에서 확인합니다.
         function requireTeacherAccess(showMessage = true) {
             const isTeacher = currentUser && currentUser.role === 'teacher';
             if (!isTeacher && showMessage) {
-                alert("접근 권한이 없습니다. 교관 계정으로 로그인하십시오.");
+                alert("접근 권한이 없습니다. 교수자 계정으로 로그인하십시오.");
             }
             return isTeacher;
         }
@@ -2385,7 +2384,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 return;
             }
             if (artifact.studentId === currentUserId) {
-                alert('본인의 artifact에는 동료 피드백을 남길 수 없습니다. 다른 훈련생의 artifact를 검토하십시오.');
+                alert('본인의 artifact에는 동료 피드백을 남길 수 없습니다. 다른 생도의 artifact를 검토하십시오.');
                 return;
             }
 
@@ -2625,7 +2624,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 : `<div class="ml-10 rounded-r-xl border-l-[6px] border-dashed border-slate-200 bg-white/70 px-4 py-2 text-[10px] italic text-slate-400">아직 등록된 동료 피드백이 없습니다.</div>`;
             const savedDraft = sharedHubUiState.commentDrafts[artifactKey] || '';
             const feedbackComposer = isMe
-                ? `<div class="rounded border border-indigo-100 bg-indigo-50/50 px-2.5 py-2 text-[10px] text-indigo-600"><i class="fa-solid fa-info-circle mr-1"></i>내 artifact입니다. 다른 훈련생의 artifact에 피드백을 남겨보십시오.</div>`
+                ? `<div class="rounded border border-indigo-100 bg-indigo-50/50 px-2.5 py-2 text-[10px] text-indigo-600"><i class="fa-solid fa-info-circle mr-1"></i>내 artifact입니다. 다른 생도의 artifact에 피드백을 남겨보십시오.</div>`
                 : `<div class="space-y-2 rounded border border-emerald-100 bg-emerald-50/40 p-2.5"><label class="block text-[10px] font-bold text-emerald-800">Open-ended peer feedback</label><textarea id="peer-comment-${artifactDomId}" data-peer-draft-key="${escapeHtml(artifactKey)}" oninput="rememberPeerCommentDraft(this)" rows="2" maxlength="500" class="w-full resize-y rounded border border-emerald-200 bg-white p-2 text-[10px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-400" placeholder="One strength is… / One question I have is… / I suggest…">${escapeHtml(savedDraft)}</textarea><div class="flex justify-end"><button onclick='submitPeerComment(${JSON.stringify(artifactKey)})' class="rounded bg-emerald-600 px-2.5 py-1.5 text-[10px] font-bold text-white hover:bg-emerald-700"><i class="fa-solid fa-paper-plane mr-1"></i>피드백 게시</button></div></div>`;
 
             return `<div class="mt-4 space-y-3 border-t border-sky-100 pt-3"><div class="flex items-center justify-between gap-2 pl-10"><div class="text-[10px] font-black uppercase tracking-widest text-sky-700"><i class="fa-solid fa-reply-all mr-1"></i>Peer feedback</div><span class="rounded bg-sky-50 px-1.5 py-0.5 text-[9px] text-sky-600">${comments.length} comments</span></div>${commentFeed}<div class="ml-10">${feedbackComposer}</div></div>`;
@@ -2937,7 +2936,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const paragraphCount = OPORD_PARAGRAPH_SEQUENCE.length;
             if (!scenarioEntries.length) {
                 listContainer.innerHTML = `<div class="text-xs text-slate-400 italic p-4 border border-dashed rounded-lg text-center">등록된 활동이 없습니다.</div>`;
-                historyContainer.innerHTML = `<div class="text-xs text-slate-400 italic p-6 border border-dashed rounded-lg text-center">등록된 활동이 없습니다. 교관이 시나리오를 공유 DB에 배포해야 합니다.</div>`;
+                historyContainer.innerHTML = `<div class="text-xs text-slate-400 italic p-6 border border-dashed rounded-lg text-center">등록된 활동이 없습니다. 교수자가 액티비티를 공유 DB에 배포해야 합니다.</div>`;
                 return;
             }
 
@@ -3420,7 +3419,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const exhausted = checksUsed >= CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK;
             const feedbackHtml = lastCheck
                 ? `<div class="mt-3 rounded-lg border ${ready ? 'border-emerald-200 bg-emerald-50/80' : 'border-amber-200 bg-amber-50/80'} p-2.5"><div class="mb-1 flex flex-wrap items-center justify-between gap-2"><span class="text-[9px] font-black uppercase tracking-wider ${ready ? 'text-emerald-700' : 'text-amber-800'}"><i class="fa-solid ${ready ? 'fa-circle-check' : 'fa-wrench'} mr-1"></i>Captain Manhee · Check ${lastCheck.attempt}</span><span class="rounded px-1.5 py-0.5 text-[9px] font-bold ${ready ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${ready ? 'Ready to move on' : 'Revise together'}</span></div><div class="whitespace-pre-wrap break-words text-[10px] leading-relaxed text-slate-700">${escapeHtml(lastCheck.reply)}</div></div>`
-                : '<div class="mt-3 text-[9px] leading-relaxed text-slate-400">Write this chunk together first. Then use one short coach check to identify the strongest next revision.</div>';
+                : '<div class="mt-3 text-[9px] leading-relaxed text-slate-400">먼저 조별 초안을 작성한 뒤, 짧은 coach check를 통해 가장 중요한 보완점을 확인하십시오.</div>';
             const previousChecksHtml = state.checks.length > 1
                 ? `<details class="mt-2"><summary class="cursor-pointer text-[9px] font-bold text-slate-500">Earlier checkpoint feedback (${state.checks.length - 1})</summary><div class="mt-2 space-y-2">${state.checks.slice(0, -1).map(item => `<div class="rounded border border-slate-200 bg-white px-2 py-1.5 text-[9px] leading-relaxed text-slate-500"><span class="font-black">Check ${item.attempt}:</span> ${escapeHtml(item.reply)}</div>`).join('')}</div></details>`
                 : '';
@@ -3441,7 +3440,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             return `
                 <div class="mt-3 rounded-lg border border-rose-200 bg-rose-50/40 p-2.5">
                     <div class="flex flex-wrap items-start justify-between gap-2">
-                        <div><p class="text-[10px] font-black uppercase tracking-wider text-rose-800"><i class="fa-solid fa-people-group mr-1"></i>Group coach checkpoint</p><p class="mt-0.5 text-[9px] leading-relaxed text-rose-700">Discuss and revise as a team before checking. Captain Manhee gives a hint only; it does not write the chunk for you.</p></div>
+                        <div><p class="text-[10px] font-black uppercase tracking-wider text-rose-800"><i class="fa-solid fa-people-group mr-1"></i>Group coach checkpoint</p><p class="mt-0.5 text-[9px] leading-relaxed text-rose-700">점검 전 조별로 먼저 토의하고 수정하십시오. Captain Manhee는 힌트만 제공하며, 최종 문장은 조에서 직접 작성합니다.</p></div>
                         <span class="rounded-full border ${exhausted ? 'border-rose-300 bg-rose-100 text-rose-700' : 'border-rose-200 bg-white text-rose-700'} px-2 py-1 text-[9px] font-black">${checksUsed}/${CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK} checks</span>
                     </div>
                     ${feedbackHtml}
@@ -3457,7 +3456,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             if (!chunk) return bodyHtml;
             return `
                 <section class="rounded-xl border border-slate-200 bg-white/70 p-3 ${extraClass}">
-                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2"><div><h5 class="text-[10px] font-black uppercase tracking-wider text-slate-700">${escapeHtml(chunk.label)}</h5><p class="mt-0.5 text-[9px] leading-relaxed text-slate-400">${escapeHtml(chunk.note)}</p></div><span class="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">1st-level chunk</span></div>
+                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2"><div><h5 class="text-[10px] font-black uppercase tracking-wider text-slate-700">${escapeHtml(chunk.label)}</h5><p class="mt-0.5 text-[9px] leading-relaxed text-slate-400">${escapeHtml(chunk.note)}</p></div><span class="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">paragraph draft</span></div>
                     ${bodyHtml}
                     ${renderCaptainManheeCheckpoint(data, drill, chunk)}
                 </section>
@@ -3470,7 +3469,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const chunk = getCaptainManheeChunk(chunkId);
             if (!chunk || !isCaptainManheeScenario(data) || !isStepComplete(activeParagraphId, 1)) return;
 
-            // Preserve the most recent team writing before evaluating it.
+            // Preserve the most recent 조별 작성 before evaluating it.
             saveStep2DraftFromUI();
             const values = getCaptainManheeValues();
             const state = getCaptainManheeCheckpointState(chunkId);
@@ -3509,7 +3508,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             }
 
             const attempt = state.checks.length + 1;
-            const message = `Checkpoint review ${attempt} of ${CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK} for the first-level OPORD chunk “${chunk.label}”. Review the group’s own writing only. Use any coach-only revision criteria silently; do not turn them into a visible checklist. Do not draft a replacement. Begin exactly with STATUS: READY or STATUS: REVISE, then give at most two brief revision hints for group discussion.`;
+            const message = `Checkpoint review ${attempt} of ${CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK} for the paragraph 초안 “${chunk.label}”. Review the group’s own writing only. Use any coach-only revision criteria silently; do not turn them into a visible checklist. Do not draft a replacement. Begin exactly with STATUS: READY or STATUS: REVISE, then give at most two brief revision hints for group discussion.`;
 
             try {
                 const response = await fetch(CAPTAIN_MANHEE_API_URL, {
@@ -3537,7 +3536,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 state.notice = '';
                 saveCaptainManheeCheckpointState(chunkId, state);
             } catch (error) {
-                state.notice = 'Captain Manhee could not connect. This did not use a coach check—continue team discussion and try again later.';
+                state.notice = 'Captain Manhee와 연결되지 않았습니다. 이번 시도는 coach check 횟수에 포함되지 않습니다. 조별 토의를 이어가고 잠시 뒤 다시 시도하십시오.';
                 saveCaptainManheeCheckpointState(chunkId, state);
                 console.error('Captain Manhee checkpoint request failed:', error);
             }
@@ -3783,11 +3782,11 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
         function renderTeamProcess(paragraphId) {
             const processes = {
-                situation: '<strong>Team interaction:</strong> Discuss the situation one first-level heading at a time. Decide what matters, then record one concise group entry for each heading.',
-                mission: '<strong>Team interaction:</strong> Draft one mission sentence together. Read it aloud, then decide whether it gives another team enough shared understanding to act.',
-                execution: '<strong>Suggested team roles:</strong> Assign one member to each first-level Execution heading; the editor checks that the five headings work together as one plan.',
-                sustainment: '<strong>Team interaction:</strong> Assign a logistics lead, personnel lead, and medic lead. Each group writes one concise top-level support entry before asking for a coach check.',
-                commandSignal: '<strong>Suggested team roles:</strong> Commander drafts Command, XO drafts Control, RTO drafts Signal, and the editor checks that each top-level entry is immediately usable.'
+                situation: '<strong>조별 토의:</strong> Situation의 주요 항목을 하나씩 확인하고, 작전에 영향을 주는 핵심 정보를 선별하여 간결하게 정리하십시오.',
+                mission: '<strong>조별 토의:</strong> 각자 작성한 mission 초안을 공유하고, 가장 명확한 OPORD 문장으로 정리하십시오. 해당 paragraph 담당자가 토의를 주도하고 아래 칸에 조별 최종안을 작성합니다.',
+                execution: '<strong>조별 역할:</strong> Execution의 각 주요 항목을 분담하여 검토한 뒤, 전체 실행 구상이 하나의 계획으로 연결되도록 정리하십시오.',
+                sustainment: '<strong>조별 토의:</strong> 보급, 인사, 의무 지원 요소를 나누어 검토하고, 각 항목을 조별 최종안에 간결하게 반영하십시오.',
+                commandSignal: '<strong>조별 역할:</strong> 지휘, 통제, 통신 항목을 분담하여 초안을 작성하고, 최종 작성자는 전체 내용이 즉시 활용 가능한지 확인하십시오.'
             };
             return `<div class="rounded-lg border border-indigo-100 bg-indigo-50/70 px-3 py-2 text-[10px] leading-relaxed text-indigo-800"><i class="fa-solid fa-people-group mr-1"></i>${processes[paragraphId] || ''}</div>`;
         }
@@ -3814,7 +3813,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
         function renderSituationWriting(data, values) {
             return `
                 ${renderTeamProcess('situation')}
-                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing workflow:</strong> Write one broad entry under each first-level Situation heading. Keep the smaller analytic requirements in the background; Captain Manhee will use them only when the team requests a checkpoint.</div>
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">작성 방법:</strong> 각 항목에 맞는 Situation 초안을 작성하십시오. 세부 판단 요소는 토의 과정에서 참고하고, 필요한 경우 Captain Manhee 점검을 통해 보완 방향을 확인합니다.</div>
                 <div class="space-y-3">
                     ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.situation, 'situation-aoi', step2TextArea('situationAOI', 'Area of Interest', values.situationAOI, 'e.g., Eastern approaches to Outpost EAGLE ...', true, 'Identify the wider area that can affect this mission.', 4))}
                     ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.situation, 'situation-ao', step2TextArea('situationAO', 'Area of Operations', values.situationAO, 'Describe the area where the unit will operate and the conditions that matter ...', true, 'Write one broad operational entry.', 5))}
@@ -3835,7 +3834,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
         function renderExecutionWriting(data, values) {
             return `
                 ${renderTeamProcess('execution')}
-                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing workflow:</strong> Build Execution through its five first-level OPORD headings. Write the broad plan first; Captain Manhee checks hidden revision requirements only after the team asks.</div>
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">작성 방법:</strong> Execution의 주요 항목별로 먼저 큰 틀의 계획을 작성하십시오. 이후 Captain Manhee 점검을 통해 보완이 필요한 부분을 확인합니다.</div>
                 <div class="space-y-3">
                     ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.execution, 'execution-intent', step2TextArea('executionIntent', 'Commander’s Intent', values.executionIntent, 'State the commander’s overall intent for the operation ...', true, 'Write one broad intent entry.', 5))}
                     ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.execution, 'execution-concept', step2TextArea('executionConcept', 'Concept of Operations', values.executionConcept, 'Describe the overall tactical approach ...', true, 'Describe the broad approach, not every individual task.', 5))}
@@ -3849,7 +3848,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
         function renderSustainmentWriting(data, values) {
             return `
                 ${renderTeamProcess('sustainment')}
-                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing workflow:</strong> Build Sustainment through its three first-level components. The sub-elements stay hidden during first drafting and become coach-only revision criteria.</div>
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">작성 방법:</strong> Sustainment의 주요 지원 요소를 중심으로 초안을 작성하십시오. 세부 요소는 보완 점검 시 참고 기준으로 사용됩니다.</div>
                 <div class="space-y-3">
                     ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.sustainment, 'sustain-logistic', step2TextArea('sustainLogistic', 'Logistic', values.sustainLogistic, 'Describe available support and how it reaches the unit ...', true, 'Write one broad logistics entry.', 6))}
                     ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.sustainment, 'sustain-personnel', step2TextArea('sustainPersonnelServices', 'Personnel Services Support', values.sustainPersonnelServices, 'State the personnel-support arrangements for the team ...', true, 'Write one broad personnel-support entry.', 5))}
@@ -3861,7 +3860,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
         function renderCommandSignalWriting(data, values) {
             return `
                 ${renderTeamProcess('commandSignal')}
-                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Writing workflow:</strong> Build Command and Signal through its three first-level components. The detailed signal requirements stay hidden during drafting and guide only the coach check.</div>
+                <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">작성 방법:</strong> Command and Signal의 지휘·통제·통신 요소를 중심으로 초안을 작성하십시오. 세부 통신 요구사항은 보완 점검 시 참고합니다.</div>
                 <div class="space-y-3">
                     ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.commandSignal, 'command-location', step2TextArea('commandCommand', 'Command', values.commandCommand, 'State leader location and command continuity ...', true, 'Write one broad Command entry.', 5))}
                     ${renderCheckpointChunk(data, PARAGRAPH_DRILLS.commandSignal, 'command-control', step2TextArea('commandControl', 'Control', values.commandControl, 'State the command-post location or control arrangements ...', true, 'Write one broad Control entry.', 5))}
@@ -3885,7 +3884,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             return `
                 <label class="block rounded-lg border border-violet-100 bg-white p-3 shadow-sm">
                     <span class="mb-2 block text-[11px] font-black leading-relaxed text-violet-900">${escapeHtml(question)}${required ? '<span class="ml-1 text-rose-500">*</span>' : ''}</span>
-                    <textarea data-step2-field="${field}" rows="${rows}" placeholder="여기에 팀 답변을 작성하십시오." oninput="saveStep2DraftFromUI()" class="w-full resize-y rounded border border-slate-200 px-3 py-2 text-[11px] leading-relaxed text-slate-700 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">${escapeHtml(value)}</textarea>
+                    <textarea data-step2-field="${field}" rows="${rows}" placeholder="답변을 작성하십시오." oninput="saveStep2DraftFromUI()" class="w-full resize-y rounded border border-slate-200 px-3 py-2 text-[11px] leading-relaxed text-slate-700 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">${escapeHtml(value)}</textarea>
                 </label>
             `;
         }
@@ -3950,20 +3949,20 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             if (heading) heading.innerHTML = isThinkingPromptActivity
                 ? '<i class="fa-solid fa-comments mr-1"></i>Step 2: Teacher Questions'
                 : (activityType === 'lecture'
-                    ? '<i class="fa-solid fa-pen-to-square mr-1"></i>Step 2: Lecture Revision Writing'
+                    ? '<i class="fa-solid fa-pen-to-square mr-1"></i>Step 2: Teacher Questions'
                     : '<i class="fa-solid fa-people-group mr-1"></i>Step 2: Code Your Way · Group Coach Checkpoints');
             step2Slots.innerHTML = '';
 
             if (!step1Complete) {
                 panel.classList.add('step-locked');
                 instruction.innerText = isThinkingPromptActivity
-                    ? 'Step 1의 OPORD shell sequence를 통과하면 교관이 직접 작성한 Step 2 질문과 답변칸이 열립니다.'
+                    ? 'Step 1의 OPORD shell sequence를 통과하면 교수 질문과 답변칸이 열립니다.'
                     : (activityType === 'lecture'
                         ? 'Step 1의 OPORD shell sequence를 통과하면 팀의 open-ended revision workspace가 열립니다.'
-                        : 'Step 1의 OPORD shell sequence를 통과하면 팀이 first-level writing chunk를 작성하고, 각 chunk마다 최대 3회의 coach check를 사용할 수 있습니다.');
+                        : 'Step 1의 OPORD shell sequence를 통과하면 팀이 paragraph 초안를 작성하고, 각 chunk마다 최대 3회의 coach check를 사용할 수 있습니다.');
                 status.className = 'text-[10px] rounded bg-slate-200 px-2 py-1 font-bold text-slate-500';
                 status.innerText = 'Locked until Step 1';
-                step2Slots.innerHTML = `<div class="rounded-lg border border-dashed border-amber-200 bg-white/60 px-4 py-5 text-center text-[11px] text-slate-400"><i class="fa-solid fa-lock mr-1"></i> First construct the OPORD shell.</div>`;
+                step2Slots.innerHTML = `<div class="rounded-lg border border-dashed border-amber-200 bg-white/60 px-4 py-5 text-center text-[11px] text-slate-400"><i class="fa-solid fa-lock mr-1"></i> 먼저 OPORD shell을 완성하십시오.</div>`;
                 verifyBtn.classList.add('hidden');
                 resetBtn.classList.add('hidden');
                 return;
@@ -3974,12 +3973,12 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 const artifact = getCurrentStep2Artifact();
                 instruction.innerText = isThinkingPromptActivity
                     ? '제출된 Step 2 질문 답변입니다. 수정 · 재작성으로 다시 열어 팀의 관찰을 보완할 수 있습니다.'
-                    : '제출된 team writing artifact입니다. 수정 · 재작성으로 다시 열어 내용을 보완할 수 있습니다.';
+                    : '제출된 조별 작성 산출물입니다. 수정 · 재작성으로 다시 열어 내용을 보완할 수 있습니다.';
                 status.className = 'text-[10px] rounded bg-emerald-100 px-2 py-1 font-bold text-emerald-700';
                 status.innerText = isThinkingPromptActivity ? 'Submitted Step 2 responses' : 'Submitted writing artifact';
                 step2Slots.innerHTML = `
                     <div class="rounded-xl border border-emerald-200 bg-white p-3">
-                        <div class="mb-2 flex items-center justify-between gap-2"><span class="text-[10px] font-black uppercase tracking-wider text-emerald-700"><i class="fa-solid fa-check-circle mr-1"></i>Team paragraph output</span><span class="text-[9px] text-slate-400">Shared to artifact pile-up</span></div>
+                        <div class="mb-2 flex items-center justify-between gap-2"><span class="text-[10px] font-black uppercase tracking-wider text-emerald-700"><i class="fa-solid fa-check-circle mr-1"></i>Submitted paragraph output</span><span class="text-[9px] text-slate-400">Shared to activity board</span></div>
                         <pre class="whitespace-pre-wrap break-words rounded-lg border border-emerald-100 bg-emerald-50/50 p-3 text-[11px] font-mono leading-relaxed text-emerald-950">${escapeHtml(artifact?.text || 'Saved writing artifact not found.')}</pre>
                     </div>
                 `;
@@ -3991,9 +3990,9 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
             const values = getStep2SeedValues();
             instruction.innerText = isThinkingPromptActivity
-                ? '아래 굵게 표시된 교관 질문을 읽고, 각 질문 바로 밑의 칸에 팀 답변을 작성하십시오.'
+                ? '아래 굵게 표시된 교수 질문을 읽고, 각 질문 바로 밑의 칸에 답변을 작성하십시오.'
                 : (isCaptainManheeScenario(data)
-                    ? '팀이 first-level OPORD chunk를 먼저 작성합니다. 각 chunk는 team discussion 뒤 최대 3회의 Captain Manhee coach check로 revision hint를 받을 수 있습니다.'
+                    ? '각 paragraph 담당자가 조별 토의를 주도하여 OPORD 초안을 작성합니다. 작성 후 최대 3회의 Captain Manhee 점검을 통해 보완 방향을 확인할 수 있습니다.'
                     : drill.step2Prompt);
             status.className = 'text-[10px] rounded bg-amber-100 px-2 py-1 font-bold text-amber-800';
             status.innerText = isThinkingPromptActivity ? 'Teacher question responses' : (activityType === 'lecture' ? 'Lecture revision draft' : drill.step2Title);
@@ -4002,7 +4001,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 ? '<i class="fa-solid fa-cloud-arrow-up"></i> Step 2 답변 제출 및 공유'
                 : (activityType === 'lecture'
                     ? '<i class="fa-solid fa-cloud-arrow-up"></i> Revised Paragraph 제출 및 공유'
-                    : '<i class="fa-solid fa-cloud-arrow-up"></i> Team Writing 제출 및 공유');
+                    : '<i class="fa-solid fa-cloud-arrow-up"></i> 조별 작성안 제출 및 공유');
             resetBtn.classList.add('hidden');
             step2Slots.innerHTML = renderStep2WritingForm(data, drill, values);
             refreshStep2LivePreview();
@@ -4036,10 +4035,10 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     ? '<i class="fa-solid fa-chalkboard-user"></i> Lecture Reference & Phrase Bank'
                     : '<i class="fa-solid fa-map-location-dot"></i> Scenario Reference & Phrase Bank';
                 note.innerHTML = isOpord01ThinkingPromptActivity(data)
-                    ? '교관 reference와 phrase bank를 참고하여 Step 2의 교관 질문에 팀 답변을 작성하십시오.'
+                    ? '교수 reference와 phrase bank를 참고하여 Step 2의 교수 질문에 답변을 작성하십시오.'
                     : (activityType === 'lecture'
-                        ? '교관이 입력한 영상 스크립트·예문을 참고하되, Step 2에는 팀의 수정문을 자기 말로 작성하십시오.'
-                        : '교관이 제공한 scenario reference를 참고하되, Step 2에서는 팀의 own wording으로 작성하십시오.');
+                        ? '교수가 제시한 영상 스크립트·예문을 참고하되, Step 2에는 자기 말로 수정문을 작성하십시오.'
+                        : '교수가 제시한 scenario reference를 참고하되, Step 2에서는 조별 own wording으로 작성하십시오.');
                 pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
                 return;
             }
@@ -4049,7 +4048,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 ? '이 paragraph의 shell과 Step 2 질문 답변이 모두 제출되었습니다.'
                 : (activityType === 'lecture'
                     ? '이 paragraph의 shell과 lecture revision draft가 모두 제출되었습니다.'
-                    : '이 paragraph의 Step 1 shell과 Step 2 team writing이 모두 완료되었습니다.');
+                    : '이 paragraph의 Step 1 shell과 Step 2 조별 작성이 모두 완료되었습니다.');
             pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
         }
 
@@ -4220,7 +4219,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             clearStep1Diagnostics();
             markStepComplete(activeParagraphId, 1);
             feedback.className = 'text-xs font-bold text-emerald-600';
-            feedback.innerText = '✓ Step 1 통과: OPORD shell sequence가 확인되었습니다. Step 2 language builder가 열립니다.';
+            feedback.innerText = '✓ Step 1 통과: OPORD shell sequence가 확인되었습니다. Step 2 writing workspace가 열립니다.';
             document.getElementById('hint-box').classList.add('hidden');
             activeBuildStep = 2;
             loadWorkshop();
@@ -4480,7 +4479,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     ? `🎉 ${drill.title} Step 2 답변이 실제 공유 DB에 제출되었습니다.`
                     : (activityType === 'lecture'
                         ? `🎉 ${drill.title} revised paragraph가 실제 공유 DB에 제출되었습니다.`
-                        : `🎉 ${drill.title} team writing artifact가 실제 공유 DB에 제출되었습니다.`);
+                        : `🎉 ${drill.title} 조별 작성 산출물가 실제 공유 DB에 제출되었습니다.`);
                 document.getElementById('hint-box').classList.add('hidden');
                 loadWorkshop();
             } catch (error) {
@@ -4491,7 +4490,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 if (submitButton) {
                     submitButton.disabled = false;
                     submitButton.classList.remove('opacity-60', 'cursor-wait');
-                    submitButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>Team Writing 제출 및 공유';
+                    submitButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>조별 작성안 제출 및 공유';
                 }
             }
         }
