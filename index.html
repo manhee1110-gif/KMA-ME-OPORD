@@ -121,7 +121,7 @@
                             <div>
                                 <label class="block font-bold text-slate-600 mb-1">활동 코드명 / 짧은 이름</label>
                                 <input type="text" id="new-sci-code" class="w-full border rounded p-2" placeholder="예: Defense basics / 야간 방어 실습 1">
-                                <p id="scenario-code-note" class="mt-1 text-[10px] text-slate-400">새 활동은 자유로운 코드명/짧은 이름을 사용할 수 있고, 기존 활동은 기록 연결을 위해 코드가 고정됩니다.</p>
+                                <p id="scenario-code-note" class="mt-1 text-[10px] text-slate-400">새 활동은 자유로운 코드명/짧은 이름을 사용할 수 있고, 기존 활동도 수정 모드에서 코드명을 바꿀 수 있습니다.</p>
                             </div>
                             <div>
                                 <label class="block font-bold text-slate-600 mb-1">시나리오 제목 및 상황 설명</label>
@@ -216,23 +216,54 @@
                         </div>
                     </div>
                     <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 lg:col-span-2 space-y-4">
-                        <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b pb-2">
-                            <i class="fa-solid fa-list-check text-indigo-500"></i> 📊 교관용 과제 제출 현황 트래커
-                        </h3>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left text-xs border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold">
-                                        <th class="p-2.5">훈련생</th>
-                                        <th class="p-2.5">시나리오</th>
-                                        <th class="p-2.5">Paragraph</th>
-                                        <th class="p-2.5">상태</th>
-                                        <th class="p-2.5">동료 피드백</th>
-                                        <th class="p-2.5">제출된 작성 산출물 (Artifact)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="teacher-tracker-rows" class="divide-y divide-slate-100"></tbody>
-                            </table>
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+                            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-list-check text-indigo-500"></i> 📊 교관용 과제 제출 현황 트래커
+                            </h3>
+                            <span class="rounded bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-600">Activity-first view</span>
+                        </div>
+                        <div id="teacher-tracker-grid" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div id="scenario-quick-edit-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+                <div class="max-h-[90vh] w-full max-w-6xl overflow-hidden rounded-2xl bg-white shadow-2xl border border-slate-200">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-gradient-to-r from-amber-50 to-indigo-50 px-5 py-4">
+                        <div class="min-w-0">
+                            <p class="text-[10px] font-black uppercase tracking-widest text-amber-700">Teacher Quick Edit</p>
+                            <h3 id="quick-edit-title" class="truncate text-base font-black text-slate-900">활동 빠른 편집</h3>
+                            <p id="quick-edit-subtitle" class="mt-1 text-[10px] leading-relaxed text-slate-500">학생 화면 미리보기를 보면서 paragraph별 자료를 바로 수정합니다.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="saveQuickEditParagraph()" id="quick-edit-save-btn" class="rounded-lg bg-amber-600 px-3 py-2 text-xs font-black text-white shadow hover:bg-amber-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>현재 paragraph 저장</button>
+                            <button type="button" onclick="closeScenarioQuickEdit()" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"><i class="fa-solid fa-xmark mr-1"></i>닫기</button>
+                        </div>
+                    </div>
+                    <div class="grid max-h-[calc(90vh-76px)] grid-cols-1 gap-0 overflow-y-auto lg:grid-cols-5">
+                        <div class="border-b border-slate-100 bg-slate-50/70 p-4 lg:col-span-2 lg:border-b-0 lg:border-r">
+                            <p class="mb-2 text-[10px] font-black uppercase tracking-widest text-slate-500">학생 화면 미리보기</p>
+                            <div id="quick-edit-tabs" class="mb-3 grid grid-cols-5 gap-1"></div>
+                            <div id="quick-edit-preview" class="space-y-3"></div>
+                        </div>
+                        <div class="space-y-4 p-4 lg:col-span-3">
+                            <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
+                                <p id="quick-edit-paragraph-label" class="text-xs font-black text-amber-800">1. Situation</p>
+                                <p class="mt-1 text-[10px] leading-relaxed text-slate-500">한 줄 단위로 입력하면 학생 화면에 각각 reference card, phrase chip, teacher question으로 표시됩니다.</p>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-[11px] font-black text-slate-700">Reference cards <span class="font-normal text-slate-400">one card per line</span></label>
+                                <textarea id="quick-edit-reference" oninput="renderQuickEditPreviewFromFields()" rows="7" class="w-full rounded-xl border border-slate-200 bg-white p-3 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-[11px] font-black text-indigo-700">Teacher Phrase Bank <span class="font-normal text-slate-400">one phrase per line</span></label>
+                                <textarea id="quick-edit-phrases" oninput="renderQuickEditPreviewFromFields()" rows="4" class="w-full rounded-xl border border-indigo-100 bg-indigo-50/30 p-3 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-[11px] font-black text-violet-700">Step 2 Questions / Guided Prompts <span class="font-normal text-slate-400">one question per line</span></label>
+                                <textarea id="quick-edit-questions" oninput="renderQuickEditPreviewFromFields()" rows="4" class="w-full rounded-xl border border-violet-100 bg-violet-50/30 p-3 font-mono text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-violet-500"></textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -350,6 +381,8 @@
         const defaultScenarios = {
             "OPORD-01": {
                 code: "OPORD-01",
+                createdAt: 1,
+                updatedAt: 1,
                 title: "강의 동시 활동: OPORD Video Dictation Workshop",
                 activityType: "lecture",
                 slots1: [{ id: "m1", label: "Who & When (수행 부대 및 시간)" }, { id: "m2", label: "What Task (전술 과업 동사)" }, { id: "m3", label: "Where & Why (지역 및 목적)" }],
@@ -357,6 +390,8 @@
             },
             "OPORD-02": {
                 code: "OPORD-02",
+                createdAt: 2,
+                updatedAt: 2,
                 title: "응용 훈련: 독수리 캠프 야간 방어 작전",
                 activityType: "code",
                 slots1: [{ id: "m1", label: "Who & When (수행 부대 및 시간)" }, { id: "m2", label: "What Task (전술 과업 동사)" }, { id: "m3", label: "Where & Why (지역 및 목적)" }],
@@ -539,6 +574,34 @@
             hasCapturedLayout: false
         };
 
+        // Keep the teacher control tower tracker grouped and stable across refreshes.
+        let teacherTrackerUiState = {
+            openScenarioCodes: new Set(),
+            openBundleKeys: new Set(),
+            hasCapturedLayout: false
+        };
+
+        function captureTeacherTrackerUiState() {
+            const trackerGrid = document.getElementById('teacher-tracker-grid');
+            if (!trackerGrid) return;
+            const scenarioDetails = trackerGrid.querySelectorAll('details[data-teacher-scenario-code]');
+            const bundleDetails = trackerGrid.querySelectorAll('details[data-teacher-bundle-key]');
+            if (!scenarioDetails.length && !bundleDetails.length && !teacherTrackerUiState.hasCapturedLayout) return;
+            const openScenarioCodes = new Set();
+            scenarioDetails.forEach(details => {
+                if (details.open) openScenarioCodes.add(details.dataset.teacherScenarioCode);
+            });
+            const openBundleKeys = new Set();
+            bundleDetails.forEach(details => {
+                if (details.open) openBundleKeys.add(details.dataset.teacherBundleKey);
+            });
+            teacherTrackerUiState = {
+                openScenarioCodes,
+                openBundleKeys,
+                hasCapturedLayout: true
+            };
+        }
+
         function captureStudentDashboardUiState() {
             const historyContainer = document.getElementById('student-artifact-history');
             if (!historyContainer) return;
@@ -662,7 +725,7 @@
         function mapScenarioDatabaseRow(row) {
             const step2Blocks = cloneCourseMaterialObject(row.step2_blocks, {});
             return {
-                code: String(row.code || '').toUpperCase(),
+                code: String(row.code || '').trim(),
                 title: row.title || `${row.code} 훈련 시나리오`,
                 activityType: normalizeActivityType(row.activity_type),
                 step2Blocks,
@@ -687,9 +750,9 @@
 
         function ensureSelectedScenarioAvailable() {
             const scenarios = getScenarioStore();
-            const codes = Object.keys(scenarios).sort();
-            if (!codes.length) return;
-            if (!scenarios[selectedScenarioCode]) selectedScenarioCode = codes[0];
+            const firstScenario = sortScenarioEntries(Object.values(scenarios))[0];
+            if (!firstScenario) return;
+            if (!scenarios[selectedScenarioCode]) selectedScenarioCode = firstScenario.code;
         }
 
         async function refreshSharedScenarios() {
@@ -702,6 +765,7 @@
             const { data, error } = await supabaseClient
                 .from('scenarios')
                 .select('code, title, activity_type, step2_blocks, phrase_banks, is_active, created_by, updated_by, created_at, updated_at')
+                .order('created_at', { ascending: true })
                 .order('code', { ascending: true });
 
             if (error) {
@@ -1567,6 +1631,23 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             return '';
         }
 
+        function scenarioSortValue(scenario) {
+            const code = String(scenario?.code || '').trim();
+            if (code === 'OPORD-01') return 1;
+            if (code === 'OPORD-02') return 2;
+            const created = Number(scenario?.createdAt || scenario?.created_at || 0);
+            const updated = Number(scenario?.updatedAt || scenario?.updated_at || 0);
+            return created || updated || 9999999999999;
+        }
+
+        function sortScenarioEntries(entries) {
+            return [...(entries || [])].sort((a, b) => {
+                const rankCompare = scenarioSortValue(a) - scenarioSortValue(b);
+                if (rankCompare !== 0) return rankCompare;
+                return String(a?.code || '').localeCompare(String(b?.code || ''), 'ko');
+            });
+        }
+
 
         function parseTeacherBlocks(value) {
             return String(value || '')
@@ -1636,6 +1717,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                     step2Questions,
                     phraseBanks,
                     activityType: normalizeActivityType(raw.activityType || (code === 'OPORD-02' ? 'code' : 'lecture')),
+                    createdAt: raw.createdAt || raw.created_at || (code === 'OPORD-01' ? 1 : (code === 'OPORD-02' ? 2 : Date.now())),
+                    updatedAt: raw.updatedAt || raw.updated_at || (code === 'OPORD-01' ? 1 : (code === 'OPORD-02' ? 2 : Date.now())),
                     scenarioVersion: 'lecture-code-v1'
                 };
             });
@@ -1712,7 +1795,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const library = document.getElementById('teacher-scenario-library');
             if (!library) return;
             const scenarios = getScenarioStore();
-            const entries = Object.values(scenarios).sort((a, b) => a.code.localeCompare(b.code));
+            const entries = sortScenarioEntries(Object.values(scenarios));
             if (!entries.length) {
                 library.innerHTML = '<div class="rounded border border-dashed border-amber-200 bg-white/70 px-2 py-2 text-[10px] italic text-slate-400">저장된 활동이 없습니다.</div>';
                 return;
@@ -1722,7 +1805,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 const phraseCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + (scenario.phraseBanks?.[id]?.length || 0), 0);
                 const questionCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + getScenarioStep2Questions(scenario, id).length, 0);
                 const activity = getActivityMeta(getScenarioActivityType(scenario));
-                return `<div class="flex items-center justify-between gap-2 rounded border ${editingScenarioCode === scenario.code ? 'border-amber-400 bg-white' : 'border-amber-100 bg-white/70'} px-2 py-1.5"><div class="min-w-0"><p class="font-mono text-[10px] font-black text-indigo-700">${escapeHtml(scenario.code)}</p><p class="truncate text-[10px] text-slate-600">${escapeHtml(scenario.title)}</p><p class="mt-0.5"><span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></p><p class="mt-1 text-[9px] text-slate-400">${blockCount} reference cards · ${phraseCount} phrase cues · ${questionCount} prompts</p></div><div class="flex shrink-0 flex-col gap-1"><button type="button" onclick='loadScenarioForEdit(${JSON.stringify(scenario.code)})' class="rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-200"><i class="fa-solid fa-pen mr-1"></i>수정</button><button type="button" onclick='deleteScenarioEditor(${JSON.stringify(scenario.code)})' class="rounded bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"><i class="fa-solid fa-trash-can mr-1"></i>삭제</button></div></div>`;
+                return `<div class="flex items-center justify-between gap-2 rounded border ${editingScenarioCode === scenario.code ? 'border-amber-400 bg-white' : 'border-amber-100 bg-white/70'} px-2 py-1.5"><div class="min-w-0"><p class="font-mono text-[10px] font-black text-indigo-700">${escapeHtml(scenario.code)}</p><p class="truncate text-[10px] text-slate-600">${escapeHtml(scenario.title)}</p><p class="mt-0.5"><span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></p><p class="mt-1 text-[9px] text-slate-400">${blockCount} reference cards · ${phraseCount} phrase cues · ${questionCount} prompts</p></div><div class="flex shrink-0 flex-col gap-1"><button type="button" onclick='openScenarioQuickEdit(${JSON.stringify(scenario.code)})' class="rounded bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fa-solid fa-window-restore mr-1"></i>빠른편집</button><button type="button" onclick='loadScenarioForEdit(${JSON.stringify(scenario.code)})' class="rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-200"><i class="fa-solid fa-pen mr-1"></i>상세수정</button><button type="button" onclick='deleteScenarioEditor(${JSON.stringify(scenario.code)})' class="rounded bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"><i class="fa-solid fa-trash-can mr-1"></i>삭제</button></div></div>`;
             }).join('');
         }
 
@@ -1749,7 +1832,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const note = document.getElementById('scenario-code-note');
             const saveBtn = document.getElementById('scenario-save-btn');
             if (mode) mode.innerText = '새 시나리오 작성 모드';
-            if (note) note.innerText = '새 활동은 자유로운 코드명/짧은 이름을 사용할 수 있고, 기존 활동은 기록 연결을 위해 코드가 고정됩니다.';
+            if (note) note.innerText = '새 활동은 자유로운 코드명/짧은 이름을 사용할 수 있고, 기존 활동도 수정 모드에서 코드명을 바꿀 수 있습니다.';
             if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB에 시나리오 저장';
             renderScenarioEditorLibrary();
         }
@@ -1766,8 +1849,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const codeInput = document.getElementById('new-sci-code');
             const titleInput = document.getElementById('new-sci-title');
             codeInput.value = scenario.code;
-            codeInput.readOnly = true;
-            codeInput.classList.add('bg-slate-100', 'text-slate-500');
+            codeInput.readOnly = false;
+            codeInput.classList.remove('bg-slate-100', 'text-slate-500');
             titleInput.value = scenarioTitleForEditor(scenario.title);
             const activityTypeInput = document.getElementById('new-sci-activity-type');
             if (activityTypeInput) activityTypeInput.value = getScenarioActivityType(scenario);
@@ -1784,7 +1867,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const note = document.getElementById('scenario-code-note');
             const saveBtn = document.getElementById('scenario-save-btn');
             if (mode) mode.innerText = `[${scenario.code}] 기존 시나리오 수정 모드`;
-            if (note) note.innerText = '기존 코드명은 artifact와 진행 기록 연결을 위해 변경할 수 없습니다. 새 활동은 평문 코드명을 사용할 수 있습니다.';
+            if (note) note.innerText = '기존 활동도 코드명/짧은 이름을 바꿀 수 있습니다. 단, 이미 제출된 artifact는 이전 코드명으로 보존됩니다.';
             if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB의 시나리오 변경 저장';
             renderScenarioEditorLibrary();
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1797,7 +1880,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const requestedCode = normalizeScenarioCodeInput(codeInput.value);
             const title = titleInput.value.trim();
             const activityType = normalizeActivityType(document.getElementById('new-sci-activity-type')?.value);
-            const code = editingScenarioCode || requestedCode;
+            const originalCode = editingScenarioCode;
+            const code = requestedCode;
 
             const codeError = getScenarioCodeValidationError(code);
             if (codeError || !title) {
@@ -1830,9 +1914,11 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             }
 
             const scenarios = getScenarioStore();
-            const existing = scenarios[code] || {};
             const isEditing = Boolean(editingScenarioCode);
-            if (!isEditing && scenarios[code] && !confirm(`[${code}] 시나리오가 이미 있습니다. 기존 자료를 새 OPORD 자료로 덮어쓰겠습니까?`)) return;
+            const isRenaming = isEditing && originalCode && originalCode !== code;
+            const existing = isRenaming ? (scenarios[originalCode] || {}) : (scenarios[code] || {});
+            if (!isEditing && scenarios[code] && !confirm(`[${code}] 시나리오가 이미 있습니다. 기존 자료를 새 활동 자료로 덮어쓰겠습니까?`)) return;
+            if (isRenaming && scenarios[code] && !confirm(`[${code}] 활동이 이미 있습니다. 이 이름의 기존 활동 자료를 덮어쓰고 [${originalCode}] 활동 카드를 이름 변경 처리할까요?`)) return;
 
             const scenarioToSave = {
                 ...existing,
@@ -1853,6 +1939,23 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             setScenarioSaveBusy(true);
             try {
                 await writeScenarioToDatabase(scenarioToSave);
+                if (isRenaming) {
+                    const { error: deleteOldError } = await supabaseClient
+                        .from('scenarios')
+                        .delete()
+                        .eq('code', originalCode);
+                    if (deleteOldError) throw deleteOldError;
+                    try {
+                        const local = JSON.parse(localStorage.getItem('OPORD_SCENARIOS')) || {};
+                        delete local[originalCode];
+                        localStorage.setItem('OPORD_SCENARIOS', JSON.stringify(local));
+                    } catch (localError) {
+                        console.warn('Local old scenario cleanup skipped:', localError);
+                    }
+                    if (sharedScenarioStore && typeof sharedScenarioStore === 'object') delete sharedScenarioStore[originalCode];
+                    sharedHubUiState.openScenarioCodes.delete(originalCode);
+                    studentDashboardUiState.openScenarioCodes.delete(originalCode);
+                }
                 await refreshSharedScenarios();
 
                 // Keep a local cache only as a resilient fallback; DB is now the shared source of truth.
@@ -1860,7 +1963,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 saveScenarioStore(refreshed);
                 resetScenarioStep2Progress(code);
 
-                const actionText = isEditing ? '수정·배포 완료' : '출제·배포 완료';
+                const actionText = isRenaming ? '이름 변경·배포 완료' : (isEditing ? '수정·배포 완료' : '출제·배포 완료');
                 alert(`✅ [${actionText}] [${code}]의 scenario reference cards, phrase bank, Step 2 questions가 공유 DB에 저장되었습니다.
 
 전 생도 화면은 다음 자동 동기화 또는 새로고침 때 최신 자료를 받습니다. 기존 제출 artifact는 보관됩니다.`);
@@ -1891,6 +1994,338 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             return artifact.paragraphId || 'mission';
         }
 
+        function renderTeacherTrackerGrid(artifacts) {
+            captureTeacherTrackerUiState();
+            const grid = document.getElementById('teacher-tracker-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            grid.className = 'space-y-3';
+
+            if (!artifacts.length) {
+                grid.innerHTML = `<div class="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center text-xs italic text-slate-400">아직 학생들이 제출한 과제가 없습니다.</div>`;
+                return;
+            }
+
+            const scenarios = getScenarioStore();
+            const packages = groupArtifactsByStudentAndScenario(artifacts);
+            const packagesByScenario = new Map();
+            packages.forEach(bundle => {
+                if (!packagesByScenario.has(bundle.scenarioCode)) packagesByScenario.set(bundle.scenarioCode, []);
+                packagesByScenario.get(bundle.scenarioCode).push(bundle);
+            });
+
+            const scenarioEntries = sortScenarioEntries([...new Set([
+                ...Object.values(scenarios).map(scenario => scenario.code),
+                ...packages.map(bundle => bundle.scenarioCode)
+            ])].filter(Boolean).map(code => scenarios[code] || { code, title: `${code} activity`, activityType: 'lecture' }));
+
+            scenarioEntries.forEach(scenario => {
+                const scenarioCode = scenario.code;
+                const scenarioPackages = (packagesByScenario.get(scenarioCode) || [])
+                    .sort((a, b) => {
+                        const recentCompare = Number(b.latestTimestamp || 0) - Number(a.latestTimestamp || 0);
+                        if (recentCompare !== 0) return recentCompare;
+                        const aName = userDatabase[a.studentId]?.name || a.studentId;
+                        const bName = userDatabase[b.studentId]?.name || b.studentId;
+                        return String(aName).localeCompare(String(bName), 'ko');
+                    });
+
+                const activity = getActivityMeta(getScenarioActivityType(scenario));
+                const isScenarioOpen = teacherTrackerUiState.openScenarioCodes.has(scenarioCode);
+                const totalParagraphs = scenarioPackages.reduce((sum, bundle) => sum + bundle.completedCount, 0);
+                const totalComments = scenarioPackages.reduce((sum, bundle) => sum + bundle.commentCount, 0);
+                const latestTimestamp = Math.max(0, ...scenarioPackages.map(bundle => Number(bundle.latestTimestamp || 0)));
+                const latestText = latestTimestamp
+                    ? formatTimestamp(latestTimestamp)
+                    : '제출 없음';
+                const paragraphStats = OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => {
+                    const count = scenarioPackages.filter(bundle => bundle.artifactIndex[paragraphId]).length;
+                    const drill = PARAGRAPH_DRILLS[paragraphId];
+                    return `<span class="rounded border px-2 py-1 text-center text-[9px] font-bold ${count ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}">${drill.number}. ${count}/${scenarioPackages.length || 0}</span>`;
+                }).join('');
+
+                const cadetCards = scenarioPackages.length
+                    ? scenarioPackages.map(bundle => {
+                        const bundleKey = getSharedHubBundleKey(bundle);
+                        const isBundleOpen = teacherTrackerUiState.openBundleKeys.has(bundleKey);
+                        const sName = userDatabase[bundle.studentId] ? userDatabase[bundle.studentId].name : bundle.studentId;
+                        const latestBundleText = bundle.latestTimestamp
+                            ? formatTimestamp(bundle.latestTimestamp)
+                            : '';
+                        const paragraphChips = OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => {
+                            const drill = PARAGRAPH_DRILLS[paragraphId];
+                            const artifact = bundle.artifactIndex[paragraphId];
+                            return `<span class="rounded border px-1.5 py-1 text-center text-[9px] font-bold ${artifact ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-400'}">${drill.number}. ${artifact ? '✓' : '—'}</span>`;
+                        }).join('');
+                        const paragraphRows = OPORD_PARAGRAPH_SEQUENCE.map(paragraphId => {
+                            const artifact = bundle.artifactIndex[paragraphId];
+                            const label = getOpordParagraphLabel(paragraphId);
+                            if (!artifact) {
+                                return `<div class="rounded-lg border border-dashed border-slate-200 bg-slate-50/60 p-3"><div class="text-[10px] font-black text-slate-500">${escapeHtml(label)}</div><p class="mt-1 text-[10px] italic text-slate-400">Not submitted yet.</p></div>`;
+                            }
+                            const feedbackCount = getArtifactComments(artifact).length;
+                            return `<div class="rounded-xl border border-indigo-100 bg-indigo-50/20 p-3"><div class="mb-2 flex flex-wrap items-center justify-between gap-2"><span class="rounded bg-indigo-50 border border-indigo-100 px-2 py-0.5 text-[10px] font-black text-indigo-700">${escapeHtml(label)}</span><div class="flex items-center gap-1.5"><span class="rounded bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">✓ submitted</span><span class="rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-700">${feedbackCount} comments</span></div></div><pre class="max-h-44 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-indigo-100 bg-white p-3 text-[10px] font-mono leading-relaxed text-slate-700">${escapeHtml(artifact.text)}</pre></div>`;
+                        }).join('');
+
+                        return `
+                            <details data-teacher-bundle-key="${escapeHtml(bundleKey)}" ${isBundleOpen ? 'open' : ''} class="group rounded-xl border border-slate-200 bg-white shadow-sm open:shadow-md">
+                                <summary class="cursor-pointer list-none px-4 py-3">
+                                    <div class="flex flex-wrap items-center justify-between gap-3">
+                                        <div class="min-w-0 flex items-center gap-2">
+                                            <i class="fa-solid fa-user-graduate text-slate-400"></i>
+                                            <div class="min-w-0"><div class="truncate text-xs font-black text-slate-800">${escapeHtml(sName)}</div><div class="truncate text-[10px] text-slate-400">${escapeHtml(bundle.studentId)} · ${latestBundleText}</div></div>
+                                        </div>
+                                        <div class="flex items-center gap-2"><span class="rounded bg-emerald-50 px-2 py-1 text-[10px] font-black text-emerald-700">${bundle.completedCount}/5 paragraphs</span><span class="rounded bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700">${bundle.commentCount} comments</span><i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform group-open:rotate-180"></i></div>
+                                    </div>
+                                    <div class="mt-3 grid grid-cols-5 gap-1.5">${paragraphChips}</div>
+                                </summary>
+                                <div class="border-t border-slate-100 px-4 pb-4 pt-3">
+                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">Student package · 1 → 5</p>
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            <button type="button" onclick='copyBundleForSlides(${JSON.stringify(scenarioCode)}, ${JSON.stringify(bundle.studentId)}, "opord")' class="rounded-lg border border-emerald-200 bg-white px-2 py-1 text-[9px] font-black text-emerald-700 hover:bg-emerald-50"><i class="fa-solid fa-file-lines mr-1"></i>OPORD만</button>
+                                            <button type="button" onclick='copyBundleForSlides(${JSON.stringify(scenarioCode)}, ${JSON.stringify(bundle.studentId)}, "full")' class="rounded-lg border border-indigo-200 bg-white px-2 py-1 text-[9px] font-black text-indigo-700 hover:bg-indigo-50"><i class="fa-solid fa-copy mr-1"></i>OPORD+Peer</button>
+                                            <button type="button" onclick='copyBundleForSlides(${JSON.stringify(scenarioCode)}, ${JSON.stringify(bundle.studentId)}, "feedback")' class="rounded-lg border border-amber-200 bg-white px-2 py-1 text-[9px] font-black text-amber-700 hover:bg-amber-50"><i class="fa-solid fa-comments mr-1"></i>Peer만</button>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-3">${paragraphRows}</div>
+                                </div>
+                            </details>
+                        `;
+                    }).join('')
+                    : `<div class="rounded-lg border border-dashed border-slate-200 bg-slate-50/70 px-4 py-6 text-center text-xs italic text-slate-400">이 활동에는 아직 제출된 산출물이 없습니다.</div>`;
+
+                grid.innerHTML += `
+                    <details data-teacher-scenario-code="${escapeHtml(scenarioCode)}" ${isScenarioOpen ? 'open' : ''} class="group rounded-2xl border border-slate-200 bg-white shadow-sm open:border-indigo-200 open:shadow-md">
+                        <summary class="cursor-pointer list-none px-5 py-4">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div class="min-w-0 flex items-start gap-3">
+                                    <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 font-mono text-xs font-black text-indigo-700">${escapeHtml(scenarioCode)}</span>
+                                    <div class="min-w-0">
+                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4><span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
+                                        <p class="mt-1 text-[10px] leading-relaxed text-slate-500">활동별로 생도 package를 열어 제출 문단과 피드백 현황을 확인합니다.</p>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                    <span class="rounded bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">${scenarioPackages.length} cadets</span>
+                                    <span class="rounded bg-indigo-50 px-2.5 py-1 text-[10px] font-bold text-indigo-700">${totalParagraphs} paragraphs</span>
+                                    <span class="rounded bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">${totalComments} comments</span>
+                                    <span class="text-[10px] text-slate-400">${latestText}</span>
+                                    <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform group-open:rotate-180"></i>
+                                </div>
+                            </div>
+                            <div class="mt-3 grid grid-cols-5 gap-1.5">${paragraphStats}</div>
+                        </summary>
+                        <div class="border-t border-slate-100 bg-slate-50/40 px-4 py-4">
+                            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">Cadet packages · latest first</p>
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    ${scenarioPackages.length ? `<button type="button" onclick='copyScenarioForSlides(${JSON.stringify(scenarioCode)}, "opord")' class="rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-emerald-700 hover:bg-emerald-50"><i class="fa-solid fa-file-lines mr-1"></i>활동 OPORD만</button><button type="button" onclick='copyScenarioForSlides(${JSON.stringify(scenarioCode)}, "full")' class="rounded-lg border border-indigo-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-indigo-700 hover:bg-indigo-50"><i class="fa-solid fa-copy mr-1"></i>OPORD+Peer</button><button type="button" onclick='copyScenarioForSlides(${JSON.stringify(scenarioCode)}, "feedback")' class="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-amber-700 hover:bg-amber-50"><i class="fa-solid fa-comments mr-1"></i>Peer만</button>` : ''}
+                                </div>
+                            </div>
+                            <div class="space-y-3">${cadetCards}</div>
+                        </div>
+                    </details>
+                `;
+            });
+        }
+
+
+        function formatTimestamp(timestamp) {
+            const value = Number(timestamp || 0);
+            if (!value) return '';
+            return new Date(value).toLocaleString('ko-KR', {
+                month: 'numeric',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        let quickEditScenarioCode = null;
+        let quickEditParagraphId = 'situation';
+
+        function getQuickEditScenario() {
+            if (!quickEditScenarioCode) return null;
+            return getScenarioStore()[quickEditScenarioCode] || null;
+        }
+
+        function openScenarioQuickEdit(code) {
+            if (!requireTeacherAccess()) return;
+            const scenarios = getScenarioStore();
+            const scenario = scenarios[code];
+            if (!scenario) {
+                alert('선택한 활동을 찾을 수 없습니다. 화면을 새로고침한 뒤 다시 시도하십시오.');
+                return;
+            }
+            quickEditScenarioCode = code;
+            quickEditParagraphId = 'situation';
+            renderQuickEditModal();
+            const modal = document.getElementById('scenario-quick-edit-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            }
+        }
+
+        function closeScenarioQuickEdit() {
+            const modal = document.getElementById('scenario-quick-edit-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function setQuickEditParagraph(paragraphId) {
+            if (!TEACHER_PARAGRAPH_IDS.includes(paragraphId)) return;
+            quickEditParagraphId = paragraphId;
+            renderQuickEditModal();
+        }
+
+        function renderQuickEditModal() {
+            const scenario = getQuickEditScenario();
+            if (!scenario) return;
+            const drill = PARAGRAPH_DRILLS[quickEditParagraphId] || PARAGRAPH_DRILLS.situation;
+            const title = document.getElementById('quick-edit-title');
+            const subtitle = document.getElementById('quick-edit-subtitle');
+            const label = document.getElementById('quick-edit-paragraph-label');
+            const tabs = document.getElementById('quick-edit-tabs');
+            const preview = document.getElementById('quick-edit-preview');
+            const referenceField = document.getElementById('quick-edit-reference');
+            const phraseField = document.getElementById('quick-edit-phrases');
+            const questionField = document.getElementById('quick-edit-questions');
+
+            if (title) title.textContent = `${scenario.code} · ${scenario.title}`;
+            if (subtitle) subtitle.textContent = `${getActivityMeta(getScenarioActivityType(scenario)).label} · 학생 화면에 보일 자료를 paragraph별로 바로 고칩니다.`;
+            if (label) label.textContent = `${drill.number}. ${drill.title}`;
+
+            if (tabs) {
+                tabs.innerHTML = TEACHER_PARAGRAPH_IDS.map(id => {
+                    const item = PARAGRAPH_DRILLS[id];
+                    const active = id === quickEditParagraphId;
+                    return `<button type="button" onclick="setQuickEditParagraph('${id}')" class="rounded-lg border px-2 py-1.5 text-[10px] font-black ${active ? 'border-amber-300 bg-amber-100 text-amber-800' : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'}">${item.number}</button>`;
+                }).join('');
+            }
+
+            const references = cloneBlockList(scenario.step2Blocks?.[quickEditParagraphId]).filter(Boolean);
+            const phrases = cloneBlockList(scenario.phraseBanks?.[quickEditParagraphId]).filter(Boolean);
+            const questions = getScenarioStep2Questions(scenario, quickEditParagraphId);
+
+            if (referenceField) referenceField.value = references.join('\n');
+            if (phraseField) phraseField.value = phrases.join('\n');
+            if (questionField) questionField.value = questions.join('\n');
+
+            if (preview) {
+                const referenceHtml = references.length
+                    ? references.map((text, index) => `<div class="rounded-lg border border-indigo-100 bg-white p-2 text-[11px] leading-relaxed text-slate-700"><span class="mr-1 font-black text-indigo-600">${index + 1}.</span>${escapeHtml(text)}</div>`).join('')
+                    : '<div class="rounded-lg border border-dashed border-slate-200 bg-white/70 p-3 text-[11px] italic text-slate-400">No reference cards yet.</div>';
+                const phraseHtml = phrases.length
+                    ? `<div class="flex flex-wrap gap-1.5">${phrases.map(phrase => `<span class="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">${escapeHtml(phrase)}</span>`).join('')}</div>`
+                    : '<div class="rounded-lg border border-dashed border-slate-200 bg-white/70 p-3 text-[11px] italic text-slate-400">No phrase chips yet.</div>';
+                const questionHtml = questions.length
+                    ? questions.map((question, index) => `<div class="rounded-xl border border-violet-100 bg-violet-50/40 p-3"><p class="text-[11px] font-black text-violet-800">${index + 1}. ${escapeHtml(question)}</p><div class="mt-2 h-16 rounded-lg border border-violet-100 bg-white"></div></div>`).join('')
+                    : '<div class="rounded-lg border border-dashed border-slate-200 bg-white/70 p-3 text-[11px] italic text-slate-400">No Step 2 questions yet.</div>';
+
+                preview.innerHTML = `
+                    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div class="mb-3 flex items-center justify-between gap-2"><h4 class="text-sm font-black text-slate-900">${drill.number}. ${escapeHtml(drill.title)}</h4><span class="rounded bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500">student view</span></div>
+                        <p class="mb-2 text-[10px] font-black uppercase tracking-widest text-indigo-700">Teacher reference cards</p>
+                        <div class="space-y-2">${referenceHtml}</div>
+                        <p class="mb-2 mt-4 text-[10px] font-black uppercase tracking-widest text-emerald-700">Phrase bank</p>
+                        ${phraseHtml}
+                        <p class="mb-2 mt-4 text-[10px] font-black uppercase tracking-widest text-violet-700">Step 2 questions</p>
+                        <div class="space-y-2">${questionHtml}</div>
+                    </div>
+                `;
+            }
+        }
+
+
+        function renderQuickEditPreviewFromFields() {
+            const scenario = getQuickEditScenario();
+            const preview = document.getElementById('quick-edit-preview');
+            if (!scenario || !preview) return;
+            const drill = PARAGRAPH_DRILLS[quickEditParagraphId] || PARAGRAPH_DRILLS.situation;
+            const references = parseTeacherBlocks(document.getElementById('quick-edit-reference')?.value || '');
+            const phrases = parseTeacherBlocks(document.getElementById('quick-edit-phrases')?.value || '');
+            const questions = parseTeacherBlocks(document.getElementById('quick-edit-questions')?.value || '');
+            const referenceHtml = references.length
+                ? references.map((text, index) => `<div class="rounded-lg border border-indigo-100 bg-white p-2 text-[11px] leading-relaxed text-slate-700"><span class="mr-1 font-black text-indigo-600">${index + 1}.</span>${escapeHtml(text)}</div>`).join('')
+                : '<div class="rounded-lg border border-dashed border-slate-200 bg-white/70 p-3 text-[11px] italic text-slate-400">No reference cards yet.</div>';
+            const phraseHtml = phrases.length
+                ? `<div class="flex flex-wrap gap-1.5">${phrases.map(phrase => `<span class="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">${escapeHtml(phrase)}</span>`).join('')}</div>`
+                : '<div class="rounded-lg border border-dashed border-slate-200 bg-white/70 p-3 text-[11px] italic text-slate-400">No phrase chips yet.</div>';
+            const questionHtml = questions.length
+                ? questions.map((question, index) => `<div class="rounded-xl border border-violet-100 bg-violet-50/40 p-3"><p class="text-[11px] font-black text-violet-800">${index + 1}. ${escapeHtml(question)}</p><div class="mt-2 h-16 rounded-lg border border-violet-100 bg-white"></div></div>`).join('')
+                : '<div class="rounded-lg border border-dashed border-slate-200 bg-white/70 p-3 text-[11px] italic text-slate-400">No Step 2 questions yet.</div>';
+            preview.innerHTML = `
+                <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div class="mb-3 flex items-center justify-between gap-2"><h4 class="text-sm font-black text-slate-900">${drill.number}. ${escapeHtml(drill.title)}</h4><span class="rounded bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500">live preview</span></div>
+                    <p class="mb-2 text-[10px] font-black uppercase tracking-widest text-indigo-700">Teacher reference cards</p>
+                    <div class="space-y-2">${referenceHtml}</div>
+                    <p class="mb-2 mt-4 text-[10px] font-black uppercase tracking-widest text-emerald-700">Phrase bank</p>
+                    ${phraseHtml}
+                    <p class="mb-2 mt-4 text-[10px] font-black uppercase tracking-widest text-violet-700">Step 2 questions</p>
+                    <div class="space-y-2">${questionHtml}</div>
+                </div>
+            `;
+        }
+
+        async function saveQuickEditParagraph() {
+            if (!requireTeacherAccess()) return;
+            const scenario = getQuickEditScenario();
+            if (!scenario) {
+                alert('선택한 활동을 찾을 수 없습니다.');
+                return;
+            }
+            const saveButton = document.getElementById('quick-edit-save-btn');
+            const referenceField = document.getElementById('quick-edit-reference');
+            const phraseField = document.getElementById('quick-edit-phrases');
+            const questionField = document.getElementById('quick-edit-questions');
+
+            const step2Blocks = cloneCourseMaterialObject(scenario.step2Blocks || {}, {});
+            const phraseBanks = cloneCourseMaterialObject(scenario.phraseBanks || {}, {});
+            const step2Questions = getScenarioStep2QuestionMap(scenario);
+            step2Blocks[quickEditParagraphId] = parseTeacherBlocks(referenceField?.value || '');
+            phraseBanks[quickEditParagraphId] = parseTeacherBlocks(phraseField?.value || '');
+            step2Questions[quickEditParagraphId] = parseTeacherBlocks(questionField?.value || '');
+            step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
+
+            const scenarioToSave = {
+                ...scenario,
+                step2Blocks,
+                step2Questions,
+                phraseBanks,
+                updatedBy: currentSupabaseUserId,
+                updatedAt: Date.now(),
+                scenarioVersion: 'scenario-db-v1'
+            };
+
+            if (saveButton) {
+                saveButton.disabled = true;
+                saveButton.classList.add('opacity-60', 'cursor-wait');
+                saveButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>저장 중…';
+            }
+            try {
+                await writeScenarioToDatabase(scenarioToSave);
+                await refreshSharedScenarios();
+                saveScenarioStore(getScenarioStore());
+                resetScenarioStep2Progress(scenario.code);
+                renderTeacherDashboard();
+                renderQuickEditModal();
+                alert(`✅ ${scenario.code} · ${PARAGRAPH_DRILLS[quickEditParagraphId].title} 자료가 저장되었습니다.`);
+            } catch (error) {
+                console.error('Quick edit save failed:', error);
+                alert(`빠른 편집 내용을 저장하지 못했습니다.\n${error.message || '잠시 뒤 다시 시도하십시오.'}`);
+            } finally {
+                if (saveButton) {
+                    saveButton.disabled = false;
+                    saveButton.classList.remove('opacity-60', 'cursor-wait');
+                    saveButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>현재 paragraph 저장';
+                }
+            }
+        }
+
         function renderTeacherDashboard() {
             recoverCompletedCodeActivityArtifacts();
             if (!requireTeacherAccess(false)) {
@@ -1905,30 +2340,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 renderScenarioEditorLibrary();
             }
 
-            const rows = document.getElementById('teacher-tracker-rows');
-            rows.innerHTML = '';
-            const artifacts = getArtifactsStore();
-
-            if (artifacts.length === 0) {
-                rows.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400 italic">아직 학생들이 제출한 과제가 없습니다.</td></tr>`;
-                return;
-            }
-
-            artifacts.forEach(art => {
-                const sName = userDatabase[art.studentId] ? userDatabase[art.studentId].name : art.studentId;
-                const paragraphTitle = art.paragraphTitle || getParagraphTitle(getArtifactParagraphId(art));
-                const feedbackCount = getArtifactComments(art).length;
-                rows.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition-all text-xs align-top">
-                        <td class="p-2.5 font-bold text-slate-800">${escapeHtml(sName)}</td>
-                        <td class="p-2.5 font-mono text-indigo-600 font-bold">${escapeHtml(art.scenarioCode)}</td>
-                        <td class="p-2.5"><span class="rounded bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700">${escapeHtml(paragraphTitle)}</span></td>
-                        <td class="p-2.5"><span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">✓ PASS</span></td>
-                        <td class="p-2.5"><span class="rounded bg-amber-50 border border-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">${feedbackCount} comments</span></td>
-                        <td class="p-2.5 font-mono whitespace-pre-wrap text-slate-600 bg-slate-50/50">${escapeHtml(art.text)}</td>
-                    </tr>
-                `;
-            });
+            renderTeacherTrackerGrid(getArtifactsStore());
         }
 
         function getArtifactKey(artifact) {
@@ -2194,7 +2606,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const commentFeed = comments.length
                 ? comments.map(comment => {
                     const author = comment.authorName || (userDatabase[comment.authorId] ? userDatabase[comment.authorId].name : comment.authorId);
-                    const commentTime = new Date(comment.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+                    const commentTime = formatTimestamp(comment.timestamp);
                     const ownComment = isOwnPeerComment(comment);
                     const commentDomId = getCommentDomId(comment);
                     const actions = ownComment
@@ -2385,10 +2797,11 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 packagesByScenario.get(bundle.scenarioCode).push(bundle);
             });
 
-            const scenarioCodes = [...new Set([
+            const scenarioListForHub = sortScenarioEntries([...new Set([
                 ...Object.values(scenarios).map(scenario => scenario.code),
                 ...packages.map(bundle => bundle.scenarioCode)
-            ])].filter(Boolean).sort((a, b) => String(a).localeCompare(String(b)));
+            ])].filter(Boolean).map(code => scenarios[code] || { code, title: `${code} activity`, activityType: 'lecture' }));
+            const scenarioCodes = scenarioListForHub.map(scenario => scenario.code);
 
             const firstScenarioWithSubmissions = scenarioCodes.find(code => (packagesByScenario.get(code) || []).length) || scenarioCodes[0] || '';
 
@@ -2414,7 +2827,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 const isScenarioOpen = sharedHubUiState.openScenarioCodes.has(scenarioCode);
                 const latestTimestamp = Math.max(0, ...scenarioPackages.map(bundle => Number(bundle.latestTimestamp || 0)));
                 const latestText = latestTimestamp
-                    ? new Date(latestTimestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+                    ? formatTimestamp(latestTimestamp)
                     : '제출 없음';
                 const totalParagraphs = scenarioPackages.reduce((sum, bundle) => sum + bundle.completedCount, 0);
                 const totalComments = scenarioPackages.reduce((sum, bundle) => sum + bundle.commentCount, 0);
@@ -2429,7 +2842,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                         const sName = userDatabase[bundle.studentId] ? userDatabase[bundle.studentId].name : bundle.studentId;
                         const isMe = bundle.studentId === currentUserId;
                         const bundleLatestText = bundle.latestTimestamp
-                            ? new Date(bundle.latestTimestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+                            ? formatTimestamp(bundle.latestTimestamp)
                             : '';
                         const bundleKey = getSharedHubBundleKey(bundle);
                         const isBundleOpen = sharedHubUiState.openBundleKeys.has(bundleKey);
@@ -2519,63 +2932,52 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             listContainer.innerHTML = ''; historyContainer.innerHTML = '';
 
             const scenarios = getScenarioStore();
-            const scenarioEntries = Object.values(scenarios).sort((a, b) => a.code.localeCompare(b.code));
+            const scenarioEntries = sortScenarioEntries(Object.values(scenarios));
             const artifacts = getArtifactsStore();
             const paragraphCount = OPORD_PARAGRAPH_SEQUENCE.length;
-            const groups = { lecture: [], code: [] };
-            scenarioEntries.forEach(scenario => groups[getScenarioActivityType(scenario)].push(scenario));
-
-            ['lecture', 'code'].forEach(activityType => {
-                const entries = groups[activityType];
-                if (!entries.length) return;
-                const activity = getActivityMeta(activityType);
-                const description = activityType === 'lecture'
-                    ? '강의·영상 직후: shell을 확인하고 reference를 바탕으로 팀 수정문을 작성합니다.'
-                    : '본격 팀 활동: scenario를 바탕으로 팀 OPORD를 작성합니다. Step 1 통과 뒤 각 first-level writing chunk를 팀이 먼저 작성하고, 필요할 때만 3회의 Captain Manhee coach check로 revision hint를 받습니다.';
-                listContainer.innerHTML += `
-                    <div class="rounded-lg border ${activity.panel} p-2.5 space-y-2">
-                        <div class="flex items-center gap-1.5"><i class="fa-solid ${activity.icon} text-[11px]"></i><span class="text-[10px] font-black uppercase tracking-wider">${activity.label}</span></div>
-                        <p class="text-[9px] leading-relaxed text-slate-500">${description}</p>
-                        <div class="space-y-2" id="dash-group-${activityType}"></div>
-                    </div>
-                `;
-                const groupContainer = document.getElementById(`dash-group-${activityType}`);
-                entries.forEach(sci => {
-                    const submittedParagraphs = new Set(
-                        artifacts
-                            .filter(a => a.studentId === currentUserId && a.scenarioCode === sci.code)
-                            .map(getArtifactParagraphId)
-                    );
-                    const progress = getProgressStore();
-                    const completedParagraphs = new Set(submittedParagraphs);
-                    OPORD_PARAGRAPH_SEQUENCE.forEach(paragraphId => {
-                        if (progress[`${currentUserId}::${sci.code}::${paragraphId}::step2`]) {
-                            completedParagraphs.add(paragraphId);
-                        }
-                    });
-                    const completeCount = completedParagraphs.size;
-                    const submittedCount = submittedParagraphs.size;
-                    const isPassed = completeCount === paragraphCount;
-                    const buttonLabel = isPassed ? '복습하기' : (completeCount > 0 ? '계속' : '도전');
-                    const statusDetail = submittedCount === completeCount
-                        ? `${completeCount}/${paragraphCount} paragraphs`
-                        : `${completeCount}/${paragraphCount} complete · ${submittedCount} shared`;
-                    groupContainer.innerHTML += `
-                        <div class="p-3 border rounded-lg flex justify-between items-center bg-white hover:border-indigo-300 transition-all gap-3">
-                            <div class="space-y-0.5 min-w-0">
-                                <span class="text-[10px] font-mono font-bold ${isPassed ? 'text-emerald-600' : 'text-indigo-600'}">${escapeHtml(sci.code)} · ${statusDetail}</span>
-                                <h4 class="text-xs font-bold text-slate-800">${escapeHtml(sci.title)}</h4>
-                            </div>
-                            <button onclick="startTraining('${escapeHtml(sci.code)}')" class="shrink-0 px-2.5 py-1 text-[11px] font-bold text-white rounded shadow ${isPassed ? 'bg-emerald-600 hover:bg-emerald-700' : 'navy-bg hover:bg-slate-800'}">${buttonLabel}</button>
-                        </div>
-                    `;
-                });
-            });
-
             if (!scenarioEntries.length) {
+                listContainer.innerHTML = `<div class="text-xs text-slate-400 italic p-4 border border-dashed rounded-lg text-center">등록된 활동이 없습니다.</div>`;
                 historyContainer.innerHTML = `<div class="text-xs text-slate-400 italic p-6 border border-dashed rounded-lg text-center">등록된 활동이 없습니다. 교관이 시나리오를 공유 DB에 배포해야 합니다.</div>`;
                 return;
             }
+
+            // Keep the left-side launcher flat. Activity type is shown as a small badge,
+            // not as a separate umbrella section, so new lessons keep accumulating as
+            // OPORD / defense / offense activities grow.
+            scenarioEntries.forEach(sci => {
+                const activity = getActivityMeta(getScenarioActivityType(sci));
+                const submittedParagraphs = new Set(
+                    artifacts
+                        .filter(a => a.studentId === currentUserId && a.scenarioCode === sci.code)
+                        .map(getArtifactParagraphId)
+                );
+                const progress = getProgressStore();
+                const completedParagraphs = new Set(submittedParagraphs);
+                OPORD_PARAGRAPH_SEQUENCE.forEach(paragraphId => {
+                    if (progress[`${currentUserId}::${sci.code}::${paragraphId}::step2`]) {
+                        completedParagraphs.add(paragraphId);
+                    }
+                });
+                const completeCount = completedParagraphs.size;
+                const submittedCount = submittedParagraphs.size;
+                const isPassed = completeCount === paragraphCount;
+                const buttonLabel = isPassed ? '복습하기' : (completeCount > 0 ? '계속' : '도전');
+                const statusDetail = submittedCount === completeCount
+                    ? `${completeCount}/${paragraphCount} paragraphs`
+                    : `${completeCount}/${paragraphCount} complete · ${submittedCount} shared`;
+                listContainer.innerHTML += `
+                    <div class="p-3 border rounded-lg flex justify-between items-center bg-white hover:border-indigo-300 transition-all gap-3">
+                        <div class="space-y-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-[10px] font-mono font-bold ${isPassed ? 'text-emerald-600' : 'text-indigo-600'}">${escapeHtml(sci.code)} · ${statusDetail}</span>
+                                <span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span>
+                            </div>
+                            <h4 class="text-xs font-bold text-slate-800">${escapeHtml(sci.title)}</h4>
+                        </div>
+                        <button onclick='startTraining(${JSON.stringify(sci.code)})' class="shrink-0 px-2.5 py-1 text-[11px] font-bold text-white rounded shadow ${isPassed ? 'bg-emerald-600 hover:bg-emerald-700' : 'navy-bg hover:bg-slate-800'}">${buttonLabel}</button>
+                    </div>
+                `;
+            });
 
             const myArtifacts = artifacts.filter(a => a.studentId === currentUserId);
             const packages = groupArtifactsByStudentAndScenario(myArtifacts);
@@ -2606,7 +3008,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 const isComplete = completeCount === paragraphCount;
                 const isScenarioOpen = studentDashboardUiState.openScenarioCodes.has(scenario.code);
                 const latestText = bundle.latestTimestamp
-                    ? new Date(bundle.latestTimestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+                    ? formatTimestamp(bundle.latestTimestamp)
                     : '제출 없음';
                 const statusDetail = submittedCount === completeCount
                     ? `${completeCount}/${paragraphCount} paragraphs`
@@ -2654,7 +3056,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                         <div class="border-t border-slate-100 bg-slate-50/40 px-4 py-4">
                             <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-500">My activity package · 1 → 5</p>
-                                <button onclick="startTraining('${escapeHtml(scenario.code)}')" class="rounded ${isComplete ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'} px-3 py-1.5 text-[10px] font-bold text-white shadow"><i class="fa-solid fa-arrow-right mr-1"></i>${actionLabel}</button>
+                                <button onclick='startTraining(${JSON.stringify(scenario.code)})' class="rounded ${isComplete ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'} px-3 py-1.5 text-[10px] font-bold text-white shadow"><i class="fa-solid fa-arrow-right mr-1"></i>${actionLabel}</button>
                             </div>
                             <div class="space-y-2">${paragraphRows}</div>
                         </div>
@@ -3479,19 +3881,22 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             return prompts[paragraphId] || 'Write your revised OPORD paragraph here.';
         }
 
+        function step2TeacherQuestionArea(field, question, value = '', required = false, rows = 4) {
+            return `
+                <label class="block rounded-lg border border-violet-100 bg-white p-3 shadow-sm">
+                    <span class="mb-2 block text-[11px] font-black leading-relaxed text-violet-900">${escapeHtml(question)}${required ? '<span class="ml-1 text-rose-500">*</span>' : ''}</span>
+                    <textarea data-step2-field="${field}" rows="${rows}" placeholder="여기에 팀 답변을 작성하십시오." oninput="saveStep2DraftFromUI()" class="w-full resize-y rounded border border-slate-200 px-3 py-2 text-[11px] leading-relaxed text-slate-700 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">${escapeHtml(value)}</textarea>
+                </label>
+            `;
+        }
+
         function renderTeacherStep2QuestionResponses(data, values, mode = 'standalone') {
             const prompts = getScenarioStep2Questions(data, activeParagraphId);
             if (!prompts.length) return '';
             const promptInputs = prompts.map((prompt, index) =>
-                step2TextArea(getLectureResponseField(index), `Teacher question ${index + 1}`, values[getLectureResponseField(index)] || '', prompt, true, prompt, 4)
+                step2TeacherQuestionArea(getLectureResponseField(index), prompt, values[getLectureResponseField(index)] || '', true, 4)
             ).join('');
-            const guidance = mode === 'prewrite'
-                ? 'Answer the teacher questions first, then use those notes to complete the OPORD writing chunks below.'
-                : 'Read or watch the reference together, then answer the teacher questions below in short team notes.';
-            return `
-                <div class="rounded-lg border border-violet-100 bg-violet-50/70 px-3 py-2 text-[10px] leading-relaxed text-violet-900"><i class="fa-solid fa-comments mr-1"></i><strong>Teacher Step 2 questions:</strong> ${guidance}</div>
-                <div class="grid grid-cols-1 gap-3">${promptInputs}</div>
-            `;
+            return `<div class="grid grid-cols-1 gap-3">${promptInputs}</div>`;
         }
 
         function renderLectureThinkingPrompts(data, drill, values) {
@@ -3543,7 +3948,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const activityType = getScenarioActivityType(data);
             const isThinkingPromptActivity = isOpord01ThinkingPromptActivity(data);
             if (heading) heading.innerHTML = isThinkingPromptActivity
-                ? '<i class="fa-solid fa-comments mr-1"></i>Step 2: Guided Thinking Prompts'
+                ? '<i class="fa-solid fa-comments mr-1"></i>Step 2: Teacher Questions'
                 : (activityType === 'lecture'
                     ? '<i class="fa-solid fa-pen-to-square mr-1"></i>Step 2: Lecture Revision Writing'
                     : '<i class="fa-solid fa-people-group mr-1"></i>Step 2: Code Your Way · Group Coach Checkpoints');
@@ -3552,7 +3957,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             if (!step1Complete) {
                 panel.classList.add('step-locked');
                 instruction.innerText = isThinkingPromptActivity
-                    ? 'Step 1의 OPORD shell sequence를 통과하면 교관이 설정한 Step 2 question prompt가 열립니다.'
+                    ? 'Step 1의 OPORD shell sequence를 통과하면 교관이 직접 작성한 Step 2 질문과 답변칸이 열립니다.'
                     : (activityType === 'lecture'
                         ? 'Step 1의 OPORD shell sequence를 통과하면 팀의 open-ended revision workspace가 열립니다.'
                         : 'Step 1의 OPORD shell sequence를 통과하면 팀이 first-level writing chunk를 작성하고, 각 chunk마다 최대 3회의 coach check를 사용할 수 있습니다.');
@@ -3568,10 +3973,10 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             if (complete) {
                 const artifact = getCurrentStep2Artifact();
                 instruction.innerText = isThinkingPromptActivity
-                    ? '제출된 guided thinking responses입니다. 수정 · 재작성으로 다시 열어 팀의 관찰을 보완할 수 있습니다.'
+                    ? '제출된 Step 2 질문 답변입니다. 수정 · 재작성으로 다시 열어 팀의 관찰을 보완할 수 있습니다.'
                     : '제출된 team writing artifact입니다. 수정 · 재작성으로 다시 열어 내용을 보완할 수 있습니다.';
                 status.className = 'text-[10px] rounded bg-emerald-100 px-2 py-1 font-bold text-emerald-700';
-                status.innerText = isThinkingPromptActivity ? 'Submitted thinking responses' : 'Submitted writing artifact';
+                status.innerText = isThinkingPromptActivity ? 'Submitted Step 2 responses' : 'Submitted writing artifact';
                 step2Slots.innerHTML = `
                     <div class="rounded-xl border border-emerald-200 bg-white p-3">
                         <div class="mb-2 flex items-center justify-between gap-2"><span class="text-[10px] font-black uppercase tracking-wider text-emerald-700"><i class="fa-solid fa-check-circle mr-1"></i>Team paragraph output</span><span class="text-[9px] text-slate-400">Shared to artifact pile-up</span></div>
@@ -3586,15 +3991,15 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
             const values = getStep2SeedValues();
             instruction.innerText = isThinkingPromptActivity
-                ? '영상·스크립트, reference cards, phrase bank를 근거로 아래 Step 2 question prompt에 짧고 구체적인 팀 답변을 작성하십시오.'
+                ? '아래 굵게 표시된 교관 질문을 읽고, 각 질문 바로 밑의 칸에 팀 답변을 작성하십시오.'
                 : (isCaptainManheeScenario(data)
                     ? '팀이 first-level OPORD chunk를 먼저 작성합니다. 각 chunk는 team discussion 뒤 최대 3회의 Captain Manhee coach check로 revision hint를 받을 수 있습니다.'
                     : drill.step2Prompt);
             status.className = 'text-[10px] rounded bg-amber-100 px-2 py-1 font-bold text-amber-800';
-            status.innerText = isThinkingPromptActivity ? 'Guided thinking responses' : (activityType === 'lecture' ? 'Lecture revision draft' : drill.step2Title);
+            status.innerText = isThinkingPromptActivity ? 'Teacher question responses' : (activityType === 'lecture' ? 'Lecture revision draft' : drill.step2Title);
             verifyBtn.classList.remove('hidden');
             verifyBtn.innerHTML = isThinkingPromptActivity
-                ? '<i class="fa-solid fa-cloud-arrow-up"></i> Thinking Responses 제출 및 공유'
+                ? '<i class="fa-solid fa-cloud-arrow-up"></i> Step 2 답변 제출 및 공유'
                 : (activityType === 'lecture'
                     ? '<i class="fa-solid fa-cloud-arrow-up"></i> Revised Paragraph 제출 및 공유'
                     : '<i class="fa-solid fa-cloud-arrow-up"></i> Team Writing 제출 및 공유');
@@ -3631,7 +4036,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     ? '<i class="fa-solid fa-chalkboard-user"></i> Lecture Reference & Phrase Bank'
                     : '<i class="fa-solid fa-map-location-dot"></i> Scenario Reference & Phrase Bank';
                 note.innerHTML = isOpord01ThinkingPromptActivity(data)
-                    ? '영상 스크립트·phrase bank를 참고하여 Step 2의 두 thinking prompt에 팀의 짧은 근거 답변을 작성하십시오. 전체 OPORD 작성은 OPORD-02에서 합니다.'
+                    ? '교관 reference와 phrase bank를 참고하여 Step 2의 교관 질문에 팀 답변을 작성하십시오.'
                     : (activityType === 'lecture'
                         ? '교관이 입력한 영상 스크립트·예문을 참고하되, Step 2에는 팀의 수정문을 자기 말로 작성하십시오.'
                         : '교관이 제공한 scenario reference를 참고하되, Step 2에서는 팀의 own wording으로 작성하십시오.');
@@ -3641,7 +4046,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
             title.innerHTML = '<i class="fa-solid fa-circle-check"></i> Paragraph Submitted';
             note.innerHTML = isOpord01ThinkingPromptActivity(data)
-                ? '이 paragraph의 shell과 두 guided thinking responses가 모두 제출되었습니다.'
+                ? '이 paragraph의 shell과 Step 2 질문 답변이 모두 제출되었습니다.'
                 : (activityType === 'lecture'
                     ? '이 paragraph의 shell과 lecture revision draft가 모두 제출되었습니다.'
                     : '이 paragraph의 Step 1 shell과 Step 2 team writing이 모두 완료되었습니다.');
@@ -3912,11 +4317,12 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
         function compileGuidedQuestionResponses(paragraphId, values, scenarioData = getScenarioStore()[selectedScenarioCode]) {
             const prompts = getScenarioStep2Questions(scenarioData, paragraphId);
             if (!prompts.length) return '';
-            const lines = ['GUIDED THINKING RESPONSES'];
+            const lines = [];
             prompts.forEach((prompt, index) => {
-                lines.push('', `${index + 1}. ${prompt}`, String(values[getLectureResponseField(index)] || '').trim());
+                const answer = String(values[getLectureResponseField(index)] || '').trim();
+                if (answer) lines.push(`${index + 1}. ${prompt}\n${answer}`);
             });
-            return lines.join('\n').trim();
+            return lines.join('\n\n').trim();
         }
 
         function compileStep2Writing(paragraphId, values, activityType = getScenarioActivityType(getScenarioStore()[selectedScenarioCode]), scenarioData = getScenarioStore()[selectedScenarioCode]) {
@@ -3981,14 +4387,14 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
         function getReadableStep2FieldName(field) {
             const lectureMatch = String(field || '').match(/^lectureResponse(\d+)$/);
-            if (lectureMatch) return `Thinking prompt ${lectureMatch[1]} response`;
+            if (lectureMatch) return `Teacher question ${lectureMatch[1]} response`;
             const names = {
                 situationAOI: 'Area of Interest', situationAO: 'Area of Operations', situationEnemy: 'Enemy Forces (Latest Intelligence)', situationFriendly: 'Friendly Forces', situationAttach: 'Attachments and Detachments',
                 missionStatement: 'Mission Statement',
                 executionIntent: 'Commander’s Intent', executionConcept: 'Concept of Operations', executionManeuver: 'Scheme of Movement and Maneuver', executionTasks: 'Tasks to Subordinate Units', executionCoord: 'Coordinating Instructions',
                 sustainLogistic: 'Logistic', sustainPersonnelServices: 'Personnel Services Support', sustainTccc: 'Tactical Combat Casualty Care',
                 commandCommand: 'Command', commandControl: 'Control', commandSignal: 'Signal',
-                lectureDraft: 'Team revised paragraph', lectureResponse1: 'Thinking prompt 1 response', lectureResponse2: 'Thinking prompt 2 response',
+                lectureDraft: 'Team revised paragraph', lectureResponse1: 'Teacher question 1 response', lectureResponse2: 'Teacher question 2 response',
                 situationTerrain: 'Terrain', situationWeather: 'Weather', situationTwoLevelsUp: 'Two Levels Up', situationOneLevelUp: 'One Level Up', situationAdjacent: 'Adjacent Units',
                 missionUnit: 'Who / Unit', missionTime: 'When / Time', missionTask: 'What / Task', missionObjective: 'Where / Objective', missionPurpose: 'Why / Purpose',
                 executionPurpose: 'Intent: Purpose', executionKeyTasks: 'Intent: Key Tasks', executionEndState: 'Intent: End State', executionPhase1: 'Phase I', executionPhase2: 'Phase II',
@@ -4071,7 +4477,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 if (currentUser?.role === 'teacher') renderTeacherDashboard();
                 feedback.className = 'text-xs font-bold text-emerald-600';
                 feedback.innerText = isOpord01ThinkingPromptActivity(data)
-                    ? `🎉 ${drill.title} thinking responses가 실제 공유 DB에 제출되었습니다.`
+                    ? `🎉 ${drill.title} Step 2 답변이 실제 공유 DB에 제출되었습니다.`
                     : (activityType === 'lecture'
                         ? `🎉 ${drill.title} revised paragraph가 실제 공유 DB에 제출되었습니다.`
                         : `🎉 ${drill.title} team writing artifact가 실제 공유 DB에 제출되었습니다.`);
