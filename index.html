@@ -750,6 +750,54 @@
             }
 
             const localScenarios = getScenarioStore();
+
+            // If the teacher typed changes into the editor before the first DB publish,
+            // include that visible editor draft in the initial seed payload as well.
+            const editorCode = (editingScenarioCode || document.getElementById('new-sci-code')?.value.trim().toUpperCase() || '').trim();
+            const editorTitle = (document.getElementById('new-sci-title')?.value || '').trim();
+            const editorActivityType = normalizeActivityType(document.getElementById('new-sci-activity-type')?.value);
+            const editorHasAnyMaterial = TEACHER_PARAGRAPH_IDS.some(paragraphId => {
+                const referenceText = document.getElementById(`new-sci-${paragraphId}`)?.value || '';
+                const phraseText = document.getElementById(`new-sci-phrases-${paragraphId}`)?.value || '';
+                return referenceText.trim() || phraseText.trim();
+            });
+
+            if (editorCode && editorTitle && editorHasAnyMaterial) {
+                const step2Blocks = {};
+                const phraseBanks = {};
+                const missing = [];
+                TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
+                    const field = document.getElementById(`new-sci-${paragraphId}`);
+                    const phraseField = document.getElementById(`new-sci-phrases-${paragraphId}`);
+                    const blocks = parseTeacherBlocks(field ? field.value : '');
+                    const phrases = parseTeacherBlocks(phraseField ? phraseField.value : '');
+                    if (!blocks.length && !phrases.length) missing.push(`${PARAGRAPH_DRILLS[paragraphId].number}. ${PARAGRAPH_DRILLS[paragraphId].title}`);
+                    step2Blocks[paragraphId] = blocks;
+                    phraseBanks[paragraphId] = phrases;
+                });
+                if (missing.length) {
+                    alert(`편집기에 입력 중인 시나리오가 있습니다. 최초 배포 전에 5개 paragraph를 모두 채우거나, 편집기를 초기화하십시오.
+
+입력이 필요한 문단: ${missing.join(', ')}`);
+                    return;
+                }
+                localScenarios[editorCode] = {
+                    ...(localScenarios[editorCode] || {}),
+                    code: editorCode,
+                    title: editorTitle,
+                    activityType: editorActivityType,
+                    step2Blocks,
+                    phraseBanks,
+                    isActive: localScenarios[editorCode]?.isActive !== false,
+                    createdBy: localScenarios[editorCode]?.createdBy || currentSupabaseUserId,
+                    createdAt: localScenarios[editorCode]?.createdAt || Date.now(),
+                    updatedBy: currentSupabaseUserId,
+                    updatedAt: Date.now(),
+                    scenarioVersion: 'scenario-db-v1'
+                };
+                saveScenarioStore(localScenarios);
+            }
+
             const payload = Object.values(localScenarios).map(scenario => ({
                 code: scenario.code,
                 title: scenario.title,
@@ -1335,6 +1383,14 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
 
         function cloneBlockList(list) {
             return Array.isArray(list) ? list.map(item => String(item)) : [];
+        }
+
+
+        function parseTeacherBlocks(value) {
+            return String(value || '')
+                .split(/\r?\n/)
+                .map(line => line.trim())
+                .filter(Boolean);
         }
 
         function getScenarioStore() {
@@ -3361,7 +3417,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 return;
             }
 
-            const submitButton = document.querySelector('#step2-slots button[onclick*="verifyStep2"]');
+            const submitButton = document.getElementById('step2-verify-btn');
             if (submitButton) {
                 submitButton.disabled = true;
                 submitButton.classList.add('opacity-60', 'cursor-wait');
