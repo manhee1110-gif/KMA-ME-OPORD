@@ -52,6 +52,17 @@
         .source-tabs-scroll { scrollbar-width: none; -ms-overflow-style: none; }
         .source-tabs-scroll::-webkit-scrollbar { display: none; }
         .source-map-frame { background-image: linear-gradient(45deg, #f8fafc 25%, transparent 25%), linear-gradient(-45deg, #f8fafc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f8fafc 75%), linear-gradient(-45deg, transparent 75%, #f8fafc 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
+        .source-gallery-stage { min-height: 260px; }
+        .source-gallery-image { display: block; max-height: calc(94dvh - 290px); min-height: 180px; width: 100%; object-fit: contain; }
+        .source-gallery-arrow { position: absolute; top: 50%; z-index: 3; display: inline-flex; height: 2.75rem; width: 2.75rem; transform: translateY(-50%); align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,.55); border-radius: 9999px; background: rgba(15,23,42,.78); color: white; box-shadow: 0 8px 24px rgba(15,23,42,.28); transition: transform .15s ease, background-color .15s ease; }
+        .source-gallery-arrow:hover { background: rgba(49,46,129,.92); transform: translateY(-50%) scale(1.05); }
+        .source-gallery-arrow.prev { left: 0.75rem; }
+        .source-gallery-arrow.next { right: 0.75rem; }
+        .source-gallery-dot.active { background: #312e81; color: #fff; border-color: #312e81; }
+        @media (max-width: 640px) {
+            .source-gallery-image { max-height: calc(100dvh - 285px); }
+            .source-gallery-arrow { height: 2.35rem; width: 2.35rem; }
+        }
     </style>
 </head>
 <body>
@@ -167,6 +178,11 @@
                                         <p id="company-source-toggle-status" class="mt-1 text-[9px] leading-relaxed text-slate-500">원문 세트가 저장된 활동에서만 켜거나 끌 수 있습니다. 숨겨도 원문 데이터는 삭제되지 않습니다.</p>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="rounded-lg border border-cyan-100 bg-cyan-50/50 p-3">
+                                <label for="new-sci-company-source-images" class="block text-[11px] font-black text-cyan-900"><i class="fa-solid fa-images mr-1"></i>Company OPORD 이미지 갤러리</label>
+                                <textarea id="new-sci-company-source-images" rows="4" oninput="updateCompanySourceImageEditorUi()" class="mt-2 w-full rounded border border-cyan-200 bg-white p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="map_final.png | 1. 작전지역 기본도&#10;phase1.png | 2. Phase I 도하·고립&#10;phase2.png | 3. Phase II UAS 타격"></textarea>
+                                <p class="mt-1 text-[9px] leading-relaxed text-slate-500">한 줄에 이미지 하나: <strong>파일명 또는 URL | 표시 제목 | 설명(선택)</strong>. GitHub에서는 이미지 파일을 index.html과 같은 폴더에 올리면 됩니다.</p>
                             </div>
                             <div class="rounded-lg border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
                                 <div>
@@ -1009,6 +1025,11 @@
                 step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
                 const seedSource = getScenarioCompanySource(localScenarios[editorCode] || {});
                 const seedSourceToggle = document.getElementById('new-sci-company-source-enabled');
+                const seedImagesField = document.getElementById('new-sci-company-source-images');
+                if (seedImagesField) {
+                    seedSource.images = parseCompanySourceImageLines(seedImagesField.value);
+                    seedSource.mapUrl = seedSource.images[0]?.url || '';
+                }
                 if (companySourceHasContent(seedSource)) {
                     seedSource.enabled = Boolean(seedSourceToggle?.checked);
                     step2Blocks[COMPANY_SOURCE_KEY] = seedSource;
@@ -1027,6 +1048,7 @@
                     step2Blocks,
                     step2Questions,
                     phraseBanks,
+                    companySource: seedSource,
                     isActive: localScenarios[editorCode]?.isActive !== false,
                     createdBy: localScenarios[editorCode]?.createdBy || currentSupabaseUserId,
                     createdAt: localScenarios[editorCode]?.createdAt || Date.now(),
@@ -1344,6 +1366,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                         "subtitle": "Company-level source order · fictional classroom scenario",
                         "missionAnchor": "COMPANY MISSION\nC Company attacks to destroy the enemy UAS cell on OBJ HWARANG NLT 140600JUL26 in order to restore freedom of maneuver for 2nd Brigade along the eastern ring road and prevent further enemy UAS attacks against battalion critical assets.\n\nCOMMANDER'S INTENT\nPurpose: Restore freedom of maneuver for 2nd Brigade along the eastern ring road and prevent further enemy UAS attacks against battalion critical assets.\nKey Tasks: Isolate OBJ HWARANG; locate and destroy the enemy UAS cell; prevent exfiltration; protect friendly C2 and UAS nodes; secure OBJ HWARANG until passage is complete.\nEnd State: The enemy UAS cell is destroyed, OBJ HWARANG is under friendly control, and 2nd Brigade continues north without effective enemy UAS interference.",
                         "mapUrl": "map_final.png",
+                        "images": [{ "url": "map_final.png", "label": "1. Operation Hwarang Shield Map", "caption": "Fictional 1:25,000 training map for the company-level source order." }],
                         "sections": {
                                     "situation": "HEADQUARTERS\nC COMPANY, 1ST BATTALION, 1ST BRIGADE\nHWARANG CITY, KOREA\n121800JUL26\nOPORD 26-07 (OPERATION HWARANG SHIELD) (UNCLASSIFIED)\nHYPOTHETICAL EDUCATIONAL SCENARIO — FOR CLASSROOM USE ONLY\nReferences: Map, Hwarang City, North Korea, 1:25,000, 2d Edition (fictional training map).\nTime Zone Used Throughout the Order: Local\nTASK ORGANIZATION\nC Company Headquarters\n1st Rifle Platoon\n2nd Rifle Platoon\n3rd Rifle Platoon\nWeapons Platoon (Mortar Section)\nUAS Platoon, OPCON to C Company for the duration of the operation\nBattalion Electronic Warfare Platoon, direct support\nJavelin Team, OPCON to 3d Platoon for Phase II\n1. SITUATION\na. Area of Interest.\nHwarang City is a fictitious North Korean city located along a major approach toward Pyongyang. The city sits in a basin surrounded by mountainous terrain. A built-up urban center occupies the basin floor, Hwarang Stream crosses the city, and an outer ring road encircles the surrounding mountains. The eastern ring road is a critical route for follow-on forces advancing north.\nA friendly lead brigade seized Hwarang City and disrupted the enemy battalion that had defended it. The 1st Brigade subsequently conducted a follow-and-assume mission to stabilize the city and support the forward passage of lines and continued attack of the reinforced 2d Brigade.\nb. Area of Operations.\n(1) Boundaries.\nNorth: 1st and 2nd Companies’ stabilization sectors north of Hwarang Stream.\nSouth: C Company assembly area and battalion support area.\nEast: The 1st Battalion–2nd Brigade boundary and the eastern ring road.\nWest: The adjacent 2nd battalion’s stabilization sector.\nExact boundary coordinates and graphic control measures: All grids use fictional training MGRS zone 52S CG. North boundary: gridline 625; south boundary: gridline 595; east boundary: gridline 435; west boundary: gridline 395. PL MELONA follows the south bank of Hwarang Stream; PL BABAMBA follows the north bank; PL OKDONGJA marks the mountain foothill; PL MEGATON marks the mid-slope; PL NUGABA marks the summit and serves as the limit of advance.\n(2) Terrain.\n(a) Obstacles.\nHwarang Stream is relatively wide but shallow, with a moderate current. It is not frozen despite winter conditions. Its shallow depth permits a deliberate dismounted wet-gap crossing without bridging assets. The wet crossing, however, increases exposure to cold-weather injury and slows movement.\nHwarang Mountain is approximately 600 meters high. No vehicle road reaches the summit; movement is limited to hiking trails, ridgelines, and unimproved paths. Mountainous terrain also prevents direct lateral vehicle movement between the battalion sector and the eastern ring road.\n(b) Avenues of Approach.\nThe urban street grid supports mounted and dismounted movement and provides multiple concealed routes to the stream. After crossing, the limited trails and ridges canalize dismounted movement toward OBJ HWARANG. Enemy teams may exfiltrate west toward the urban area or east across the brigade boundary.\n(c) Key Terrain.\nOBJ HWARANG consists of the summit and adjacent ridgelines of Hwarang Mountain. It dominates observation of both the urban area and the eastern ring road. Control of the objective enables UAS operations and attacks against friendly forces moving through either sector.\n(d) Observation and Fields of Fire.\nFour- to five-story buildings in the urban area provide elevated observation and concealment. Hwarang Mountain is sparsely vegetated and offers limited natural concealment. Movement on exposed slopes is readily observable by ground observers and UAS. The summit provides long-range observation over the city and the eastern ring road.\n(e) Cover and Concealment.\nUrban buildings provide effective concealment for friendly personnel and technical systems. The mountain provides limited concealment except along folds in the terrain and reverse slopes. The enemy occupies a hardened UAS control and firing position near the summit.\nExact objective grid and named terrain features: OBJ HWARANG, 52S CG 42500 62000; hardened UAS control and firing position, 52S CG 42520 62030, a reinforced concrete observation post built into the rocky summit.\n(3) Weather.\n\nHigh / Low | –2°C / –8°C\n--- | ---\nWind | Northwest 4–5 m/s, gusting to 7 m/s\nVisibility | Good\nSky | Clear\nIllumination | No moon\nPrecipitation | None expected\nGround | Snow remains on the ground\n\nEffects. Clear weather favors friendly and enemy UAS observation. Snow reveals tracks and movement. Wind and low temperatures reduce small-UAS endurance, stability, and battery performance. No moon slows dismounted movement and increases reliance on NVGs. The wet-gap crossing increases the risk of hypothermia and frost injury.\nc. Enemy Forces.\n(1) Composition.\nThe enemy force on OBJ HWARANG is assessed as a reinforced UAS cell of platoon-minus strength. It consists of reconnaissance UAS teams, strike UAS teams, a command-and-control element, a security element, an antiarmor team, and a limited mortar-observer capability.\n(2) Disposition.\nThe main enemy element occupies a hardened UAS control and firing position near the summit. Reconnaissance and strike teams operate from the summit and eastern ridgeline. Security and antiarmor elements observe the primary mountain approaches and the eastern ring road.\n(3) Strength.\nThe enemy is composed of remnants of the former city-defense force but retains approximately 70–80 percent combat effectiveness in personnel, UAS systems, and protected fighting positions.\n(4) Recent Activities.\nThe enemy has repeatedly used reconnaissance UAS to observe friendly command posts, communications nodes, mortar positions, supply movement, and follow-on forces. It then employs strike UAS, mortar fires, and antiarmor weapons against identified targets. From Hwarang Mountain, the enemy exploits the boundary between 1st Battalion and 2nd Brigade to attack both formations and complicate friendly coordination.\n(5) Capabilities.\n• Conduct persistent UAS surveillance and target acquisition.\n• Attack command-and-control, communications, fires, and sustainment nodes with strike UAS.\n• Adjust mortar fires using UAS observation.\n• Engage vehicles on the eastern ring road with antiarmor weapons.\n• Use hardened positions to increase survivability.\n• Disperse in small teams and exfiltrate across unit boundaries or into the urban area.\n• Reconstitute and resume UAS operations after temporary displacement.\n(6) Enemy Most Likely Course of Action.\nThe enemy continues to observe 1st Battalion and 2nd Brigade movement from OBJ HWARANG and attacks command posts, support nodes, and vehicles with UAS-enabled effects. Upon detecting C Company’s attack, the enemy defends from hardened positions, continues strike-UAS operations, and attempts to delay the assault. If unable to retain the position, it disperses in small teams and exfiltrates east across the brigade boundary or west into the urban area.\n(7) Enemy Most Dangerous Course of Action.\nThe enemy detects C Company during the wet-gap crossing, masses strike UAS and mortar fires on the crossing site and mountain approaches, and simultaneously attacks the C Company CP or UAS Control Site to disrupt command and control and remote strike capability.\nd. Friendly Forces.\n(1) Two Levels Up.\n1st Brigade secures Hwarang City, conducts stabilization operations, and supports the forward passage and continued attack of 2nd Brigade in order to enable the advance toward Pyongyang.\n(2) One Level Up.\n1st Battalion stabilizes eastern Hwarang City, protects key routes and critical assets, and destroys remaining enemy forces that can interfere with the passage of 2nd Brigade. C Company is the battalion decisive operation for the attack on OBJ HWARANG.\n(3) Adjacent Units.\nNorth: 1st and 2nd Companies conduct stabilization operations north of Hwarang Stream.\nWest: 2nd Battalion conducts stabilization operations in the adjacent sector.\nEast: 2nd Brigade advances north along the eastern ring road.\nSouth: 3rd Battalion remains in brigade reserve.\ne. Attachments and Detachments.\n• UAS Platoon OPCON to C Company for the duration of the operation.\n• Battalion Electronic Warfare Platoon in direct support of C Company.\n• One Javelin team OPCON to 3rd Platoon for Phase II.",
                                     "mission": "2. MISSION\nC Company attacks to destroy the enemy UAS cell on OBJ HWARANG NLT 140600JUL26 in order to restore freedom of maneuver for 2nd Brigade along the eastern ring road and prevent further enemy UAS attacks against battalion critical assets.",
@@ -1637,12 +1660,61 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         const STEP2_QUESTIONS_KEY = '__step2Questions';
 
 
+        function normalizeCompanySourceImages(value, legacyMapUrl = '') {
+            const rawImages = Array.isArray(value) ? value : [];
+            const images = [];
+            const seen = new Set();
+            rawImages.forEach((item, index) => {
+                const source = typeof item === 'string' ? { url: item } : (item && typeof item === 'object' ? item : {});
+                const url = String(source.url || source.src || '').trim();
+                if (!url || seen.has(url)) return;
+                seen.add(url);
+                images.push({
+                    url,
+                    label: String(source.label || source.title || `${index + 1}. Source Image`).trim(),
+                    caption: String(source.caption || source.description || '').trim()
+                });
+            });
+            const fallbackUrl = String(legacyMapUrl || '').trim();
+            if (!images.length && fallbackUrl) {
+                images.push({ url: fallbackUrl, label: '1. Map / Concept Sketch', caption: '' });
+            }
+            return images;
+        }
+
+        function parseCompanySourceImageLines(value) {
+            return String(value || '')
+                .split(/\r?\n/)
+                .map(line => line.trim())
+                .filter(Boolean)
+                .map((line, index) => {
+                    const [url = '', label = '', ...captionParts] = line.split('|').map(part => part.trim());
+                    return {
+                        url,
+                        label: label || `${index + 1}. Source Image`,
+                        caption: captionParts.join(' | ').trim()
+                    };
+                })
+                .filter(item => item.url);
+        }
+
+        function serializeCompanySourceImages(value, legacyMapUrl = '') {
+            return normalizeCompanySourceImages(value, legacyMapUrl)
+                .map(image => [image.url, image.label, image.caption].filter(Boolean).join(' | '))
+                .join('\n');
+        }
+
+        function getCompanySourceImages(source) {
+            const value = source && typeof source === 'object' ? source : {};
+            return normalizeCompanySourceImages(value.images, value.mapUrl);
+        }
+
         function companySourceHasContent(value) {
             const source = value && typeof value === 'object' ? value : {};
             const sections = source.sections && typeof source.sections === 'object' ? source.sections : {};
             return Boolean(
                 String(source.missionAnchor || '').trim()
-                || String(source.mapUrl || '').trim()
+                || getCompanySourceImages(source).length
                 || TEACHER_PARAGRAPH_IDS.some(id => String(sections[id] || '').trim())
             );
         }
@@ -1652,9 +1724,10 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const sections = source.sections && typeof source.sections === 'object' ? source.sections : {};
             const normalizedSections = {};
             TEACHER_PARAGRAPH_IDS.forEach(id => { normalizedSections[id] = String(sections[id] || ''); });
+            const images = normalizeCompanySourceImages(source.images, source.mapUrl);
             const contentAvailable = Boolean(
                 String(source.missionAnchor || '').trim()
-                || String(source.mapUrl || '').trim()
+                || images.length
                 || Object.values(normalizedSections).some(section => String(section || '').trim())
             );
             const hasExplicitEnabled = Object.prototype.hasOwnProperty.call(source, 'enabled');
@@ -1667,7 +1740,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 title: String(source.title || ''),
                 subtitle: String(source.subtitle || ''),
                 missionAnchor: String(source.missionAnchor || ''),
-                mapUrl: String(source.mapUrl || ''),
+                mapUrl: images[0]?.url || '',
+                images,
                 sections: normalizedSections
             };
         }
@@ -1697,6 +1771,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const status = document.getElementById('company-source-toggle-status');
             if (!checkbox) return;
             const normalized = normalizeCompanySource(source, false);
+            const imageField = document.getElementById('new-sci-company-source-images');
+            if (imageField) imageField.value = serializeCompanySourceImages(normalized.images, normalized.mapUrl);
             const hasContent = companySourceHasContent(normalized);
             checkbox.disabled = !hasContent;
             checkbox.checked = hasContent && normalized.enabled !== false;
@@ -1704,7 +1780,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             if (status) {
                 status.innerText = hasContent
                     ? (checkbox.checked
-                        ? '현재 활동에서는 Mission Anchor, Company OPORD 원문, Map 버튼이 학생 화면에 표시됩니다.'
+                        ? `현재 활동에서는 Mission Anchor, Company OPORD 원문, 이미지 ${getCompanySourceImages(normalized).length}장이 학생 화면에 표시됩니다.`
                         : '현재 활동에서는 Company OPORD Source 세트를 숨깁니다. 원문 데이터는 그대로 보존됩니다.')
                     : '이 활동에는 저장된 Company OPORD Source 세트가 없습니다.';
                 status.className = `mt-1 text-[9px] leading-relaxed ${hasContent ? (checkbox.checked ? 'text-emerald-700' : 'text-amber-700') : 'text-slate-400'}`;
@@ -1719,6 +1795,22 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 ? '저장 후 학생 화면에 Mission Anchor, Company OPORD 원문, Map 버튼이 표시됩니다.'
                 : '저장 후 학생 화면에서 Company OPORD Source 세트가 숨겨집니다. 원문 데이터는 삭제되지 않습니다.';
             status.className = `mt-1 text-[9px] leading-relaxed ${checkbox.checked ? 'text-emerald-700' : 'text-amber-700'}`;
+        }
+
+        function updateCompanySourceImageEditorUi() {
+            const checkbox = document.getElementById('new-sci-company-source-enabled');
+            const field = document.getElementById('new-sci-company-source-images');
+            const status = document.getElementById('company-source-toggle-status');
+            if (!checkbox || !field) return;
+            const imageCount = parseCompanySourceImageLines(field.value).length;
+            if (imageCount) {
+                checkbox.disabled = false;
+                checkbox.classList.remove('opacity-50');
+                if (status) {
+                    status.innerText = `이미지 ${imageCount}장이 입력되었습니다. 체크 후 저장하면 학생 팝업에서 갤러리로 표시됩니다.`;
+                    status.className = 'mt-1 text-[9px] leading-relaxed text-cyan-700';
+                }
+            }
         }
 
         function materializeBuiltInScenario(code) {
@@ -1742,7 +1834,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 isActive: true,
                 createdAt: base.createdAt || Date.now(),
                 updatedAt: Date.now(),
-                scenarioVersion: 'hwarang-opord02-v4'
+                scenarioVersion: 'hwarang-opord02-gallery-v1'
             };
         }
 
@@ -1779,12 +1871,14 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         }
 
         let companySourceActiveTab = 'situation';
+        let companySourceActiveImageIndex = 0;
 
         function openCompanyOpordSource(tabId = activeParagraphId) {
             const scenario = getScenarioStore()[selectedScenarioCode];
             const source = getScenarioCompanySource(scenario);
             if (!hasCompanySource(source)) return;
             companySourceActiveTab = tabId === 'map' ? 'map' : (TEACHER_PARAGRAPH_IDS.includes(tabId) ? tabId : 'situation');
+            if (companySourceActiveTab === 'map') companySourceActiveImageIndex = 0;
             document.getElementById('company-source-title').innerText = source.title || 'Company OPORD Source';
             document.getElementById('company-source-subtitle').innerText = source.subtitle || '';
             const modal = document.getElementById('company-source-modal');
@@ -1803,6 +1897,48 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
 
         function handleCompanySourceBackdrop(event) {
             if (event.target?.id === 'company-source-modal') closeCompanyOpordSource();
+        }
+
+        function setCompanySourceImage(index) {
+            const source = getScenarioCompanySource(getScenarioStore()[selectedScenarioCode]);
+            const images = getCompanySourceImages(source);
+            if (!images.length) return;
+            companySourceActiveImageIndex = ((Number(index) || 0) + images.length) % images.length;
+            renderCompanyOpordSource(source);
+        }
+
+        function stepCompanySourceImage(delta) {
+            setCompanySourceImage(companySourceActiveImageIndex + Number(delta || 0));
+        }
+
+        function renderCompanySourceGallery(source) {
+            const images = getCompanySourceImages(source);
+            if (!images.length) {
+                return '<div class="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center text-sm text-slate-500">등록된 이미지가 없습니다.</div>';
+            }
+            companySourceActiveImageIndex = Math.min(Math.max(companySourceActiveImageIndex, 0), images.length - 1);
+            const image = images[companySourceActiveImageIndex];
+            const multiple = images.length > 1;
+            const numberButtons = images.map((item, index) => `
+                <button type="button" onclick="setCompanySourceImage(${index})" class="source-gallery-dot ${index === companySourceActiveImageIndex ? 'active' : ''} min-w-8 rounded-full border border-slate-300 bg-white px-2.5 py-1.5 text-[10px] font-black text-slate-600 hover:border-indigo-400 hover:text-indigo-700" aria-label="${index + 1}번 이미지 보기">${index + 1}</button>`).join('');
+            return `
+                <div class="mx-auto max-w-7xl space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                        <div class="min-w-0">
+                            <p class="text-[10px] font-black uppercase tracking-[0.16em] text-indigo-600">Source Image Gallery</p>
+                            <h3 class="truncate text-sm font-black text-slate-900">${escapeHtml(image.label || `${companySourceActiveImageIndex + 1}. Source Image`)}</h3>
+                        </div>
+                        <span class="rounded-full bg-slate-900 px-3 py-1 text-[10px] font-black text-white">${companySourceActiveImageIndex + 1} / ${images.length}</span>
+                    </div>
+                    <div class="source-map-frame source-gallery-stage relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+                        ${multiple ? '<button type="button" onclick="stepCompanySourceImage(-1)" class="source-gallery-arrow prev" aria-label="이전 이미지"><i class="fa-solid fa-chevron-left"></i></button>' : ''}
+                        <img src="${escapeHtml(image.url)}" alt="${escapeHtml(image.label || 'Company OPORD source image')}" class="source-gallery-image mx-auto rounded-xl" onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden')">
+                        <div class="hidden p-12 text-center text-sm text-rose-600">이미지 파일을 찾을 수 없습니다: <strong>${escapeHtml(image.url)}</strong><br><span class="text-xs text-slate-500">GitHub에서 index.html과 같은 폴더에 업로드했는지 확인하십시오.</span></div>
+                        ${multiple ? '<button type="button" onclick="stepCompanySourceImage(1)" class="source-gallery-arrow next" aria-label="다음 이미지"><i class="fa-solid fa-chevron-right"></i></button>' : ''}
+                    </div>
+                    ${image.caption ? `<p class="rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-xs leading-relaxed text-slate-600">${escapeHtml(image.caption)}</p>` : ''}
+                    ${multiple ? `<div class="flex flex-wrap items-center justify-center gap-2">${numberButtons}</div><p class="text-center text-[10px] text-slate-400">좌우 화살표 또는 키보드 ← →로 이미지를 이동할 수 있습니다.</p>` : ''}
+                </div>`;
         }
 
         function formatCompanySourceText(text, sectionId = '') {
@@ -1897,18 +2033,18 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 { id: 'execution', label: '3. Execution', icon: 'fa-person-rifle' },
                 { id: 'sustainment', label: '4. Sustainment', icon: 'fa-boxes-stacked' },
                 { id: 'commandSignal', label: '5. Command & Signal', icon: 'fa-tower-broadcast' },
-                { id: 'map', label: 'Map / Concept Sketch', icon: 'fa-map' }
+                { id: 'map', label: 'Images / Concept Sketch', icon: 'fa-images' }
             ];
             const tabContainer = document.getElementById('company-source-tabs');
             tabContainer.innerHTML = tabs
-                .filter(tab => tab.id !== 'map' || source.mapUrl)
+                .filter(tab => tab.id !== 'map' || getCompanySourceImages(source).length)
                 .map(tab => `<button type="button" onclick="companySourceActiveTab='${tab.id}'; renderCompanyOpordSource()" class="source-modal-tab ${companySourceActiveTab === tab.id ? 'active' : ''} shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-600 hover:border-indigo-300 hover:text-indigo-700"><i class="fa-solid ${tab.icon} mr-1"></i>${tab.label}</button>`)
                 .join('');
 
             const content = document.getElementById('company-source-content');
             content.scrollTop = 0;
             if (companySourceActiveTab === 'map') {
-                content.innerHTML = `<div class="source-map-frame rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"><img src="${escapeHtml(source.mapUrl)}" alt="Operation Hwarang Shield fictional training map" class="mx-auto h-auto max-w-full rounded-xl" onerror="this.parentElement.innerHTML='<div class=&quot;p-12 text-center text-sm text-rose-600&quot;>map_final.png을 index.html과 같은 폴더에 업로드하십시오.</div>'"></div>`;
+                content.innerHTML = renderCompanySourceGallery(source);
                 return;
             }
             const paragraphTitle = PARAGRAPH_DRILLS[companySourceActiveTab]?.title || 'OPORD';
@@ -1917,14 +2053,23 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 <div class="mx-auto max-w-6xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-7">
                     <div class="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                         <h3 class="text-base font-black text-slate-900">${escapeHtml(paragraphTitle)} · Company-Level Source</h3>
-                        <button type="button" onclick="companySourceActiveTab='map'; renderCompanyOpordSource()" class="${source.mapUrl ? '' : 'hidden'} rounded-lg bg-indigo-50 px-3 py-2 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fa-solid fa-map mr-1"></i>지도 함께 보기</button>
+                        <button type="button" onclick="companySourceActiveTab='map'; companySourceActiveImageIndex=0; renderCompanyOpordSource()" class="${getCompanySourceImages(source).length ? '' : 'hidden'} rounded-lg bg-indigo-50 px-3 py-2 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fa-solid fa-images mr-1"></i>이미지 함께 보기</button>
                     </div>
                     <div class="source-doc">${formatCompanySourceText(text, companySourceActiveTab)}</div>
                 </div>`;
         }
 
         document.addEventListener('keydown', event => {
-            if (event.key === 'Escape' && !document.getElementById('company-source-modal')?.classList.contains('hidden')) closeCompanyOpordSource();
+            const modalOpen = !document.getElementById('company-source-modal')?.classList.contains('hidden');
+            if (!modalOpen) return;
+            if (event.key === 'Escape') {
+                closeCompanyOpordSource();
+                return;
+            }
+            if (companySourceActiveTab === 'map' && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+                event.preventDefault();
+                stepCompanySourceImage(event.key === 'ArrowLeft' ? -1 : 1);
+            }
         });
 
         function normalizeStep2QuestionMap(value) {
@@ -2204,7 +2349,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             titleInput.value = '';
             const activityTypeInput = document.getElementById('new-sci-activity-type');
             if (activityTypeInput) activityTypeInput.value = 'lecture';
-            setCompanySourceToggleState({ enabled: false });
+            setCompanySourceToggleState({ enabled: false, images: [] });
             TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
                 const field = document.getElementById(`new-sci-${paragraphId}`);
                 const phraseField = document.getElementById(`new-sci-phrases-${paragraphId}`);
@@ -2294,6 +2439,11 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
             const sourceToPreserve = getScenarioCompanySource(getScenarioStore()[editingScenarioCode || code] || {});
             const sourceVisibilityToggle = document.getElementById('new-sci-company-source-enabled');
+            const sourceImagesField = document.getElementById('new-sci-company-source-images');
+            if (sourceImagesField) {
+                sourceToPreserve.images = parseCompanySourceImageLines(sourceImagesField.value);
+                sourceToPreserve.mapUrl = sourceToPreserve.images[0]?.url || '';
+            }
             if (companySourceHasContent(sourceToPreserve)) {
                 sourceToPreserve.enabled = Boolean(sourceVisibilityToggle?.checked);
                 step2Blocks[COMPANY_SOURCE_KEY] = sourceToPreserve;
@@ -2320,6 +2470,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 step2Blocks,
                 step2Questions,
                 phraseBanks,
+                companySource: sourceToPreserve,
                 isActive: existing.isActive !== false,
                 createdBy: existing.createdBy || currentSupabaseUserId,
                 createdAt: existing.createdAt || Date.now(),
@@ -3723,7 +3874,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     </div>
                     <div class="flex flex-col gap-2 lg:w-52">
                         <button type="button" onclick="openCompanyOpordSource('${activeParagraphId}')" class="rounded-xl bg-indigo-700 px-4 py-3 text-left text-xs font-black text-white shadow hover:bg-indigo-800"><i class="fa-solid fa-file-lines mr-2"></i>View Company OPORD Source<span class="mt-1 block text-[9px] font-medium text-indigo-200">현재 paragraph부터 열기</span></button>
-                        ${companySource.mapUrl ? `<button type="button" onclick="openCompanyOpordSource('map')" class="rounded-xl border border-indigo-200 bg-white px-4 py-2 text-left text-[10px] font-bold text-indigo-700 hover:bg-indigo-50"><i class="fa-solid fa-map mr-2"></i>Map / Concept Sketch</button>` : ''}
+                        ${getCompanySourceImages(companySource).length ? `<button type="button" onclick="openCompanyOpordSource('map')" class="rounded-xl border border-indigo-200 bg-white px-4 py-2 text-left text-[10px] font-bold text-indigo-700 hover:bg-indigo-50"><i class="fa-solid fa-images mr-2"></i>Images / Concept Sketch</button>` : ''}
                     </div>
                 </div>`
                 : '';
