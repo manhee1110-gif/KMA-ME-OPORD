@@ -159,6 +159,15 @@
                                 </select>
                                 <p class="mt-1 text-[10px] leading-relaxed text-slate-400">Lecture 모드는 교수 질문에 대한 답변 또는 수정문을 작성합니다. Code Your Way 모드는 paragraph별 조별 초안을 작성하고, 필요한 경우 최대 3회의 Captain Manhee coach check를 활용합니다.</p>
                             </div>
+                            <div class="rounded-lg border border-sky-100 bg-sky-50/60 p-3">
+                                <div class="flex items-start gap-2.5">
+                                    <input id="new-sci-company-source-enabled" type="checkbox" onchange="updateCompanySourceToggleUi()" class="mt-0.5 h-4 w-4 rounded border-sky-300 text-indigo-600 focus:ring-indigo-500">
+                                    <div class="min-w-0 flex-1">
+                                        <label for="new-sci-company-source-enabled" class="cursor-pointer text-[11px] font-black text-sky-900">학생 화면에 Company OPORD Source 팝업 표시</label>
+                                        <p id="company-source-toggle-status" class="mt-1 text-[9px] leading-relaxed text-slate-500">원문 세트가 저장된 활동에서만 켜거나 끌 수 있습니다. 숨겨도 원문 데이터는 삭제되지 않습니다.</p>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="rounded-lg border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
                                 <div>
                                     <span class="font-bold text-indigo-700 block text-[11px]">Full OPORD Teacher Feed</span>
@@ -998,6 +1007,12 @@
                     step2Questions[paragraphId] = questions;
                 });
                 step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
+                const seedSource = getScenarioCompanySource(localScenarios[editorCode] || {});
+                const seedSourceToggle = document.getElementById('new-sci-company-source-enabled');
+                if (companySourceHasContent(seedSource)) {
+                    seedSource.enabled = Boolean(seedSourceToggle?.checked);
+                    step2Blocks[COMPANY_SOURCE_KEY] = seedSource;
+                }
                 if (missing.length) {
                     alert(`편집기에 입력 중인 시나리오가 있습니다. 최초 배포 전에 5개 paragraph를 모두 채우거나, 편집기를 초기화하십시오.
 
@@ -1324,6 +1339,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
 
         const BUILT_IN_COMPANY_SOURCE = {
             "OPORD-02": {
+                        "enabled": true,
                         "title": "OPORD 26-07 · OPERATION HWARANG SHIELD",
                         "subtitle": "Company-level source order · fictional classroom scenario",
                         "missionAnchor": "COMPANY MISSION\nC Company attacks to destroy the enemy UAS cell on OBJ HWARANG NLT 140600JUL26 in order to restore freedom of maneuver for 2nd Brigade along the eastern ring road and prevent further enemy UAS attacks against battalion critical assets.\n\nCOMMANDER'S INTENT\nPurpose: Restore freedom of maneuver for 2nd Brigade along the eastern ring road and prevent further enemy UAS attacks against battalion critical assets.\nKey Tasks: Isolate OBJ HWARANG; locate and destroy the enemy UAS cell; prevent exfiltration; protect friendly C2 and UAS nodes; secure OBJ HWARANG until passage is complete.\nEnd State: The enemy UAS cell is destroyed, OBJ HWARANG is under friendly control, and 2nd Brigade continues north without effective enemy UAS interference.",
@@ -1621,12 +1637,33 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         const STEP2_QUESTIONS_KEY = '__step2Questions';
 
 
-        function normalizeCompanySource(value) {
+        function companySourceHasContent(value) {
+            const source = value && typeof value === 'object' ? value : {};
+            const sections = source.sections && typeof source.sections === 'object' ? source.sections : {};
+            return Boolean(
+                String(source.missionAnchor || '').trim()
+                || String(source.mapUrl || '').trim()
+                || TEACHER_PARAGRAPH_IDS.some(id => String(sections[id] || '').trim())
+            );
+        }
+
+        function normalizeCompanySource(value, legacyEnabled = null) {
             const source = value && typeof value === 'object' ? value : {};
             const sections = source.sections && typeof source.sections === 'object' ? source.sections : {};
             const normalizedSections = {};
             TEACHER_PARAGRAPH_IDS.forEach(id => { normalizedSections[id] = String(sections[id] || ''); });
+            const contentAvailable = Boolean(
+                String(source.missionAnchor || '').trim()
+                || String(source.mapUrl || '').trim()
+                || Object.values(normalizedSections).some(section => String(section || '').trim())
+            );
+            const hasExplicitEnabled = Object.prototype.hasOwnProperty.call(source, 'enabled');
+            const explicitEnabled = source.enabled !== false && source.enabled !== 'false' && source.enabled !== 0;
+            const enabled = hasExplicitEnabled
+                ? explicitEnabled
+                : (legacyEnabled === null ? contentAvailable : Boolean(legacyEnabled));
             return {
+                enabled,
                 title: String(source.title || ''),
                 subtitle: String(source.subtitle || ''),
                 missionAnchor: String(source.missionAnchor || ''),
@@ -1637,14 +1674,51 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
 
         function hasCompanySource(source) {
             const normalized = normalizeCompanySource(source);
-            return Boolean(normalized.missionAnchor || normalized.mapUrl || Object.values(normalized.sections).some(Boolean));
+            return normalized.enabled !== false && companySourceHasContent(normalized);
         }
 
         function getScenarioCompanySource(scenario) {
-            if (!scenario || typeof scenario !== 'object') return normalizeCompanySource({});
-            const stored = scenario.companySource || scenario.step2Blocks?.[COMPANY_SOURCE_KEY];
-            if (hasCompanySource(stored)) return normalizeCompanySource(stored);
-            return normalizeCompanySource(BUILT_IN_COMPANY_SOURCE[scenario.code] || {});
+            if (!scenario || typeof scenario !== 'object') return normalizeCompanySource({}, false);
+            const blocks = scenario.step2Blocks && typeof scenario.step2Blocks === 'object' ? scenario.step2Blocks : {};
+            const hasDirectSource = Object.prototype.hasOwnProperty.call(scenario, 'companySource');
+            const hasBlockSource = Object.prototype.hasOwnProperty.call(blocks, COMPANY_SOURCE_KEY);
+            if (!hasDirectSource && !hasBlockSource) return normalizeCompanySource({}, false);
+            const stored = hasDirectSource ? scenario.companySource : blocks[COMPANY_SOURCE_KEY];
+            const hasExplicitEnabled = stored && typeof stored === 'object'
+                && Object.prototype.hasOwnProperty.call(stored, 'enabled');
+            // Legacy migration: a source attached to a Code Your Way activity remains visible;
+            // a source accidentally carried into a Lecture/Homework activity is hidden.
+            const legacyEnabled = hasExplicitEnabled ? null : getScenarioActivityType(scenario) === 'code';
+            return normalizeCompanySource(stored, legacyEnabled);
+        }
+
+        function setCompanySourceToggleState(source) {
+            const checkbox = document.getElementById('new-sci-company-source-enabled');
+            const status = document.getElementById('company-source-toggle-status');
+            if (!checkbox) return;
+            const normalized = normalizeCompanySource(source, false);
+            const hasContent = companySourceHasContent(normalized);
+            checkbox.disabled = !hasContent;
+            checkbox.checked = hasContent && normalized.enabled !== false;
+            checkbox.classList.toggle('opacity-50', !hasContent);
+            if (status) {
+                status.innerText = hasContent
+                    ? (checkbox.checked
+                        ? '현재 활동에서는 Mission Anchor, Company OPORD 원문, Map 버튼이 학생 화면에 표시됩니다.'
+                        : '현재 활동에서는 Company OPORD Source 세트를 숨깁니다. 원문 데이터는 그대로 보존됩니다.')
+                    : '이 활동에는 저장된 Company OPORD Source 세트가 없습니다.';
+                status.className = `mt-1 text-[9px] leading-relaxed ${hasContent ? (checkbox.checked ? 'text-emerald-700' : 'text-amber-700') : 'text-slate-400'}`;
+            }
+        }
+
+        function updateCompanySourceToggleUi() {
+            const checkbox = document.getElementById('new-sci-company-source-enabled');
+            const status = document.getElementById('company-source-toggle-status');
+            if (!checkbox || !status) return;
+            status.innerText = checkbox.checked
+                ? '저장 후 학생 화면에 Mission Anchor, Company OPORD 원문, Map 버튼이 표시됩니다.'
+                : '저장 후 학생 화면에서 Company OPORD Source 세트가 숨겨집니다. 원문 데이터는 삭제되지 않습니다.';
+            status.className = `mt-1 text-[9px] leading-relaxed ${checkbox.checked ? 'text-emerald-700' : 'text-amber-700'}`;
         }
 
         function materializeBuiltInScenario(code) {
@@ -1654,8 +1728,11 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             TEACHER_PARAGRAPH_IDS.forEach(id => { step2Blocks[id] = cloneBlockList(builtInBlocks[id]).filter(Boolean); });
             const questionMap = normalizeStep2QuestionMap(builtInBlocks[STEP2_QUESTIONS_KEY] || {});
             step2Blocks[STEP2_QUESTIONS_KEY] = questionMap;
-            const companySource = normalizeCompanySource(BUILT_IN_COMPANY_SOURCE[code] || {});
-            if (hasCompanySource(companySource)) step2Blocks[COMPANY_SOURCE_KEY] = companySource;
+            const companySource = normalizeCompanySource(BUILT_IN_COMPANY_SOURCE[code] || {}, code === 'OPORD-02');
+            if (companySourceHasContent(companySource)) {
+                companySource.enabled = true;
+                step2Blocks[COMPANY_SOURCE_KEY] = companySource;
+            }
             return {
                 ...base,
                 step2Blocks,
@@ -1884,7 +1961,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 delete blocks[STEP2_QUESTIONS_KEY];
             }
             const companySource = getScenarioCompanySource(scenario);
-            if (hasCompanySource(companySource)) blocks[COMPANY_SOURCE_KEY] = companySource;
+            if (companySourceHasContent(companySource)) blocks[COMPANY_SOURCE_KEY] = companySource;
             else delete blocks[COMPANY_SOURCE_KEY];
             return blocks;
         }
@@ -1965,7 +2042,10 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 const builtIn = builtInMatchesActivity ? (BUILT_IN_SCENARIO_STEP2_BLOCKS[code] || {}) : {};
                 const builtInQuestionMap = normalizeStep2QuestionMap(builtIn[STEP2_QUESTIONS_KEY] || {});
                 const builtInPhraseBanks = builtInMatchesActivity ? (BUILT_IN_SCENARIO_PHRASE_BANKS[code] || {}) : {};
-                const builtInCompanySource = normalizeCompanySource(builtInMatchesActivity ? (BUILT_IN_COMPANY_SOURCE[code] || {}) : {});
+                const builtInCompanySource = normalizeCompanySource(
+                    builtInMatchesActivity ? (BUILT_IN_COMPANY_SOURCE[code] || {}) : {},
+                    builtInMatchesActivity && resolvedActivityType === 'code'
+                );
                 const step2Blocks = {};
                 const phraseBanks = {};
                 const step2Questions = {};
@@ -1997,9 +2077,20 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                         : cloneBlockList(builtInQuestionMap[paragraphId]).filter(Boolean);
                 });
                 step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
-                const storedCompanySource = normalizeCompanySource(raw.companySource || existingBlocks[COMPANY_SOURCE_KEY] || {});
-                const companySource = hasCompanySource(storedCompanySource) ? storedCompanySource : builtInCompanySource;
-                if (hasCompanySource(companySource)) step2Blocks[COMPANY_SOURCE_KEY] = companySource;
+                const hasDirectCompanySource = Object.prototype.hasOwnProperty.call(raw, 'companySource');
+                const hasBlockCompanySource = Object.prototype.hasOwnProperty.call(existingBlocks, COMPANY_SOURCE_KEY);
+                const hasStoredCompanySource = hasDirectCompanySource || hasBlockCompanySource;
+                const storedCompanySourceRaw = hasDirectCompanySource ? raw.companySource : existingBlocks[COMPANY_SOURCE_KEY];
+                const storedHasExplicitEnabled = storedCompanySourceRaw && typeof storedCompanySourceRaw === 'object'
+                    && Object.prototype.hasOwnProperty.call(storedCompanySourceRaw, 'enabled');
+                const storedCompanySource = normalizeCompanySource(
+                    storedCompanySourceRaw || {},
+                    storedHasExplicitEnabled ? null : resolvedActivityType === 'code'
+                );
+                const companySource = hasStoredCompanySource ? storedCompanySource : builtInCompanySource;
+                if (hasStoredCompanySource || companySourceHasContent(companySource)) {
+                    step2Blocks[COMPANY_SOURCE_KEY] = companySource;
+                }
 
                 normalized[code] = {
                     ...raw,
@@ -2113,6 +2204,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             titleInput.value = '';
             const activityTypeInput = document.getElementById('new-sci-activity-type');
             if (activityTypeInput) activityTypeInput.value = 'lecture';
+            setCompanySourceToggleState({ enabled: false });
             TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
                 const field = document.getElementById(`new-sci-${paragraphId}`);
                 const phraseField = document.getElementById(`new-sci-phrases-${paragraphId}`);
@@ -2147,6 +2239,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             titleInput.value = scenarioTitleForEditor(scenario.title);
             const activityTypeInput = document.getElementById('new-sci-activity-type');
             if (activityTypeInput) activityTypeInput.value = getScenarioActivityType(scenario);
+            setCompanySourceToggleState(getScenarioCompanySource(scenario));
             const questionMap = getScenarioStep2QuestionMap(scenario);
             TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
                 const field = document.getElementById(`new-sci-${paragraphId}`);
@@ -2200,7 +2293,11 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             });
             step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
             const sourceToPreserve = getScenarioCompanySource(getScenarioStore()[editingScenarioCode || code] || {});
-            if (hasCompanySource(sourceToPreserve)) step2Blocks[COMPANY_SOURCE_KEY] = sourceToPreserve;
+            const sourceVisibilityToggle = document.getElementById('new-sci-company-source-enabled');
+            if (companySourceHasContent(sourceToPreserve)) {
+                sourceToPreserve.enabled = Boolean(sourceVisibilityToggle?.checked);
+                step2Blocks[COMPANY_SOURCE_KEY] = sourceToPreserve;
+            }
             if (missing.length) {
                 alert(`Full OPORD scenario에는 5개 paragraph의 Step 2 blocks가 모두 필요합니다.
 
