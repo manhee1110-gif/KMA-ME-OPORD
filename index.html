@@ -11,9 +11,10 @@
         body { background-color: #f8fafc; font-family: 'Pretendard', system-ui, sans-serif; }
         .navy-bg { background-color: #0b132b; }
         .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .drag-block { cursor: grab; transition: all 0.2s; }
+        .drag-block { cursor: grab; transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease; }
         .drag-block:active { cursor: grabbing; }
-        .drop-zone.drag-over { background-color: #e0e7ff; border-color: #4f46e5; }
+        .drop-zone { transition: background-color 0.12s ease, border-color 0.12s ease; }
+        .drop-zone.drag-over { background-color: #e0e7ff; border-color: #4f46e5; outline: 2px solid rgba(79,70,229,0.35); outline-offset: 1px; }
         .opord-shell details { border: 1px solid #e2e8f0; border-radius: 0.75rem; background: #ffffff; }
         .opord-shell summary { cursor: pointer; list-style: none; }
         .opord-shell summary::-webkit-details-marker { display: none; }
@@ -28,6 +29,29 @@
         .step-locked .drop-zone, .step-locked button { pointer-events: none; }
         .shell-slot { min-height: 42px; }
         .workspace-step-heading { letter-spacing: 0.01em; }
+
+        .source-doc { color: #334155; font-family: 'Pretendard', system-ui, sans-serif; font-size: 0.93rem; line-height: 1.78; overflow-wrap: anywhere; }
+        .source-doc p { margin: 0.62rem 0; }
+        .source-doc .source-kicker { margin: 0.2rem 0 0.75rem; border-radius: 0.8rem; background: #f8fafc; padding: 0.75rem 0.9rem; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.05em; color: #475569; }
+        .source-doc .source-h0 { margin: 1.5rem 0 0.65rem; border-left: 5px solid #4f46e5; border-radius: 0.55rem; background: #eef2ff; padding: 0.65rem 0.85rem; font-size: 0.92rem; font-weight: 950; letter-spacing: 0.06em; color: #312e81; }
+        .source-doc .source-h1 { margin: 1.65rem 0 0.75rem; border-bottom: 2px solid #cbd5e1; padding-bottom: 0.5rem; font-size: 1.08rem; font-weight: 950; color: #0f172a; }
+        .source-doc .source-h2 { margin: 1.25rem 0 0.5rem; border-radius: 0.5rem; background: #f1f5f9; padding: 0.48rem 0.7rem; font-size: 0.98rem; font-weight: 900; color: #1e293b; }
+        .source-doc .source-h3 { margin: 0.95rem 0 0.4rem; border-left: 3px solid #a5b4fc; padding-left: 0.62rem; font-size: 0.93rem; font-weight: 850; color: #334155; }
+        .source-doc .source-phase { margin: 1.15rem 0 0.5rem; border: 1px solid #c7d2fe; border-radius: 0.7rem; background: #eef2ff; padding: 0.62rem 0.8rem; font-size: 0.94rem; font-weight: 950; color: #3730a3; }
+        .source-doc .source-bullet { position: relative; margin: 0.38rem 0; padding-left: 1.15rem; }
+        .source-doc .source-bullet::before { content: '•'; position: absolute; left: 0.1rem; color: #4f46e5; font-weight: 950; }
+        .source-doc .source-label { font-weight: 900; color: #0f172a; }
+        .source-doc .source-mission-callout { margin: 0.85rem 0; border: 1px solid #a7f3d0; border-radius: 0.85rem; background: #ecfdf5; padding: 1rem; font-weight: 750; color: #064e3b; }
+        .source-doc table { width: 100%; min-width: 860px; border-collapse: separate; border-spacing: 0; font-size: 0.78rem; line-height: 1.48; }
+        .source-doc th { position: sticky; top: 0; z-index: 2; background: #e0e7ff; color: #312e81; text-align: left; font-weight: 950; }
+        .source-doc th, .source-doc td { border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; padding: 0.7rem; vertical-align: top; white-space: normal; }
+        .source-doc th:last-child, .source-doc td:last-child { border-right: 0; }
+        .source-doc tbody tr:nth-child(even) { background: #f8fafc; }
+        .source-table-wrap { margin: 1.05rem 0; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; border: 1px solid #cbd5e1; border-radius: 0.85rem; background: white; box-shadow: 0 4px 14px rgba(15,23,42,.05); }
+        .source-modal-tab.active { background: #312e81; color: #ffffff; border-color: #312e81; }
+        .source-tabs-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+        .source-tabs-scroll::-webkit-scrollbar { display: none; }
+        .source-map-frame { background-image: linear-gradient(45deg, #f8fafc 25%, transparent 25%), linear-gradient(-45deg, #f8fafc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f8fafc 75%), linear-gradient(-45deg, transparent 75%, #f8fafc 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0px; }
     </style>
 </head>
 <body>
@@ -113,6 +137,7 @@
                             </div>
                             <div id="scenario-db-status" class="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[10px] text-slate-500">공유 시나리오 DB 상태를 확인 중입니다…</div>
                             <button id="scenario-db-seed-btn" type="button" onclick="seedScenarioDatabaseFromLocal()" class="hidden w-full rounded bg-emerald-600 px-3 py-2 text-[10px] font-bold text-white shadow hover:bg-emerald-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>현재 교수 자료를 공유 DB에 최초 배포</button>
+                            <button id="hwarang-package-deploy-btn" type="button" onclick="deployHwarangCoursePackage()" class="w-full rounded bg-indigo-700 px-3 py-2 text-[10px] font-bold text-white shadow hover:bg-indigo-800"><i class="fa-solid fa-shield-halved mr-1"></i>Operation Hwarang Shield를 OPORD-02로 배포</button>
                             <div id="teacher-scenario-library" class="max-h-40 space-y-1.5 overflow-y-auto pr-1"></div>
                         </div>
 
@@ -376,6 +401,25 @@
         </main>
     </div>
 
+
+    <div id="company-source-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/70 p-0 backdrop-blur-sm sm:p-4" onclick="handleCompanySourceBackdrop(event)">
+        <div class="flex h-[100dvh] min-h-0 w-full max-w-7xl flex-col overflow-hidden rounded-none border border-slate-200 bg-white shadow-2xl sm:h-[94dvh] sm:rounded-2xl" role="dialog" aria-modal="true" aria-labelledby="company-source-title">
+            <div class="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-slate-900 px-5 py-4 text-white">
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">Company OPORD Source</p>
+                    <h2 id="company-source-title" class="mt-1 text-lg font-black">OPORD Source</h2>
+                    <p id="company-source-subtitle" class="mt-1 text-[11px] text-slate-300"></p>
+                </div>
+                <button type="button" onclick="closeCompanyOpordSource()" class="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700"><i class="fa-solid fa-xmark mr-1"></i>닫기</button>
+            </div>
+            <div class="shrink-0 border-b border-indigo-100 bg-indigo-50 px-5 py-3 text-[11px] leading-relaxed text-indigo-950">
+                <i class="fa-solid fa-circle-info mr-1 text-indigo-600"></i><strong>Read, extract, and transform.</strong> Company-level information 중 자기 소대에 필요한 내용만 선별하십시오. 원문을 그대로 복사하지 말고 platoon-level OPORD로 재구성하십시오.
+            </div>
+            <div id="company-source-tabs" class="source-tabs-scroll flex shrink-0 gap-2 overflow-x-auto overflow-y-hidden border-b border-slate-200 bg-white px-4 py-3"></div>
+            <div id="company-source-content" class="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-slate-50 p-3 sm:p-6"></div>
+        </div>
+    </div>
+
     <script>
         const defaultScenarios = {
             "OPORD-01": {
@@ -391,10 +435,10 @@
                 code: "OPORD-02",
                 createdAt: 2,
                 updatedAt: 2,
-                title: "응용 훈련: 독수리 캠프 야간 방어 작전",
+                title: "Operation Hwarang Shield · Platoon OPORD Writing Lab",
                 activityType: "code",
                 slots1: [{ id: "m1", label: "Who & When (수행 부대 및 시간)" }, { id: "m2", label: "What Task (전술 과업 동사)" }, { id: "m3", label: "Where & Why (지역 및 목적)" }],
-                slots2: [{ id: "s1", label: "3rd Platoon, NLT 2300," }, { id: "s2", label: "defends Outpost EAGLE" }, { id: "s3", label: "in order to prevent enemy infiltration." }]
+                slots2: [{ id: "s1", label: "C Company, NLT 140600JUL26," }, { id: "s2", label: "attacks to destroy the enemy UAS cell on OBJ HWARANG" }, { id: "s3", label: "in order to restore freedom of maneuver for 2d Brigade." }]
             }
         };
 
@@ -542,7 +586,7 @@
         let currentUser = null;
         let currentUserId = '';
         let currentSupabaseUserId = '';
-        let selectedScenarioCode = 'OPORD-01';
+        let selectedScenarioCode = 'OPORD-02';
         let sharedArtifacts = [];
         let sharedComments = [];
 
@@ -1264,7 +1308,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         // Default language support for legacy scenarios. New or edited scenarios can override
         // these through the teacher editor; one line becomes one student-facing phrase chip.
         // Generic fallback language support for newly created scenarios.
-        // OPORD-01 below overrides this with the instructor's video-dictation materials.
+        // Built-in activities override this generic language support.
         const DEFAULT_PHRASE_BANKS = {
             situation: ['vicinity', 'dominates', 'provides observation', 'limited visibility', 'assessed', 'attached', 'likely avenue of approach'],
             mission: ['at / NLT / on order', 'attacks', 'seizes', 'secures', 'clears', 'OBJ', 'in order to ...'],
@@ -1273,162 +1317,246 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             commandSignal: ['moves with', 'assumes command', 'command post', 'SITREP', 'primary', 'alternate', 'contingency', 'emergency']
         };
 
-        // OPORD-01: instructor-provided video-dictation reference cards.
+        // Built-in reference cards for Hwarang Shield and the lecture activity.
         // One array item becomes one card in the student-facing reference panel.
         // Sustainment uses a clearly labeled sample script because this lesson contains no video clip for that paragraph.
-        const BUILT_IN_SCENARIO_STEP2_BLOCKS = {
-            'OPORD-01': {
-                situation: [
-                    "Today's high is expected to be 85 degrees Fahrenheit. Expect temperatures in the upper 30s tomorrow, with Shamal winds moving in and gusting up to 70 mph.",
-                    'Downtown Baghdad; Saffron Hill; the entire AO; 3rd Infantry to the east; 1st Marine Division (us); Iraqi forces to the north; and the Euphrates Bridge—our objective.'
-                ],
-                mission: [
-                    'Godfather says it’s time for us to be more aggressive.',
-                    'Suggest you send foot patrols out into the neighborhoods.'
-                ],
-                execution: [
-                    'Major Strahm wants us to take them out.',
-                    'We’ll establish a base of fire and move under it hard and fast with two squads of three.',
-                    'We’ll take some TNT along with us to spike the guns.',
-                    'Lieutenant, it’s your responsibility.',
-                    'Liebgott, you take the first machine gun with Petty, the A-gunner.',
-                    'Pletcher and Hendricks, you take the other.',
-                    'Compton, Malarkey, Toye, and Garnier, we’ll be making the main assault.',
-                    'Lipton, when you see we captured the first gun, I want you and your TNT as fast as possible.',
-                    'Just weapons and ammo. Drop everything else. Got any spare ammo in a pack or musette bag? Bring it along.'
-                ],
-                sustainment: [
-                    'Logistics: Class V resupply is available at LOGPAC 1 on order.',
-                    'Personnel: Maintain accountability and report personnel status.',
-                    'Health Service Support: CCP 1 is at CHECKPOINT 2; evacuate casualties via ROUTE BLUE.'
-                ],
-                commandSignal: [
-                    'The AO in this region is very steep, so expect typical comms problems.',
-                    'We’re going to be on two-hour comms windows. If we miss two windows, wake somebody up. If not, don’t sweat it.',
-                    'Waypoint 1 is Budweiser; Waypoint 2 is Miller; 3 is Corona; 4 is Heineken.',
-                    'For OP 1, it’s Schlitz Malt Liquor. If we ID Shaw, pass Rick James.'
-                ]
-            },
-            'OPORD-02': {
-                situation: [
-                    'Area of Interest: The eastern approaches to Outpost EAGLE and ROUTE FALCON.',
-                    'Area of Operation: The company defensive sector around Outpost EAGLE.',
-                    'Terrain and Weather: Draws east of the outpost provide covered approaches; fog is expected after 2200.',
-                    'Enemy Forces: A platoon-sized enemy element is assessed to infiltrate from the east.',
-                    'Friendly Forces: 1st Platoon establishes the company security area north of the outpost.',
-                    'Attachments and Detachments: One medic team is attached to 3rd Platoon.'
-                ],
-                mission: [
-                    '3rd Platoon, NLT 2300,',
-                    'defends Outpost EAGLE',
-                    'in order to prevent enemy infiltration.'
-                ],
-                execution: [
-                    'Commander’s Intent: Prevent enemy penetration of the company defensive sector.',
-                    'Concept of Operation: Establish a defense in depth and defeat the enemy in EA FALCON.',
-                    '1st Platoon: Screen the northern approach and report enemy movement.',
-                    '3rd Platoon: Occupy BP 3 and block the eastern avenue of approach.',
-                    'Weapons Squad: Establish FPLs covering EA FALCON.',
-                    'Coordinating Instructions: Initiate fires when enemy crosses TRIGGER LINE ORANGE.'
-                ],
-                sustainment: [
-                    'Logistics: Water and Class V resupply are available at the company trains on order.',
-                    'Personnel: Conduct continuous accountability and report casualties immediately.',
-                    'Health Service Support: CCP 2 is located at the company CP; use ROUTE FALCON for evacuation.'
-                ],
-                commandSignal: [
-                    'Command: The platoon leader remains at BP 3 during the engagement.',
-                    'Succession of Command: The platoon sergeant assumes command if the platoon leader becomes a casualty.',
-                    'Control: The company CP is located at Outpost EAGLE; submit SITREPs every 30 minutes.',
-                    'Signal: Use platoon internal net as primary and messenger as contingency.'
-                ]
-            }
-        };
+        const COMPANY_SOURCE_KEY = '__companyOpordSource';
 
-        // Scenario-specific phrase banks. These override the generic fallback above only for OPORD-01.
-        const BUILT_IN_SCENARIO_PHRASE_BANKS = {
-            'OPORD-01': {
-                situation: [
-                    'Observation and fields of fire',
-                    'Avenues of approach',
-                    'Key terrain',
-                    'Obstacles',
-                    'Cover and concealment',
-                    'visibility',
-                    'winds',
-                    'precipitation',
-                    'cloud cover',
-                    'temperature',
-                    'humidity',
-                    'atmospheric pressure',
-                    'composition and strength',
-                    'capabilities',
-                    'location',
-                    'most likely COA',
-                    'DRAW-D: defend, reinforce, attack, withdraw, delay'
-                ],
-                mission: [
-                    'who',
-                    'what',
-                    'when',
-                    'where',
-                    'why'
-                ],
-                execution: [
-                    'purpose',
-                    'key tasks',
-                    'end state',
-                    'decisive operations',
-                    'shaping operations',
-                    'sustaining operations',
-                    'deep',
-                    'close',
-                    'rear',
-                    'support area',
-                    'phased operations',
-                    'operational timeline',
-                    'CCIR',
-                    'PIR',
-                    'FFIR',
-                    'EEFI',
-                    'ROE',
-                    'Risk Reduction Control Measures',
-                    'load carriage'
-                ],
-                sustainment: [
-                    'water',
-                    'food / ration',
-                    'ammunition',
-                    'fuel',
-                    'battery',
-                    'airdrop',
-                    'drone delivery',
-                    'foot delivery',
-                    'on-site exploitation',
-                    'EPW',
-                    'tourniquet',
-                    'CASEVAC',
-                    'MEDEVAC',
-                    'CCP',
-                    'HLZ / LZ'
-                ],
-                commandSignal: [
-                    'location of leaders',
-                    'succession of command',
-                    'command post location',
-                    'CEOI',
-                    'PACE',
-                    'Primary',
-                    'Alternate',
-                    'Contingency',
-                    'Emergency',
-                    'number combinations',
-                    'challenge passwords',
-                    'running passwords',
-                    'pyrotechnic signals'
-                ]
+        const BUILT_IN_COMPANY_SOURCE = {
+            "OPORD-02": {
+                        "title": "OPORD 26-07 · OPERATION HWARANG SHIELD",
+                        "subtitle": "Company-level source order · fictional classroom scenario",
+                        "missionAnchor": "COMPANY MISSION\nC Company attacks to destroy the enemy UAS cell on OBJ HWARANG NLT 140600JUL26 in order to restore freedom of maneuver for 2nd Brigade along the eastern ring road and prevent further enemy UAS attacks against battalion critical assets.\n\nCOMMANDER'S INTENT\nPurpose: Restore freedom of maneuver for 2nd Brigade along the eastern ring road and prevent further enemy UAS attacks against battalion critical assets.\nKey Tasks: Isolate OBJ HWARANG; locate and destroy the enemy UAS cell; prevent exfiltration; protect friendly C2 and UAS nodes; secure OBJ HWARANG until passage is complete.\nEnd State: The enemy UAS cell is destroyed, OBJ HWARANG is under friendly control, and 2nd Brigade continues north without effective enemy UAS interference.",
+                        "mapUrl": "map_final.png",
+                        "sections": {
+                                    "situation": "HEADQUARTERS\nC COMPANY, 1ST BATTALION, 1ST BRIGADE\nHWARANG CITY, KOREA\n121800JUL26\nOPORD 26-07 (OPERATION HWARANG SHIELD) (UNCLASSIFIED)\nHYPOTHETICAL EDUCATIONAL SCENARIO — FOR CLASSROOM USE ONLY\nReferences: Map, Hwarang City, North Korea, 1:25,000, 2d Edition (fictional training map).\nTime Zone Used Throughout the Order: Local\nTASK ORGANIZATION\nC Company Headquarters\n1st Rifle Platoon\n2nd Rifle Platoon\n3rd Rifle Platoon\nWeapons Platoon (Mortar Section)\nUAS Platoon, OPCON to C Company for the duration of the operation\nBattalion Electronic Warfare Platoon, direct support\nJavelin Team, OPCON to 3d Platoon for Phase II\n1. SITUATION\na. Area of Interest.\nHwarang City is a fictitious North Korean city located along a major approach toward Pyongyang. The city sits in a basin surrounded by mountainous terrain. A built-up urban center occupies the basin floor, Hwarang Stream crosses the city, and an outer ring road encircles the surrounding mountains. The eastern ring road is a critical route for follow-on forces advancing north.\nA friendly lead brigade seized Hwarang City and disrupted the enemy battalion that had defended it. The 1st Brigade subsequently conducted a follow-and-assume mission to stabilize the city and support the forward passage of lines and continued attack of the reinforced 2d Brigade.\nb. Area of Operations.\n(1) Boundaries.\nNorth: 1st and 2nd Companies’ stabilization sectors north of Hwarang Stream.\nSouth: C Company assembly area and battalion support area.\nEast: The 1st Battalion–2nd Brigade boundary and the eastern ring road.\nWest: The adjacent 2nd battalion’s stabilization sector.\nExact boundary coordinates and graphic control measures: All grids use fictional training MGRS zone 52S CG. North boundary: gridline 625; south boundary: gridline 595; east boundary: gridline 435; west boundary: gridline 395. PL MELONA follows the south bank of Hwarang Stream; PL BABAMBA follows the north bank; PL OKDONGJA marks the mountain foothill; PL MEGATON marks the mid-slope; PL NUGABA marks the summit and serves as the limit of advance.\n(2) Terrain.\n(a) Obstacles.\nHwarang Stream is relatively wide but shallow, with a moderate current. It is not frozen despite winter conditions. Its shallow depth permits a deliberate dismounted wet-gap crossing without bridging assets. The wet crossing, however, increases exposure to cold-weather injury and slows movement.\nHwarang Mountain is approximately 600 meters high. No vehicle road reaches the summit; movement is limited to hiking trails, ridgelines, and unimproved paths. Mountainous terrain also prevents direct lateral vehicle movement between the battalion sector and the eastern ring road.\n(b) Avenues of Approach.\nThe urban street grid supports mounted and dismounted movement and provides multiple concealed routes to the stream. After crossing, the limited trails and ridges canalize dismounted movement toward OBJ HWARANG. Enemy teams may exfiltrate west toward the urban area or east across the brigade boundary.\n(c) Key Terrain.\nOBJ HWARANG consists of the summit and adjacent ridgelines of Hwarang Mountain. It dominates observation of both the urban area and the eastern ring road. Control of the objective enables UAS operations and attacks against friendly forces moving through either sector.\n(d) Observation and Fields of Fire.\nFour- to five-story buildings in the urban area provide elevated observation and concealment. Hwarang Mountain is sparsely vegetated and offers limited natural concealment. Movement on exposed slopes is readily observable by ground observers and UAS. The summit provides long-range observation over the city and the eastern ring road.\n(e) Cover and Concealment.\nUrban buildings provide effective concealment for friendly personnel and technical systems. The mountain provides limited concealment except along folds in the terrain and reverse slopes. The enemy occupies a hardened UAS control and firing position near the summit.\nExact objective grid and named terrain features: OBJ HWARANG, 52S CG 42500 62000; hardened UAS control and firing position, 52S CG 42520 62030, a reinforced concrete observation post built into the rocky summit.\n(3) Weather.\n\nHigh / Low | –2°C / –8°C\n--- | ---\nWind | Northwest 4–5 m/s, gusting to 7 m/s\nVisibility | Good\nSky | Clear\nIllumination | No moon\nPrecipitation | None expected\nGround | Snow remains on the ground\n\nEffects. Clear weather favors friendly and enemy UAS observation. Snow reveals tracks and movement. Wind and low temperatures reduce small-UAS endurance, stability, and battery performance. No moon slows dismounted movement and increases reliance on NVGs. The wet-gap crossing increases the risk of hypothermia and frost injury.\nc. Enemy Forces.\n(1) Composition.\nThe enemy force on OBJ HWARANG is assessed as a reinforced UAS cell of platoon-minus strength. It consists of reconnaissance UAS teams, strike UAS teams, a command-and-control element, a security element, an antiarmor team, and a limited mortar-observer capability.\n(2) Disposition.\nThe main enemy element occupies a hardened UAS control and firing position near the summit. Reconnaissance and strike teams operate from the summit and eastern ridgeline. Security and antiarmor elements observe the primary mountain approaches and the eastern ring road.\n(3) Strength.\nThe enemy is composed of remnants of the former city-defense force but retains approximately 70–80 percent combat effectiveness in personnel, UAS systems, and protected fighting positions.\n(4) Recent Activities.\nThe enemy has repeatedly used reconnaissance UAS to observe friendly command posts, communications nodes, mortar positions, supply movement, and follow-on forces. It then employs strike UAS, mortar fires, and antiarmor weapons against identified targets. From Hwarang Mountain, the enemy exploits the boundary between 1st Battalion and 2nd Brigade to attack both formations and complicate friendly coordination.\n(5) Capabilities.\n• Conduct persistent UAS surveillance and target acquisition.\n• Attack command-and-control, communications, fires, and sustainment nodes with strike UAS.\n• Adjust mortar fires using UAS observation.\n• Engage vehicles on the eastern ring road with antiarmor weapons.\n• Use hardened positions to increase survivability.\n• Disperse in small teams and exfiltrate across unit boundaries or into the urban area.\n• Reconstitute and resume UAS operations after temporary displacement.\n(6) Enemy Most Likely Course of Action.\nThe enemy continues to observe 1st Battalion and 2nd Brigade movement from OBJ HWARANG and attacks command posts, support nodes, and vehicles with UAS-enabled effects. Upon detecting C Company’s attack, the enemy defends from hardened positions, continues strike-UAS operations, and attempts to delay the assault. If unable to retain the position, it disperses in small teams and exfiltrates east across the brigade boundary or west into the urban area.\n(7) Enemy Most Dangerous Course of Action.\nThe enemy detects C Company during the wet-gap crossing, masses strike UAS and mortar fires on the crossing site and mountain approaches, and simultaneously attacks the C Company CP or UAS Control Site to disrupt command and control and remote strike capability.\nd. Friendly Forces.\n(1) Two Levels Up.\n1st Brigade secures Hwarang City, conducts stabilization operations, and supports the forward passage and continued attack of 2nd Brigade in order to enable the advance toward Pyongyang.\n(2) One Level Up.\n1st Battalion stabilizes eastern Hwarang City, protects key routes and critical assets, and destroys remaining enemy forces that can interfere with the passage of 2nd Brigade. C Company is the battalion decisive operation for the attack on OBJ HWARANG.\n(3) Adjacent Units.\nNorth: 1st and 2nd Companies conduct stabilization operations north of Hwarang Stream.\nWest: 2nd Battalion conducts stabilization operations in the adjacent sector.\nEast: 2nd Brigade advances north along the eastern ring road.\nSouth: 3rd Battalion remains in brigade reserve.\ne. Attachments and Detachments.\n• UAS Platoon OPCON to C Company for the duration of the operation.\n• Battalion Electronic Warfare Platoon in direct support of C Company.\n• One Javelin team OPCON to 3rd Platoon for Phase II.",
+                                    "mission": "2. MISSION\nC Company attacks to destroy the enemy UAS cell on OBJ HWARANG NLT 140600JUL26 in order to restore freedom of maneuver for 2nd Brigade along the eastern ring road and prevent further enemy UAS attacks against battalion critical assets.",
+                                    "execution": "3. EXECUTION\na. Commander’s Intent.\n(1) Purpose.\nRestore freedom of maneuver for 2nd Brigade along the eastern ring road and prevent further enemy UAS attacks against battalion critical assets.\n(2) Key Tasks.\n• Isolate OBJ HWARANG.\n• Locate and destroy the enemy UAS cell.\n• Prevent enemy exfiltration across the brigade boundary or into the urban area.\n• Protect friendly command-and-control and UAS nodes.\n• Maintain positive identification and deconflict UAS, fires, and adjacent-unit movement.\n• Secure OBJ HWARANG until passage of 2nd Brigade is complete.\n(3) End State.\nEnemy: The enemy UAS cell on OBJ HWARANG is destroyed and no longer capable of conducting effective UAS attacks.\nFriendly: C Company secures Hwarang Mountain and retains sufficient combat power for follow-on missions.\nTerrain: OBJ HWARANG is under friendly control.\nAdjacent/Civil: The eastern ring road remains open and 2nd Brigade continues north without effective enemy UAS interference.\nb. Concept of Operations.\nThe purpose of this operation is to restore freedom of maneuver for 2nd Brigade along the eastern ring road. C Company conducts a deliberate attack to isolate OBJ HWARANG, employs UAS-enabled reconnaissance and remote effects to neutralize the enemy’s hardened position, and finishes with a ground assault to destroy remaining enemy forces. Decisive to the operation is isolating the enemy before it can disperse across the brigade boundary.\n1st Platoon — Decisive Operation: Destroy the enemy UAS cell and secure OBJ HWARANG.\n2nd Platoon — Supporting Operation 1: Isolate Hwarang Mountain and prevent enemy exfiltration or reinforcement.\n3rd Platoon — Supporting Operation 2: Integrate UAS and Javelin effects to locate, confirm, and strike the enemy position.\nWeapons Platoon — Supporting Element: Provide emergency mortar fires and illumination during Phase III.\n(1) Phase I — Wet-Gap Crossing and Isolation.\nPhase I begins when C Company departs the assembly area and ends when all assault, blocking, and UAS-control positions are occupied and prepared.\n• Friendly reconnaissance UAS observe the crossing site and OBJ HWARANG.\n• C Company conducts a deliberate dismounted wet-gap crossing at FORD BLUE using bounding overwatch.\n• 1st Platoon occupies Attack Position ALPHA.\n• 2nd Platoon occupies designated blocking positions to isolate OBJ HWARANG.\n• 3rd Platoon and attached UAS elements occupy UAS Control Site ALPHA in a separate building near the 1st Company CP and complete strike preparation.\n• Weapons Platoon remains prepared to provide emergency mortar fires.\nFORD BLUE grid: 52S CG 41000 60300; Attack Position ALPHA grid: 52S CG 41800 61200\n(2) Phase II — UAS-Enabled Attack.\nPhase II begins on the C Company Commander’s authenticated order to attack.\n• Reconnaissance UAS conduct final confirmation of the enemy location and hardened position.\n• 1st Platoon confirms positive identification of the enemy position.\n• Following company commander approval, 1st Platoon designates the enemy position with the prearranged IR laser signal.\n• The strike UAS team and Javelin team attack the hardened UAS control and firing position.\n• If enemy forces remain, 1st Platoon assaults to destroy them and secures OBJ HWARANG.\n• 2nd Platoon maintains the blocking line and detects, blocks, and destroys enemy forces attempting to exfiltrate.\n• 3rd Platoon maintains UAS surveillance and conducts battle damage assessment.\nSuccess condition. When the enemy UAS cell is destroyed and OBJ HWARANG is secure, the designated element fires a GREEN pyrotechnic signal. All units immediately consolidate and reorganize, establish local security, conduct BDA, recover enemy UAS equipment and intelligence materials, establish observation and defensive positions, and support passage of 2nd Brigade until 140900JUL26.\n(3) Phase III — On-Order Expanded Cordon Operation.\nPhase III begins only if Phase II fails and the designated element fires a RED pyrotechnic signal.\n• If 1st Platoon is in enemy contact, it disengages on order and moves to supplementary positions along 2nd Platoon’s blocking line.\n• If 1st Platoon has not made contact, it immediately repositions to the supplementary blocking positions.\n• 1st and 2nd Platoons establish an expanded cordon around OBJ HWARANG.\n• 3rd Platoon continues UAS surveillance and tracks enemy movement.\n• Weapons Platoon provides continuous illumination fires as requested.\n• Platoons detect, block, and destroy enemy forces attempting to penetrate or escape the cordon.\n• After destruction of the enemy, all units secure OBJ HWARANG and support passage of 2nd Brigade.\nc. Scheme of Movement and Maneuver.\nDuring the approach to FORD BLUE, C Company moves in platoon column with reconnaissance UAS forward. The crossing order is reconnaissance UAS coverage, 1st Platoon, 2d Platoon, 3d Platoon with attached UAS and Javelin elements. Units use bounding overwatch at the wet-gap crossing. After crossing, formations transition based on terrain: column or file on restricted mountain trails and dispersed formations on exposed slopes. Units maintain wide dispersion because they will assume enemy UAS observation from the beginning of movement.\nNamed routes, phase lines, and blocking-position labels: MSR YUKHOSUNRO; AXIS CHUNGMU from FORD BLUE to Attack Position ALPHA; AXIS HWARANG from Attack Position ALPHA to OBJ HWARANG; PL MELONA, PL BABAMBA, PL OKDONGJA, PL MEGATON, and PL NUGABA; 2d Platoon blocking positions BP H1 through BP H7; supplementary positions SP H1 through SP H7.\nd. Scheme of Fires.\n(1) Priority of Fires.\nPhase I: 1st Platoon, 2nd Platoon, 3rd Platoon.\nPhase II: 1st Platoon, 2nd Platoon, 3rd Platoon.\nPhase III: 1st and 2nd Platoons, then 3rd Platoon.\n(2) Essential Fire Support Task.\nProvide illumination over OBJ HWARANG during Phase III in order to enable 1st and 2nd Platoons to maintain the expanded cordon, detect exfiltrating enemy forces, and complete destruction of the UAS cell.\nMortar target list and TTLODAC data (fictional training data):\n\nTarget | Trigger | Location | Observer | Delivery | Attack Guidance | Communications\n--- | --- | --- | --- | --- | --- | ---\nAH1001 HWARANG | RED signal or enemy movement detected during Phase III | 52S CG 42500 62000 | P: 1st PLT FO A: UAS observer | Company 60-mm mortars | Illumination; 2 rounds at 60-second intervals for up to 10 minutes, then on call | Company Fires Net FH Preset 32\nAH1002 FORD GUARD | Enemy threatens the wet-gap crossing or north-bank exit | 52S CG 41050 60400 | P: 1st PLT FO A: C Company CP | Company 60-mm mortars | Smoke or HE as approved; adjust fire and cease before friendly movement enters the target area | Company Fires Net FH Preset 32\nAH1003 ALPHA GUARD | Enemy ground element approaches UAS Control Site ALPHA | 52S CG 40800 60600 | P: 3d PLT FO A: UAS Control Site | Company 60-mm mortars | Protective HE target; fire only on company commander approval after clearance of friendly positions | Company Fires Net FH Preset 32\nAH1004 TRAIL WATCH | Enemy blocking force identified along the company attack route | 52S CG 41600 61000 | P: 1st PLT FO A: Recon UAS | Company 60-mm mortars | Suppress; 4 rounds, adjust, then continue on observer request | Company Fires Net FH Preset 32\n\ne. Tasks to Subordinate Units.\n(1) 1st Platoon.\n(a) Phase I.\n• Occupy Attack Position ALPHA and prepare to confirm and designate the enemy position.\n(b) Phase II.\n• Confirm the enemy location and designate the target with the prearranged IR laser signal.\n• Assault to destroy remaining enemy forces after remote effects.\n• Secure OBJ HWARANG and establish security and defensive positions following mission success.\n(c) Phase III.\n• On the RED signal, disengage if in contact; otherwise reposition directly to supplementary blocking positions.\n• Reinforce 2nd Platoon’s blocking line and assist in establishing the expanded cordon.\n(2) 2nd Platoon.\n(a) Phase I.\n• Occupy designated blocking positions and isolate OBJ HWARANG.\n(b) Phase II.\n• Prevent enemy reinforcement and exfiltration.\n• Detect, block, and destroy enemy forces attempting to escape east or west.\n• Establish security positions on OBJ HWARANG following mission success.\n(c) Phase III.\n• Establish the expanded cordon with 1st Platoon.\n• Prevent enemy exfiltration across the 1st Battalion–2nd Brigade boundary.\n(3) 3rd Platoon.\n(a) Phase I.\n• Secure and protect UAS Control Site ALPHA.\n• Integrate the UAS reconnaissance team, strike UAS team, and Javelin team.\n• Prepare Alternate UAS Control Site BRAVO.\n(b) Phase II.\n• Locate and confirm the enemy position using reconnaissance UAS.\n• Execute strike effects on the company commander’s order following 1st Platoon’s IR designation.\n• Maintain UAS surveillance and conduct battle damage assessment.\n(c) Phase III.\n• Continue UAS surveillance, track enemy movement, and support the expanded cordon.\n• Continue battle damage assessment and report enemy attempts to penetrate or escape the cordon.\n(d) All Phases.\n• Maintain situational awareness of the entire objective area and be prepared to assume command of the company.\n(4) Weapons Platoon.\n(a) Phase I.\n• Remain prepared to provide emergency mortar fires.\n• Place the Javelin team OPCON to 3d Platoon in preparation for Phase II.\n(b) Phase II.\n• Remain prepared to provide emergency mortar fires.\n• Support the Javelin team’s attack against the hardened UAS control and firing position.\n(c) Phase III.\n• Provide continuous illumination fires as requested in support of the expanded cordon.\n(d) All Phases.\n• Coordinate all fires that may affect the eastern ring road or 2nd Brigade movement through the C Company CP.\nf. Coordinating Instructions.\n(1) Timeline.\n140100JUL26 C Company SP.\n140130JUL26 Wet-gap crossing begins.\n140300JUL26 All assault, blocking, and UAS positions occupied.\n140330JUL26 Final target confirmation complete.\n140400JUL26 H-Hour / Phase II begins.\nNLT 140600JUL26 OBJ HWARANG secured.\nUntil 140900JUL26 C Company supports 2d Brigade passage and secures Hwarang Mountain.\n(2) Commander’s Critical Information Requirements.\n(a) Priority Intelligence Requirements.\n• Exact location of enemy UAS control, launch, and hardened firing positions.\n• Number and status of enemy reconnaissance and strike UAS.\n• Enemy primary exfiltration routes and alternate positions.\n• Location of the enemy antiarmor team and mortar-observer element.\n• Indications that the enemy has detected the C Company CP or UAS Control Site.\n(b) Friendly Force Information Requirements.\n• A platoon becomes isolated or loses 30 percent or more of its combat power.\n• Loss of a key leader or critical UAS operator.\n• Loss of friendly UAS reconnaissance or strike capability.\n• FORD BLUE becomes unusable.\n• Movement of 2d Brigade is halted or creates a risk of fratricide or interference.\n(c) Essential Elements of Friendly Information.\n• Location and movement time of the company decisive operation.\n• Location of the C Company CP and UAS Control Site.\n• Location of FORD BLUE.\n• Friendly UAS launch and recovery schedule.\n• 1st Platoon attack route.\n(3) UAS Defensive Measures.\n• Each platoon designates dedicated air guards and sectors of observation.\n• Report all UAS detections immediately using the unit UAS CONTACT report.\n• Minimize unnecessary electronic emissions and visible signatures.\n• Maintain dispersion, camouflage, and use of covered routes.\n• Use approved friendly-UAS identification procedures.\n• Report, secure, and recover downed enemy UAS for exploitation when tactical conditions permit.\n• Disperse the C Company CP, UAS Control Site, Company CCP, and Battalion Aid Station to the greatest practical extent.\n(4) Execution and Transition Signals.\nAttack execution cue: Company commander’s authenticated attack order followed by 1st Platoon’s prearranged IR laser designation.\nPhase II success: GREEN pyrotechnic signal.\nPhase II failure / transition to Phase III: RED pyrotechnic signal.\n(5) Protection.\n• MOPP level: LOW.\n• Weapons Control Status: TIGHT.\n• Positive identification is required before engagement.\n• All fires and UAS operations near the eastern boundary are deconflicted with 2nd Brigade through the C Company CP.\n• All elements maintain cold-weather injury prevention measures after the wet-gap crossing.\n(6) Load Carriage.\n• Carry additional batteries for NVGs, IR devices, radios, ATAK devices, and UAS systems.\n• Protect batteries from cold exposure and keep reserve batteries insulated.\n• Carry one meal and one liter of water per Soldier for the initial operation.\n• Prioritize ammunition and mission-essential equipment.\n• Carry cold-weather and wet-crossing protective items IAW unit SOP.\n(7) Rehearsal Priorities.\n• Wet-gap crossing and actions at FORD BLUE.\n• IR laser designation and strike execution sequence.\n• GREEN/RED pyrotechnic signals and Phase III transition.\n• Disengage and reposition procedures for 1st Platoon.\n• Expanded cordon and blocking-line handoff.\n• UAS identification, air-guard reporting, and downed-UAS recovery.",
+                                    "sustainment": "4. SUSTAINMENT\na. Logistics.\n(1) Concept of Support.\nInitial supply, maintenance, and personnel support are conducted in the C Company CP area. If Phase III is initiated, C Company conducts tailgate resupply along the blocking line. If ground access is denied or significantly restricted, emergency supplies may be delivered by UAS airdrop.\n(2) Supply and Field Services.\nClass I: Each Soldier carries one meal and one liter of water. Additional food and water are pushed forward if Phase III is initiated or the objective must be held for an extended period.\nClass V: Platoons carry increased ammunition loads. Mortar illumination ammunition is prioritized. UAS munitions and Javelin rounds are stored and protected at UAS Control Site ALPHA until required.\nClass VIII: Each Soldier carries a tourniquet and hemorrhage-control dressing set. Medics carry cold-weather injury treatment supplies.\nBatteries and Power: Maintain reserve batteries for UAS, NVGs, IR lasers, ATAK devices, and FM radios. Store batteries in insulated containers and protect them from cold until use. Establish a UAS battery exchange and charging point at UAS Control Site ALPHA.\n(3) Distribution and Resupply.\nBefore Phase I, units draw and cross-load supplies in the C Company CP area. During Phase III, the company conducts tailgate resupply along the blocking line using ground vehicles. If ground delivery is not possible, the company employs UAS airdrop for selected emergency items.\nTailgate resupply route, release point, and UAS airdrop locations: MSR YUKHOSUNRO; Logistics Release Point HWARANG at Hwarang Mountain Parking Lot 1, 52S CG 40850 60450; resupply handoff points at Parking Lots 1 through 7; UAS Drop Zone TOURIST at the Hwarang Mountain Tourist Center LZ, 52S CG 41400 60800.\n(4) Maintenance and Recovery.\n• Prevent icing and moisture damage to weapons, optics, UAS, and electronic systems.\n• Recover downed friendly UAS when tactical conditions permit.\n• Protect or destroy sensitive equipment that cannot be recovered, IAW unit SOP.\n• Report Javelin, UAS, and communications-system faults immediately to the C Company CP.\nb. Personnel Services Support.\nPersonnel, administrative, detainee, and casualty-status reporting is conducted through the C Company CP. Enemy prisoners and detainees are moved to the designated collection point and transferred to the battalion.\nDetainee collection point grid: 52S CG 40050 59700, service yard south of Chungmu Hall.\nc. Tactical Combat Casualty Care (TCCC).\n(1) Care Under Fire.\nSoldiers conduct immediate self-aid and buddy aid using individually carried tourniquets and hemorrhage-control dressings.\n(2) Tactical Field Care.\nThe Company CCP is established in the C Company CP area. Each platoon designates a platoon casualty collection point and reports its location to the C Company CP.\n(3) Tactical Evacuation Care.\nPrimary: Ground CASEVAC from platoon casualty collection points to the Company CCP, then to the Battalion Aid Station.\nAlternate: MEDEVAC when authorized, available, and tactically feasible.\nBattalion Aid Station / Role 1 MTF: Located in the battalion aid-station area within the C Company sector.\nCompany CCP grid: 52S CG 39950 59750; Battalion Aid Station grid: 52S CG 39750 59500; primary and alternate evacuation routes: Primary—MSR YUKHOSUNRO; Alternate—ASR ROUTE 66.",
+                                    "commandSignal": "5. COMMAND AND SIGNAL\na. Command.\n(1) Location of Commander and Key Leaders.\nC Company Commander: C Company CP.\nExecutive Officer: C Company CP.\nFirst Sergeant: C Company CP.\nUAS Platoon Leader: C Company CP.\nUAS reconnaissance and strike team leaders: UAS Control Site ALPHA with 3rd Platoon.\n1st Platoon Leader: With 1st Platoon on the mountain approach and OBJ HWARANG.\n2nd Platoon Leader: With 2nd Platoon on the blocking line.\n3rd Platoon Leader: UAS Control Site ALPHA, maintaining observation of the objective and UAS feeds.\n(2) Succession of Command.\n1. C Company Commander\n2. Executive Officer\n3. 3rd Platoon Leader\n4. 1st Platoon Leader\n5. 2nd Platoon Leader\nb. Control.\nC Company CP: 52S CG 40000 59800, Chungmu Hall.\nUAS Control Site ALPHA: 52S CG 40500 60600, Gansungmoon Building near the 1st Company CP.\nAlternate UAS Control Site BRAVO: 52S CG 40350 60450, Hwarang Rail Park Information Center near Gansungmoon Building.\nCompany CCP: 52S CG 39950 59750.\nBattalion Aid Station: 52S CG 39750 59500.\nc. Signal.\n(1) PACE.\nPrimary: Encrypted tactical data network supporting ATAK.\nAlternate: FM voice radio.\nContingency: Commercial Iridium satellite telephone.\nEmergency: Runner / messenger.\n(2) EMCON.\n• Before H-Hour: EMCON Level 4, IAW unit SOP.\n• During execution: EMCON Level 5, IAW unit SOP.\n• Minimize unnecessary FM voice traffic.\n• Use the encrypted ATAK-enabled network whenever available.\n• When FM is required, use only authorized CEOI callsigns, code words.\n(3) Radio Nets and Frequencies.\nCompany Command Net: FH Preset 31 (exact training frequency IAW CEOI).\nCompany Fires Net: FH Preset 32 (exact training frequency IAW CEOI).\n1st Platoon Net: FH Preset 33 (exact training frequency IAW CEOI).\n2d Platoon Net: FH Preset 34 (exact training frequency IAW CEOI).\n3d Platoon / UAS Net: FH Preset 35 (exact training frequency IAW CEOI).\nEW Coordination Net: FH Preset 36 (exact training frequency IAW CEOI).\n(4) Challenge, Password, and Recognition.\nChallenge: HWARANG\nPassword: CHUNGMU\nNumber Combination: 7\nRunning Password: CADET\n(5) Visual and Pyrotechnic Signals.\nTarget designation / execution cue: Following the company commander’s authenticated attack order, 1st Platoon blows out IR laser pulses and then blinks the laser steadily on the confirmed target for 7 times.\nPhase II success: GREEN pyrotechnic signal.\nPhase II failure / transition to Phase III: RED pyrotechnic signal.\nEmergency recognition signals: IAW CEOI and unit SOP.\nACKNOWLEDGE:\nLEE, MANHEE\nCPT\nCOMMANDING\nOFFICIAL:\nYOUNG, UH-KWA\n1LT\nXO\nTRAINING NOTE: This order is a fictional classroom product designed to teach OPORD structure, UAS-enabled operations, wet-gap crossing, Javelin employment against a hardened position, pyrotechnic signals, disengagement, tailgate resupply, UAS airdrop, PACE, and EMCON concepts. It is not an operational directive."
+                        }
             }
-        };
+};
+
+        const BUILT_IN_SCENARIO_STEP2_BLOCKS = {
+            "OPORD-01": {
+                        "situation": [
+                                    "Today's high is expected to be 85 degrees Fahrenheit. Expect temperatures in the upper 30s tomorrow, with Shamal winds moving in and gusting up to 70 mph.",
+                                    "Downtown Baghdad; Saffron Hill; the entire AO; 3rd Infantry to the east; 1st Marine Division (us); Iraqi forces to the north; and the Euphrates Bridge—our objective."
+                        ],
+                        "mission": [
+                                    "Godfather says it’s time for us to be more aggressive.",
+                                    "Suggest you send foot patrols out into the neighborhoods."
+                        ],
+                        "execution": [
+                                    "Major Strahm wants us to take them out.",
+                                    "We’ll establish a base of fire and move under it hard and fast with two squads of three.",
+                                    "We’ll take some TNT along with us to spike the guns.",
+                                    "Lieutenant, it’s your responsibility.",
+                                    "Liebgott, you take the first machine gun with Petty, the A-gunner.",
+                                    "Pletcher and Hendricks, you take the other.",
+                                    "Compton, Malarkey, Toye, and Garnier, we’ll be making the main assault.",
+                                    "Lipton, when you see we captured the first gun, I want you and your TNT as fast as possible.",
+                                    "Just weapons and ammo. Drop everything else. Got any spare ammo in a pack or musette bag? Bring it along."
+                        ],
+                        "sustainment": [
+                                    "Logistics: Class V resupply is available at LOGPAC 1 on order.",
+                                    "Personnel: Maintain accountability and report personnel status.",
+                                    "Health Service Support: CCP 1 is at CHECKPOINT 2; evacuate casualties via ROUTE BLUE."
+                        ],
+                        "commandSignal": [
+                                    "The AO in this region is very steep, so expect typical comms problems.",
+                                    "We’re going to be on two-hour comms windows. If we miss two windows, wake somebody up. If not, don’t sweat it.",
+                                    "Waypoint 1 is Budweiser; Waypoint 2 is Miller; 3 is Corona; 4 is Heineken.",
+                                    "For OP 1, it’s Schlitz Malt Liquor. If we ID Shaw, pass Rick James."
+                        ],
+                        "__step2Questions": {
+                                    "situation": [
+                                                "Based on the script, what is the terrain / weather’s effect on the operation?",
+                                                "What detailed information about Enemy / Friendly forces is missing or needs clarification?"
+                                    ],
+                                    "mission": [
+                                                "What is wrong or incomplete in this mission message? Check conciseness, tense, and the five Ws.",
+                                                "Which who, what, when, where, and why details must be added before it becomes a clear mission statement?"
+                                    ],
+                                    "execution": [
+                                                "What is this briefing about?",
+                                                "Which aspects of Execution do you see? Identify the commander’s intent, concept / scheme, tasks, or coordinating instructions."
+                                    ],
+                                    "sustainment": [
+                                                "What supplies, personnel support, and casualty-care support will this unit need?",
+                                                "How will the team plan resupply, accountability, and evacuation?"
+                                    ],
+                                    "commandSignal": [
+                                                "What components of Command and Signal do you see in the clip?",
+                                                "What would you add or revise to make the command-and-signal plan more usable?"
+                                    ]
+                        }
+            },
+            "OPORD-02": {
+                        "situation": [
+                                    "AO: Hwarang City is a basin city crossed by Hwarang Stream; OBJ HWARANG dominates the urban area and the eastern ring road.",
+                                    "Terrain: Hwarang Stream is wide but shallow enough for a deliberate dismounted wet-gap crossing; mountain trails canalize movement.",
+                                    "Weather Effects: Clear skies and snow favor UAS observation and expose tracks; cold and wind reduce UAS battery endurance and stability.",
+                                    "Enemy: A reinforced platoon-minus UAS cell occupies a hardened control and firing position near the summit.",
+                                    "Enemy COA: The enemy will use reconnaissance/strike UAS, mortar observation, antiarmor weapons, and boundary seams; if pressured, it will disperse east or west.",
+                                    "Friendly: C Company is the battalion decisive operation. UAS Platoon is OPCON; the EW Platoon supports directly; one Javelin team supports 3d Platoon in Phase II."
+                        ],
+                        "mission": [
+                                    "C Company attacks to destroy the enemy UAS cell on OBJ HWARANG NLT 140600JUL26 in order to restore freedom of maneuver for 2nd Brigade along the eastern ring road and prevent further enemy UAS attacks against battalion critical assets.",
+                                    "Platoon mission stem: [Platoon] [task] [where] [when/condition] in order to [purpose linked to the company mission]."
+                        ],
+                        "execution": [
+                                    "Intent: Restore 2d Brigade's freedom of maneuver by isolating OBJ HWARANG, destroying the enemy UAS cell, and securing the mountain.",
+                                    "Phase I: Cross FORD BLUE, occupy assault/blocking/UAS-control positions, and isolate OBJ HWARANG.",
+                                    "Phase II: Confirm the target, execute the IR-designated UAS/Javelin strike, assault remaining enemy forces, and secure the objective.",
+                                    "Phase III (on RED): 1st Platoon disengages or repositions, reinforces 2d Platoon, and forms an expanded cordon under illumination.",
+                                    "Unit roles: 1st Platoon is the decisive operation; 2d Platoon blocks exfiltration; 3d Platoon integrates UAS/Javelin effects; Weapons Platoon provides fires.",
+                                    "Signals: GREEN = Phase II success; RED = failure and transition to Phase III."
+                        ],
+                        "sustainment": [
+                                    "Logistics: Initial support is at the C Company CP; Phase III uses tailgate resupply along the blocking line.",
+                                    "Contingency Distribution: Selected emergency supplies may be delivered by UAS airdrop when ground access is denied.",
+                                    "Supply: Carry one meal, one liter of water, increased ammunition, mortar illumination, and protected UAS/Javelin stocks.",
+                                    "Power and Maintenance: Insulate batteries for UAS/NVG/IR/ATAK/FM systems and prevent icing or moisture damage.",
+                                    "TCCC: Platoon casualty points feed the Company CCP, then the Battalion Aid Station; ground CASEVAC is primary and MEDEVAC is alternate."
+                        ],
+                        "commandSignal": [
+                                    "Command: Company commander, XO, first sergeant, and UAS platoon leader operate from the C Company CP.",
+                                    "Succession: Company Commander → XO → 3d Platoon Leader → 1st Platoon Leader → 2d Platoon Leader.",
+                                    "Control: UAS Control Site ALPHA is near the 1st Company CP; Alternate Site BRAVO is prepared.",
+                                    "PACE: Encrypted ATAK-enabled network / FM voice / Iridium satellite telephone / runner.",
+                                    "Signal: EMCON IAW SOP; GREEN and RED pyrotechnics control the branch; challenge HWARANG, password CHUNGMU, number 7, running password CADET."
+                        ]
+            }
+};
+
+        const BUILT_IN_SCENARIO_PHRASE_BANKS = {
+            "OPORD-01": {
+                        "situation": [
+                                    "Observation and fields of fire",
+                                    "Avenues of approach",
+                                    "Key terrain",
+                                    "Obstacles",
+                                    "Cover and concealment",
+                                    "visibility",
+                                    "winds",
+                                    "precipitation",
+                                    "temperature",
+                                    "composition and strength",
+                                    "capabilities",
+                                    "location",
+                                    "most likely COA"
+                        ],
+                        "mission": [
+                                    "who",
+                                    "what",
+                                    "when",
+                                    "where",
+                                    "why"
+                        ],
+                        "execution": [
+                                    "purpose",
+                                    "key tasks",
+                                    "end state",
+                                    "decisive operations",
+                                    "shaping operations",
+                                    "phased operations",
+                                    "operational timeline",
+                                    "CCIR",
+                                    "PIR",
+                                    "FFIR",
+                                    "EEFI",
+                                    "ROE",
+                                    "load carriage"
+                        ],
+                        "sustainment": [
+                                    "water",
+                                    "food / ration",
+                                    "ammunition",
+                                    "fuel",
+                                    "battery",
+                                    "airdrop",
+                                    "EPW",
+                                    "tourniquet",
+                                    "CASEVAC",
+                                    "MEDEVAC",
+                                    "CCP"
+                        ],
+                        "commandSignal": [
+                                    "location of leaders",
+                                    "succession of command",
+                                    "command post location",
+                                    "CEOI",
+                                    "PACE",
+                                    "Primary",
+                                    "Alternate",
+                                    "Contingency",
+                                    "Emergency",
+                                    "number combinations",
+                                    "challenge passwords",
+                                    "running passwords",
+                                    "pyrotechnic signals"
+                        ]
+            },
+            "OPORD-02": {
+                        "situation": [
+                                    "dominates observation",
+                                    "canalizes movement",
+                                    "reinforced UAS cell",
+                                    "hardened position",
+                                    "persistent surveillance",
+                                    "most likely course of action",
+                                    "most dangerous course of action",
+                                    "OPCON",
+                                    "direct support"
+                        ],
+                        "mission": [
+                                    "attacks to destroy",
+                                    "NLT",
+                                    "OBJ HWARANG",
+                                    "in order to restore freedom of maneuver",
+                                    "in order to support the company decisive operation"
+                        ],
+                        "execution": [
+                                    "deliberate attack",
+                                    "decisive operation",
+                                    "supporting operation",
+                                    "wet-gap crossing",
+                                    "isolate",
+                                    "assault",
+                                    "block",
+                                    "disengage",
+                                    "reposition",
+                                    "expanded cordon",
+                                    "consolidate and reorganize",
+                                    "be prepared to"
+                        ],
+                        "sustainment": [
+                                    "tailgate resupply",
+                                    "UAS airdrop",
+                                    "Class I",
+                                    "Class V",
+                                    "Class VIII",
+                                    "battery exchange point",
+                                    "maintenance and recovery",
+                                    "Company CCP",
+                                    "ground CASEVAC",
+                                    "MEDEVAC"
+                        ],
+                        "commandSignal": [
+                                    "location of key leaders",
+                                    "succession of command",
+                                    "PACE",
+                                    "EMCON",
+                                    "authenticated order",
+                                    "IR laser designation",
+                                    "pyrotechnic signal",
+                                    "challenge and password",
+                                    "running password"
+                        ]
+            }
+};
 
         // OPORD-01 Step 2 begins with the two thinking prompts used in the lecture deck.
         // This is deliberately lighter than OPORD-02: learners identify what the clip shows before they write a full OPORD.
@@ -1460,105 +1588,27 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 && getScenarioStep2Questions(data, paragraphId).length > 0;
         }
 
-        // One-time course-content refresh. It updates only OPORD-01 in a browser that
-        // previously stored an older prototype, while leaving OPORD-02 and custom activities intact.
-        // Version v4 changes OPORD-01 Step 2 from open-ended paragraph drafting to two guided thinking responses per paragraph.
-        const VIDEO_DICTATION_CONTENT_VERSION = 'opord-video-dictation-v4';
+        // One-time local refresh for the research-lesson course package.
+        // Shared Supabase data is updated only when the teacher presses the Hwarang deploy button.
+        const HWARANG_COURSE_PACKAGE_VERSION = 'hwarang-shield-opord02-v4';
 
-        function applyVideoDictationContentRefresh() {
-            if (localStorage.getItem('OPORD_VIDEO_DICTATION_CONTENT_VERSION') === VIDEO_DICTATION_CONTENT_VERSION) return;
-
+        function applyHwarangCoursePackageLocalRefresh() {
+            if (localStorage.getItem('HWARANG_COURSE_PACKAGE_VERSION') === HWARANG_COURSE_PACKAGE_VERSION) return;
             let storedScenarios = {};
-            try {
-                storedScenarios = JSON.parse(localStorage.getItem('OPORD_SCENARIOS')) || {};
-            } catch (error) {
-                storedScenarios = {};
-            }
-
-            const prior = storedScenarios['OPORD-01'] || {};
-            const refreshed = {
-                ...prior,
-                ...defaultScenarios['OPORD-01'],
-                code: 'OPORD-01',
-                title: '강의 동시 활동: OPORD Video Dictation Workshop',
-                activityType: 'lecture',
-                courseContentVersion: VIDEO_DICTATION_CONTENT_VERSION
-            };
-            // Force getScenarioStore() to use the new built-in cards and phrase bank.
-            delete refreshed.step2Blocks;
-            delete refreshed.phraseBanks;
-            delete refreshed.slots1;
-            delete refreshed.slots2;
-            storedScenarios['OPORD-01'] = refreshed;
+            try { storedScenarios = JSON.parse(localStorage.getItem('OPORD_SCENARIOS')) || {}; } catch (error) { storedScenarios = {}; }
+            ['OPORD-01', 'OPORD-02'].forEach(code => {
+                const prior = storedScenarios[code] || {};
+                const refreshed = { ...prior, ...defaultScenarios[code], code, courseContentVersion: HWARANG_COURSE_PACKAGE_VERSION };
+                delete refreshed.step2Blocks;
+                delete refreshed.step2Questions;
+                delete refreshed.phraseBanks;
+                storedScenarios[code] = refreshed;
+            });
             localStorage.setItem('OPORD_SCENARIOS', JSON.stringify(storedScenarios));
-            localStorage.setItem('OPORD_VIDEO_DICTATION_CONTENT_VERSION', VIDEO_DICTATION_CONTENT_VERSION);
-
-            // Start OPORD-01 cleanly after the course materials change. Other activities and users remain untouched.
-            const pruneObjectByScenario = (key) => {
-                try {
-                    const raw = JSON.parse(localStorage.getItem(key)) || {};
-                    Object.keys(raw).forEach(itemKey => {
-                        if (itemKey.includes('::OPORD-01::')) delete raw[itemKey];
-                    });
-                    localStorage.setItem(key, JSON.stringify(raw));
-                } catch (error) {
-                    // Ignore malformed prototype cache; the app will recreate it as needed.
-                }
-            };
-            pruneObjectByScenario('OPORD_WORKSHOP_PROGRESS');
-            pruneObjectByScenario('OPORD_STEP2_GUIDED_DRAFTS');
-
-            try {
-                const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
-                localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify(artifacts.filter(artifact => artifact.scenarioCode !== 'OPORD-01')));
-            } catch (error) {
-                // Ignore malformed prototype cache.
-            }
+            localStorage.setItem('HWARANG_COURSE_PACKAGE_VERSION', HWARANG_COURSE_PACKAGE_VERSION);
         }
 
-        applyVideoDictationContentRefresh();
-
-        // One-time OPORD-02 form refresh. Earlier Code Your Way forms included
-        // higher-echelon / unrelated fields. This version resets only OPORD-02
-        // local Step 2 test state so the revised company-and-below shell opens cleanly.
-        const OPORD02_COMPANY_SHELL_FORM_VERSION = 'opord02-company-shell-v2';
-
-        function applyOpord02CompanyShellFormRefresh() {
-            if (localStorage.getItem('OPORD02_COMPANY_SHELL_FORM_VERSION') === OPORD02_COMPANY_SHELL_FORM_VERSION) return;
-
-            const pruneObjectByScenario = (key) => {
-                try {
-                    const raw = JSON.parse(localStorage.getItem(key)) || {};
-                    Object.keys(raw).forEach(itemKey => {
-                        if (itemKey.includes('::OPORD-02::')) delete raw[itemKey];
-                    });
-                    localStorage.setItem(key, JSON.stringify(raw));
-                } catch (error) {
-                    // Ignore malformed prototype cache; the app recreates it as needed.
-                }
-            };
-
-            pruneObjectByScenario('OPORD_WORKSHOP_PROGRESS');
-            pruneObjectByScenario('OPORD_STEP2_GUIDED_DRAFTS');
-
-            try {
-                const artifacts = JSON.parse(localStorage.getItem('OPORD_ARTIFACTS')) || [];
-                localStorage.setItem('OPORD_ARTIFACTS', JSON.stringify(artifacts.filter(artifact => artifact.scenarioCode !== 'OPORD-02')));
-            } catch (error) {
-                // Ignore malformed prototype cache.
-            }
-
-            try {
-                const comments = JSON.parse(localStorage.getItem('OPORD_COMMENTS')) || [];
-                localStorage.setItem('OPORD_COMMENTS', JSON.stringify(comments.filter(comment => !String(comment.artifactKey || '').includes('::OPORD-02::'))));
-            } catch (error) {
-                // Ignore malformed prototype cache.
-            }
-
-            localStorage.setItem('OPORD02_COMPANY_SHELL_FORM_VERSION', OPORD02_COMPANY_SHELL_FORM_VERSION);
-        }
-
-        applyOpord02CompanyShellFormRefresh();
+        applyHwarangCoursePackageLocalRefresh();
 
         let editingScenarioCode = null;
 
@@ -1569,6 +1619,236 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         // Stored inside scenarios.step2_blocks to avoid a new Supabase column.
         // { __step2Questions: { situation: [...], mission: [...], ... } }
         const STEP2_QUESTIONS_KEY = '__step2Questions';
+
+
+        function normalizeCompanySource(value) {
+            const source = value && typeof value === 'object' ? value : {};
+            const sections = source.sections && typeof source.sections === 'object' ? source.sections : {};
+            const normalizedSections = {};
+            TEACHER_PARAGRAPH_IDS.forEach(id => { normalizedSections[id] = String(sections[id] || ''); });
+            return {
+                title: String(source.title || ''),
+                subtitle: String(source.subtitle || ''),
+                missionAnchor: String(source.missionAnchor || ''),
+                mapUrl: String(source.mapUrl || ''),
+                sections: normalizedSections
+            };
+        }
+
+        function hasCompanySource(source) {
+            const normalized = normalizeCompanySource(source);
+            return Boolean(normalized.missionAnchor || normalized.mapUrl || Object.values(normalized.sections).some(Boolean));
+        }
+
+        function getScenarioCompanySource(scenario) {
+            if (!scenario || typeof scenario !== 'object') return normalizeCompanySource({});
+            const stored = scenario.companySource || scenario.step2Blocks?.[COMPANY_SOURCE_KEY];
+            if (hasCompanySource(stored)) return normalizeCompanySource(stored);
+            return normalizeCompanySource(BUILT_IN_COMPANY_SOURCE[scenario.code] || {});
+        }
+
+        function materializeBuiltInScenario(code) {
+            const base = JSON.parse(JSON.stringify(defaultScenarios[code] || {}));
+            const builtInBlocks = BUILT_IN_SCENARIO_STEP2_BLOCKS[code] || {};
+            const step2Blocks = {};
+            TEACHER_PARAGRAPH_IDS.forEach(id => { step2Blocks[id] = cloneBlockList(builtInBlocks[id]).filter(Boolean); });
+            const questionMap = normalizeStep2QuestionMap(builtInBlocks[STEP2_QUESTIONS_KEY] || {});
+            step2Blocks[STEP2_QUESTIONS_KEY] = questionMap;
+            const companySource = normalizeCompanySource(BUILT_IN_COMPANY_SOURCE[code] || {});
+            if (hasCompanySource(companySource)) step2Blocks[COMPANY_SOURCE_KEY] = companySource;
+            return {
+                ...base,
+                step2Blocks,
+                step2Questions: questionMap,
+                phraseBanks: cloneCourseMaterialObject(BUILT_IN_SCENARIO_PHRASE_BANKS[code] || DEFAULT_PHRASE_BANKS, {}),
+                companySource,
+                isActive: true,
+                createdAt: base.createdAt || Date.now(),
+                updatedAt: Date.now(),
+                scenarioVersion: 'hwarang-opord02-v4'
+            };
+        }
+
+        async function deployHwarangCoursePackage() {
+            if (!requireTeacherAccess()) return;
+            if (!confirm('OPORD-01은 기존 Video Dictation 강의 활동으로 유지하고, OPORD-02를 Operation Hwarang Shield Code Your Way 활동으로 배포할까요?\n\n기존 제출 artifact는 코드별로 보존됩니다.')) return;
+            const button = document.getElementById('hwarang-package-deploy-btn');
+            if (button) {
+                button.disabled = true;
+                button.classList.add('opacity-60', 'cursor-wait');
+                button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>화랑방패 OPORD-02 자료 배포 중…';
+            }
+            try {
+                await writeScenarioToDatabase(materializeBuiltInScenario('OPORD-01'));
+                await writeScenarioToDatabase(materializeBuiltInScenario('OPORD-02'));
+                await refreshSharedScenarios();
+                selectedScenarioCode = 'OPORD-02';
+                resetScenarioStep2Progress('OPORD-01');
+                resetScenarioStep2Progress('OPORD-02');
+                renderTeacherDashboard();
+                renderStudentDashboard();
+                renderSharedHub();
+                alert('✅ Operation Hwarang Shield course package가 공유 DB에 배포되었습니다.\n\nOPORD-01: Video Dictation lecture activity\nOPORD-02: Hwarang Shield writing lab');
+            } catch (error) {
+                console.error('Hwarang course package deploy failed:', error);
+                alert(`화랑방패 자료를 배포하지 못했습니다.\n${error.message || '잠시 뒤 다시 시도하십시오.'}`);
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.classList.remove('opacity-60', 'cursor-wait');
+                    button.innerHTML = '<i class="fa-solid fa-shield-halved mr-1"></i>Operation Hwarang Shield를 OPORD-02로 배포';
+                }
+            }
+        }
+
+        let companySourceActiveTab = 'situation';
+
+        function openCompanyOpordSource(tabId = activeParagraphId) {
+            const scenario = getScenarioStore()[selectedScenarioCode];
+            const source = getScenarioCompanySource(scenario);
+            if (!hasCompanySource(source)) return;
+            companySourceActiveTab = tabId === 'map' ? 'map' : (TEACHER_PARAGRAPH_IDS.includes(tabId) ? tabId : 'situation');
+            document.getElementById('company-source-title').innerText = source.title || 'Company OPORD Source';
+            document.getElementById('company-source-subtitle').innerText = source.subtitle || '';
+            const modal = document.getElementById('company-source-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.classList.add('overflow-hidden');
+            renderCompanyOpordSource(source);
+        }
+
+        function closeCompanyOpordSource() {
+            const modal = document.getElementById('company-source-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        function handleCompanySourceBackdrop(event) {
+            if (event.target?.id === 'company-source-modal') closeCompanyOpordSource();
+        }
+
+        function formatCompanySourceText(text, sectionId = '') {
+            const lines = String(text || '').replace(/\r/g, '').split('\n');
+            const output = [];
+            let i = 0;
+            let taskOrganization = false;
+            let firstBodyParagraph = true;
+            const esc = value => escapeHtml(String(value || '').trim());
+
+            while (i < lines.length) {
+                const raw = lines[i];
+                const line = raw.trim();
+                if (!line) { i += 1; continue; }
+
+                // Markdown-style tables extracted from DOCX.
+                if (line.includes('|') && i + 1 < lines.length && /^\s*[-:]+(?:\s*\|\s*[-:]+)+\s*$/.test(lines[i + 1])) {
+                    const headers = line.split('|').map(part => esc(part));
+                    i += 2;
+                    const rows = [];
+                    while (i < lines.length && lines[i].includes('|') && lines[i].trim()) {
+                        rows.push(lines[i].split('|').map(part => esc(part)));
+                        i += 1;
+                    }
+                    output.push(`<div class="source-table-wrap"><table><thead><tr>${headers.map(cell => `<th>${cell}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${headers.map((_, idx) => `<td>${row[idx] || ''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`);
+                    continue;
+                }
+
+                if (/^(UNCLASSIFIED|HEADQUARTERS|TASK ORGANIZATION|REFERENCES|TIME ZONE)/i.test(line) || (/^[A-Z0-9 /&()'.,—-]{6,}$/.test(line) && !/^\d+\./.test(line))) {
+                    taskOrganization = /^TASK ORGANIZATION$/i.test(line);
+                    output.push(`<div class="${taskOrganization ? 'source-h0' : 'source-kicker'}">${esc(line)}</div>`);
+                    i += 1;
+                    continue;
+                }
+                if (/^\d+\.\s+[A-Z]/.test(line)) {
+                    taskOrganization = false;
+                    output.push(`<div class="source-h1">${esc(line)}</div>`);
+                    i += 1;
+                    continue;
+                }
+                if (/^[a-z]\.\s+/.test(line)) {
+                    output.push(`<div class="source-h2">${esc(line)}</div>`);
+                    i += 1;
+                    continue;
+                }
+                if (/^\(\d+\)\s+Phase\s+/i.test(line) || /^Phase\s+[IVX]+/i.test(line)) {
+                    output.push(`<div class="source-phase">${esc(line)}</div>`);
+                    i += 1;
+                    continue;
+                }
+                if (/^\(\d+\)\s+/.test(line) || /^\([a-z]\)\s+/.test(line)) {
+                    output.push(`<div class="source-h3">${esc(line)}</div>`);
+                    i += 1;
+                    continue;
+                }
+                if (taskOrganization && !/^\d+\./.test(line)) {
+                    output.push(`<div class="source-bullet">${esc(line)}</div>`);
+                    i += 1;
+                    continue;
+                }
+                if (/^[•*-]\s+/.test(line)) {
+                    output.push(`<div class="source-bullet">${esc(line.replace(/^[•*-]\s+/, ''))}</div>`);
+                    i += 1;
+                    continue;
+                }
+                if (/^(Success condition|Attack execution cue|Phase II success|Phase II failure)/i.test(line)) {
+                    const parts = line.split(/:\s*/, 2);
+                    output.push(`<p><span class="source-label">${esc(parts[0])}:</span> ${esc(parts[1] || '')}</p>`);
+                    i += 1;
+                    continue;
+                }
+
+                const labelMatch = line.match(/^([^:]{1,52}):\s*(.+)$/);
+                if (labelMatch) {
+                    output.push(`<p><span class="source-label">${esc(labelMatch[1])}:</span> ${esc(labelMatch[2])}</p>`);
+                } else if (sectionId === 'mission' && firstBodyParagraph && !/^2\. MISSION$/i.test(line)) {
+                    output.push(`<div class="source-mission-callout">${esc(line)}</div>`);
+                    firstBodyParagraph = false;
+                } else {
+                    output.push(`<p>${esc(line)}</p>`);
+                    firstBodyParagraph = false;
+                }
+                i += 1;
+            }
+            return output.join('');
+        }
+
+        function renderCompanyOpordSource(source = getScenarioCompanySource(getScenarioStore()[selectedScenarioCode])) {
+            const tabs = [
+                { id: 'situation', label: '1. Situation', icon: 'fa-binoculars' },
+                { id: 'mission', label: '2. Mission', icon: 'fa-bullseye' },
+                { id: 'execution', label: '3. Execution', icon: 'fa-person-rifle' },
+                { id: 'sustainment', label: '4. Sustainment', icon: 'fa-boxes-stacked' },
+                { id: 'commandSignal', label: '5. Command & Signal', icon: 'fa-tower-broadcast' },
+                { id: 'map', label: 'Map / Concept Sketch', icon: 'fa-map' }
+            ];
+            const tabContainer = document.getElementById('company-source-tabs');
+            tabContainer.innerHTML = tabs
+                .filter(tab => tab.id !== 'map' || source.mapUrl)
+                .map(tab => `<button type="button" onclick="companySourceActiveTab='${tab.id}'; renderCompanyOpordSource()" class="source-modal-tab ${companySourceActiveTab === tab.id ? 'active' : ''} shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] font-black text-slate-600 hover:border-indigo-300 hover:text-indigo-700"><i class="fa-solid ${tab.icon} mr-1"></i>${tab.label}</button>`)
+                .join('');
+
+            const content = document.getElementById('company-source-content');
+            content.scrollTop = 0;
+            if (companySourceActiveTab === 'map') {
+                content.innerHTML = `<div class="source-map-frame rounded-2xl border border-slate-200 bg-white p-2 shadow-sm"><img src="${escapeHtml(source.mapUrl)}" alt="Operation Hwarang Shield fictional training map" class="mx-auto h-auto max-w-full rounded-xl" onerror="this.parentElement.innerHTML='<div class=&quot;p-12 text-center text-sm text-rose-600&quot;>map_final.png을 index.html과 같은 폴더에 업로드하십시오.</div>'"></div>`;
+                return;
+            }
+            const paragraphTitle = PARAGRAPH_DRILLS[companySourceActiveTab]?.title || 'OPORD';
+            const text = source.sections?.[companySourceActiveTab] || 'Source text is not available for this paragraph.';
+            content.innerHTML = `
+                <div class="mx-auto max-w-6xl rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-7">
+                    <div class="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                        <h3 class="text-base font-black text-slate-900">${escapeHtml(paragraphTitle)} · Company-Level Source</h3>
+                        <button type="button" onclick="companySourceActiveTab='map'; renderCompanyOpordSource()" class="${source.mapUrl ? '' : 'hidden'} rounded-lg bg-indigo-50 px-3 py-2 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fa-solid fa-map mr-1"></i>지도 함께 보기</button>
+                    </div>
+                    <div class="source-doc">${formatCompanySourceText(text, companySourceActiveTab)}</div>
+                </div>`;
+        }
+
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !document.getElementById('company-source-modal')?.classList.contains('hidden')) closeCompanyOpordSource();
+        });
 
         function normalizeStep2QuestionMap(value) {
             const output = {};
@@ -1589,7 +1869,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         function getScenarioStep2Questions(data, paragraphId) {
             const custom = getScenarioStep2QuestionMap(data)[paragraphId] || [];
             if (custom.length) return custom;
-            if (data?.code === 'OPORD-01' && getScenarioActivityType(data) === 'lecture') {
+            if (getScenarioActivityType(data) === 'lecture') {
                 return cloneBlockList(OPORD01_THINKING_PROMPTS[paragraphId]).filter(Boolean);
             }
             return [];
@@ -1603,6 +1883,9 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             } else {
                 delete blocks[STEP2_QUESTIONS_KEY];
             }
+            const companySource = getScenarioCompanySource(scenario);
+            if (hasCompanySource(companySource)) blocks[COMPANY_SOURCE_KEY] = companySource;
+            else delete blocks[COMPANY_SOURCE_KEY];
             return blocks;
         }
 
@@ -1677,8 +1960,12 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 const existingBlocks = raw.step2Blocks && typeof raw.step2Blocks === 'object' ? raw.step2Blocks : {};
                 const existingPhraseBanks = raw.phraseBanks && typeof raw.phraseBanks === 'object' ? raw.phraseBanks : {};
                 const existingQuestionMap = normalizeStep2QuestionMap(raw.step2Questions || existingBlocks[STEP2_QUESTIONS_KEY] || {});
-                const builtIn = BUILT_IN_SCENARIO_STEP2_BLOCKS[code] || {};
-                const builtInPhraseBanks = BUILT_IN_SCENARIO_PHRASE_BANKS[code] || {};
+                const resolvedActivityType = normalizeActivityType(raw.activityType || defaultScenarios[code]?.activityType || 'lecture');
+                const builtInMatchesActivity = !raw.activityType || resolvedActivityType === normalizeActivityType(defaultScenarios[code]?.activityType || 'lecture');
+                const builtIn = builtInMatchesActivity ? (BUILT_IN_SCENARIO_STEP2_BLOCKS[code] || {}) : {};
+                const builtInQuestionMap = normalizeStep2QuestionMap(builtIn[STEP2_QUESTIONS_KEY] || {});
+                const builtInPhraseBanks = builtInMatchesActivity ? (BUILT_IN_SCENARIO_PHRASE_BANKS[code] || {}) : {};
+                const builtInCompanySource = normalizeCompanySource(builtInMatchesActivity ? (BUILT_IN_COMPANY_SOURCE[code] || {}) : {});
                 const step2Blocks = {};
                 const phraseBanks = {};
                 const step2Questions = {};
@@ -1704,9 +1991,15 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                             ? cloneBlockList(builtInPhraseBanks[paragraphId]).filter(Boolean)
                             : cloneBlockList(DEFAULT_PHRASE_BANKS[paragraphId]).filter(Boolean));
 
-                    step2Questions[paragraphId] = cloneBlockList(existingQuestionMap[paragraphId]).filter(Boolean);
+                    const existingQuestions = cloneBlockList(existingQuestionMap[paragraphId]).filter(Boolean);
+                    step2Questions[paragraphId] = existingQuestions.length
+                        ? existingQuestions
+                        : cloneBlockList(builtInQuestionMap[paragraphId]).filter(Boolean);
                 });
                 step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
+                const storedCompanySource = normalizeCompanySource(raw.companySource || existingBlocks[COMPANY_SOURCE_KEY] || {});
+                const companySource = hasCompanySource(storedCompanySource) ? storedCompanySource : builtInCompanySource;
+                if (hasCompanySource(companySource)) step2Blocks[COMPANY_SOURCE_KEY] = companySource;
 
                 normalized[code] = {
                     ...raw,
@@ -1715,7 +2008,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                     step2Blocks,
                     step2Questions,
                     phraseBanks,
-                    activityType: normalizeActivityType(raw.activityType || (code === 'OPORD-02' ? 'code' : 'lecture')),
+                    companySource,
+                    activityType: resolvedActivityType,
                     createdAt: raw.createdAt || raw.created_at || (code === 'OPORD-01' ? 1 : (code === 'OPORD-02' ? 2 : Date.now())),
                     updatedAt: raw.updatedAt || raw.updated_at || (code === 'OPORD-01' ? 1 : (code === 'OPORD-02' ? 2 : Date.now())),
                     scenarioVersion: 'lecture-code-v1'
@@ -1905,6 +2199,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 step2Questions[paragraphId] = questions;
             });
             step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
+            const sourceToPreserve = getScenarioCompanySource(getScenarioStore()[editingScenarioCode || code] || {});
+            if (hasCompanySource(sourceToPreserve)) step2Blocks[COMPANY_SOURCE_KEY] = sourceToPreserve;
             if (missing.length) {
                 alert(`Full OPORD scenario에는 5개 paragraph의 Step 2 blocks가 모두 필요합니다.
 
@@ -3103,10 +3399,14 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
         }
 
         function startTraining(code) {
-            selectedScenarioCode = code;
+            const scenarios = getScenarioStore();
+            selectedScenarioCode = scenarios[code] ? code : (sortScenarioEntries(Object.values(scenarios))[0]?.code || 'OPORD-02');
             activeParagraphId = 'situation';
             activeBuildStep = isStepComplete(activeParagraphId, 1) ? 2 : 1;
             showScreen('workshop');
+            // Defensive reload: if a browser suppresses the first click transition or old cache data was active,
+            // force the workshop render once after the screen is visible.
+            if (!document.getElementById('screen-workshop')?.classList.contains('hidden')) loadWorkshop();
         }
 
         function selectParagraph(paragraphId) {
@@ -3217,6 +3517,19 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const intro = document.getElementById('active-paragraph-intro');
             const status = step2Complete ? 'Completed' : (step1Complete ? 'Step 2 unlocked' : 'Step 1 in progress');
             const activity = getActivityMeta(getScenarioActivityType(data));
+            const companySource = getScenarioCompanySource(data);
+            const sourceTools = hasCompanySource(companySource)
+                ? `<div class="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
+                    <div class="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+                        <p class="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-700"><i class="fa-solid fa-anchor mr-1"></i>Mission Anchor</p>
+                        <div class="mt-2 whitespace-pre-line text-[10px] leading-relaxed text-slate-700">${escapeHtml(companySource.missionAnchor)}</div>
+                    </div>
+                    <div class="flex flex-col gap-2 lg:w-52">
+                        <button type="button" onclick="openCompanyOpordSource('${activeParagraphId}')" class="rounded-xl bg-indigo-700 px-4 py-3 text-left text-xs font-black text-white shadow hover:bg-indigo-800"><i class="fa-solid fa-file-lines mr-2"></i>View Company OPORD Source<span class="mt-1 block text-[9px] font-medium text-indigo-200">현재 paragraph부터 열기</span></button>
+                        ${companySource.mapUrl ? `<button type="button" onclick="openCompanyOpordSource('map')" class="rounded-xl border border-indigo-200 bg-white px-4 py-2 text-left text-[10px] font-bold text-indigo-700 hover:bg-indigo-50"><i class="fa-solid fa-map mr-2"></i>Map / Concept Sketch</button>` : ''}
+                    </div>
+                </div>`
+                : '';
             intro.innerHTML = `
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div>
@@ -3226,6 +3539,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     </div>
                     <span class="rounded-full border ${step2Complete ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-indigo-100 bg-indigo-50 text-indigo-700'} px-3 py-1 text-[10px] font-bold">${status}</span>
                 </div>
+                ${sourceTools}
             `;
         }
 
@@ -3273,7 +3587,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
         }
 
         function isCaptainManheeScenario(data) {
-            return data?.code === 'OPORD-02' && getScenarioActivityType(data) === 'code';
+            return getScenarioActivityType(data) === 'code';
         }
 
         // Step 2 stays at the first meaningful tree level. Learners collaborate on a
@@ -3648,7 +3962,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
         function normalizeOpord02BroadDraft(paragraphId, rawValues = {}, scenario = getScenarioStore()[selectedScenarioCode]) {
             const values = { ...(rawValues || {}) };
-            if (!scenario || scenario.code !== 'OPORD-02' || getScenarioActivityType(scenario) !== 'code') return values;
+            if (!scenario || getScenarioActivityType(scenario) !== 'code') return values;
 
             if (paragraphId === 'situation') {
                 values.situationAO = values.situationAO || joinLegacyDraftParts(values.situationAO, values.situationTerrain, values.situationWeather);
@@ -3741,6 +4055,12 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
         function getReferenceDescriptor(data, paragraphId) {
             const isSustainmentSample = data?.code === 'OPORD-01' && paragraphId === 'sustainment';
+            if (hasCompanySource(getScenarioCompanySource(data))) {
+                return {
+                    title: 'Writing Scaffolds / Key Extracts',
+                    note: '전체 원문은 Company OPORD Source 팝업에서 확인'
+                };
+            }
             if (isSustainmentSample) {
                 return {
                     title: 'Teacher sample script — not from the video',
@@ -3917,7 +4237,9 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
         function renderStep2WritingForm(data, drill, values) {
             const activityType = getScenarioActivityType(data);
-            const hasTeacherQuestions = getScenarioStep2Questions(data, activeParagraphId).length > 0;
+            // Teacher-question boxes are only for Lecture-in-Class activities.
+            // Code Your Way / OPORD-02 should open directly to the platoon-level OPORD writing shell.
+            const hasTeacherQuestions = activityType === 'lecture' && getScenarioStep2Questions(data, activeParagraphId).length > 0;
             if (activityType === 'lecture' && hasTeacherQuestions) {
                 return renderLectureThinkingPrompts(data, drill, values);
             }
@@ -4326,10 +4648,10 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
         function compileStep2Writing(paragraphId, values, activityType = getScenarioActivityType(getScenarioStore()[selectedScenarioCode]), scenarioData = getScenarioStore()[selectedScenarioCode]) {
             const activeScenario = scenarioData;
-            const guidedResponses = compileGuidedQuestionResponses(paragraphId, values, activeScenario);
+            const guidedResponses = activityType === 'lecture' ? compileGuidedQuestionResponses(paragraphId, values, activeScenario) : '';
             if (activityType === 'lecture' && guidedResponses) return guidedResponses;
             if (activityType === 'lecture') return String(values.lectureDraft || '').trim();
-            const withGuidedResponses = opordText => [guidedResponses, opordText].filter(Boolean).join('\n\nTEAM OPORD WRITING\n').trim();
+            const withGuidedResponses = opordText => String(opordText || '').trim();
             const value = field => String(values?.[field] || '').trim();
             if (paragraphId === 'situation') {
                 return withGuidedResponses([
@@ -4447,7 +4769,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             }
 
             try {
-                const hasTeacherQuestions = getScenarioStep2Questions(data, activeParagraphId).length > 0;
+                const hasTeacherQuestions = activityType === 'lecture' && getScenarioStep2Questions(data, activeParagraphId).length > 0;
                 const artifactMode = activityType === 'lecture' && hasTeacherQuestions
                     ? 'lecture-guided-thinking-v1'
                     : (activityType === 'lecture'
