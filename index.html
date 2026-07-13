@@ -66,7 +66,7 @@
     
         /* Activity type remains internal for workflow logic and DB compatibility.
            The former Lecture-In-Class / Code Your Way badges are intentionally hidden from all visible screens. */
-        .activity-type-badge, .activity-type-row { display: none !important; }
+        .activity-type-badge, .activity-type-row, [data-activity-type-badge] { display: none !important; visibility: hidden !important; width: 0 !important; height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
     </style>
 </head>
 <body>
@@ -153,6 +153,7 @@
                             <div id="scenario-db-status" class="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[10px] text-slate-500">공유 시나리오 DB 상태를 확인 중입니다…</div>
                             <button id="scenario-db-seed-btn" type="button" onclick="seedScenarioDatabaseFromLocal()" class="hidden w-full rounded bg-emerald-600 px-3 py-2 text-[10px] font-bold text-white shadow hover:bg-emerald-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>현재 교수 자료를 공유 DB에 최초 배포</button>
                             <button id="hwarang-package-deploy-btn" type="button" onclick="deployHwarangCoursePackage()" class="w-full rounded bg-indigo-700 px-3 py-2 text-[10px] font-bold text-white shadow hover:bg-indigo-800"><i class="fa-solid fa-shield-halved mr-1"></i>Operation Hwarang Shield를 OPORD-02로 배포</button>
+                            <button id="company-source-repair-btn" type="button" onclick="repairCompanySourceAssignmentsInDatabase()" class="w-full rounded border border-cyan-200 bg-cyan-50 px-3 py-2 text-[10px] font-bold text-cyan-800 shadow-sm hover:bg-cyan-100"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Company OPORD Source·갤러리 연결 자동 정리</button>
                             <div id="teacher-scenario-library" class="max-h-40 space-y-1.5 overflow-y-auto pr-1"></div>
                         </div>
 
@@ -1755,6 +1756,168 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             return normalized.enabled !== false && companySourceHasContent(normalized);
         }
 
+        function getRawScenarioCompanySource(scenario) {
+            if (!scenario || typeof scenario !== 'object') return normalizeCompanySource({}, false);
+            const blocks = scenario.step2Blocks && typeof scenario.step2Blocks === 'object' ? scenario.step2Blocks : {};
+            const direct = Object.prototype.hasOwnProperty.call(scenario, 'companySource') ? scenario.companySource : null;
+            const stored = direct || blocks[COMPANY_SOURCE_KEY] || {};
+            return normalizeCompanySource(stored, false);
+        }
+
+        function scenarioCompanySourceSearchText(scenario) {
+            const source = getRawScenarioCompanySource(scenario);
+            const blocks = scenario?.step2Blocks && typeof scenario.step2Blocks === 'object' ? scenario.step2Blocks : {};
+            return [
+                scenario?.code,
+                scenario?.title,
+                source.title,
+                source.subtitle,
+                source.missionAnchor,
+                ...Object.values(source.sections || {}),
+                ...getCompanySourceImages(source).flatMap(image => [image.url, image.label, image.caption]),
+                ...TEACHER_PARAGRAPH_IDS.flatMap(id => Array.isArray(blocks[id]) ? blocks[id] : [])
+            ].join(' ').toLowerCase();
+        }
+
+        function scenarioIdentitySearchText(scenario) {
+            const blocks = scenario?.step2Blocks && typeof scenario.step2Blocks === 'object' ? scenario.step2Blocks : {};
+            const phrases = scenario?.phraseBanks && typeof scenario.phraseBanks === 'object' ? scenario.phraseBanks : {};
+            return [
+                scenario?.code,
+                scenario?.title,
+                ...TEACHER_PARAGRAPH_IDS.flatMap(id => Array.isArray(blocks[id]) ? blocks[id] : []),
+                ...TEACHER_PARAGRAPH_IDS.flatMap(id => Array.isArray(phrases[id]) ? phrases[id] : [])
+            ].join(' ').toLowerCase();
+        }
+
+        function isHwarangShieldScenario(scenario) {
+            // Identify the activity by its own title/reference content, never by a source bundle
+            // that may have been attached to the wrong activity.
+            const haystack = scenarioIdentitySearchText(scenario);
+            return /operation\s+hwarang\s+shield|hwarang\s+shield|화랑(?:방패|산)|obj\s+hwarang|enemy\s+uas\s+cell/.test(haystack);
+        }
+
+        function sourceLooksLikeHwarangShield(source) {
+            const normalized = normalizeCompanySource(source, false);
+            const haystack = [
+                normalized.title,
+                normalized.subtitle,
+                normalized.missionAnchor,
+                ...Object.values(normalized.sections || {}),
+                ...getCompanySourceImages(normalized).flatMap(image => [image.url, image.label, image.caption])
+            ].join(' ').toLowerCase();
+            return /operation\s+hwarang\s+shield|hwarang\s+shield|obj\s+hwarang|enemy\s+uas\s+cell|map_final\.png|phase[123]/.test(haystack);
+        }
+
+        function mergeCompanySourceRecords(primaryValue, secondaryValue) {
+            const primary = normalizeCompanySource(primaryValue, false);
+            const secondary = normalizeCompanySource(secondaryValue, false);
+            const mergedImages = normalizeCompanySourceImages([
+                ...getCompanySourceImages(primary),
+                ...getCompanySourceImages(secondary)
+            ]);
+            const sections = {};
+            TEACHER_PARAGRAPH_IDS.forEach(id => {
+                sections[id] = String(primary.sections?.[id] || secondary.sections?.[id] || '');
+            });
+            const merged = normalizeCompanySource({
+                enabled: true,
+                title: primary.title || secondary.title,
+                subtitle: primary.subtitle || secondary.subtitle,
+                missionAnchor: primary.missionAnchor || secondary.missionAnchor,
+                images: mergedImages,
+                mapUrl: mergedImages[0]?.url || primary.mapUrl || secondary.mapUrl || '',
+                sections
+            }, true);
+            merged.enabled = true;
+            return merged;
+        }
+
+        let lastCompanySourceRepairPlan = { targetCode: '', donorCodes: [], changedCodes: [] };
+
+        function repairMisassignedCompanySourceStore(store) {
+            const values = Object.values(store || {});
+            const target = values.find(isHwarangShieldScenario);
+            if (!target) {
+                lastCompanySourceRepairPlan = { targetCode: '', donorCodes: [], changedCodes: [] };
+                return store;
+            }
+
+            const targetBefore = JSON.stringify(getRawScenarioCompanySource(target));
+            let mergedSource = getRawScenarioCompanySource(target);
+            const donorCodes = [];
+
+            values.forEach(scenario => {
+                if (!scenario || scenario.code === target.code) return;
+                const candidate = getRawScenarioCompanySource(scenario);
+                if (!companySourceHasContent(candidate) || !sourceLooksLikeHwarangShield(candidate)) return;
+                mergedSource = mergeCompanySourceRecords(mergedSource, candidate);
+                donorCodes.push(scenario.code);
+                if (scenario.step2Blocks && typeof scenario.step2Blocks === 'object') {
+                    delete scenario.step2Blocks[COMPANY_SOURCE_KEY];
+                }
+                delete scenario.companySource;
+            });
+
+            // Always merge the built-in Hwarang package as a safe fallback, regardless of activity code.
+            Object.values(BUILT_IN_COMPANY_SOURCE || {}).forEach(source => {
+                if (sourceLooksLikeHwarangShield(source)) mergedSource = mergeCompanySourceRecords(mergedSource, source);
+            });
+
+            if (companySourceHasContent(mergedSource)) {
+                mergedSource.enabled = true;
+                target.companySource = mergedSource;
+                if (!target.step2Blocks || typeof target.step2Blocks !== 'object') target.step2Blocks = {};
+                target.step2Blocks[COMPANY_SOURCE_KEY] = mergedSource;
+            }
+
+            const changedCodes = [];
+            if (targetBefore !== JSON.stringify(getRawScenarioCompanySource(target))) changedCodes.push(target.code);
+            donorCodes.forEach(code => { if (!changedCodes.includes(code)) changedCodes.push(code); });
+            lastCompanySourceRepairPlan = { targetCode: target.code, donorCodes, changedCodes };
+            return store;
+        }
+
+        async function repairCompanySourceAssignmentsInDatabase() {
+            if (!requireTeacherAccess()) return;
+            const repairedStore = getScenarioStore();
+            const plan = lastCompanySourceRepairPlan || { targetCode: '', donorCodes: [], changedCodes: [] };
+            const codes = [...new Set(plan.changedCodes || [])].filter(code => repairedStore[code]);
+            if (!codes.length) {
+                alert('현재 Company OPORD Source와 이미지 갤러리 연결은 이미 정상입니다.');
+                return;
+            }
+            const targetTitle = repairedStore[plan.targetCode]?.title || plan.targetCode;
+            if (!confirm(`Company OPORD Source와 이미지 갤러리를 "${targetTitle}" 활동으로 이동하고, 다른 활동에서는 제거할까요?`)) return;
+            const button = document.getElementById('company-source-repair-btn');
+            const originalHtml = button?.innerHTML || '';
+            try {
+                if (button) {
+                    button.disabled = true;
+                    button.classList.add('opacity-60', 'cursor-wait');
+                    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Source·갤러리 연결 정리 중…';
+                }
+                for (const code of codes) {
+                    await writeScenarioToDatabase(repairedStore[code]);
+                }
+                await refreshSharedScenarios();
+                renderScenarioEditorLibrary();
+                if (editingScenarioCode && getScenarioStore()[editingScenarioCode]) loadScenarioForEdit(editingScenarioCode);
+                renderStudentDashboard();
+                alert(`✅ Company OPORD Source와 이미지 갤러리를 ${plan.targetCode} 활동에 연결했습니다.
+다른 활동의 잘못 연결된 Source 데이터도 제거했습니다.`);
+            } catch (error) {
+                console.error('Company source assignment repair failed:', error);
+                alert(`연결 정리 중 오류가 발생했습니다: ${error.message || error}`);
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.classList.remove('opacity-60', 'cursor-wait');
+                    button.innerHTML = originalHtml || '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Company OPORD Source·갤러리 연결 자동 정리';
+                }
+            }
+        }
+
         function getScenarioCompanySource(scenario) {
             if (!scenario || typeof scenario !== 'object') return normalizeCompanySource({}, false);
             const blocks = scenario.step2Blocks && typeof scenario.step2Blocks === 'object' ? scenario.step2Blocks : {};
@@ -2256,6 +2419,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 };
             });
 
+            repairMisassignedCompanySourceStore(normalized);
             const serialized = JSON.stringify(normalized);
             if (localStorage.getItem('OPORD_SCENARIOS') !== serialized) {
                 localStorage.setItem('OPORD_SCENARIOS', serialized);
@@ -2338,7 +2502,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 const phraseCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + (scenario.phraseBanks?.[id]?.length || 0), 0);
                 const questionCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + getScenarioStep2Questions(scenario, id).length, 0);
                 const activity = getActivityMeta(getScenarioActivityType(scenario));
-                return `<div class="flex items-center justify-between gap-2 rounded border ${editingScenarioCode === scenario.code ? 'border-amber-400 bg-white' : 'border-amber-100 bg-white/70'} px-2 py-1.5"><div class="min-w-0"><p class="font-mono text-[10px] font-black text-indigo-700">${escapeHtml(scenario.code)}</p><p class="truncate text-[10px] text-slate-600">${escapeHtml(scenario.title)}</p><p class="activity-type-row mt-0.5"><span class="activity-type-badge rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></p><p class="mt-1 text-[9px] text-slate-400">${blockCount} reference cards · ${phraseCount} phrase cues · ${questionCount} prompts</p></div><div class="flex shrink-0 flex-col gap-1"><button type="button" onclick='openScenarioQuickEdit(${JSON.stringify(scenario.code)})' class="rounded bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fa-solid fa-window-restore mr-1"></i>빠른편집</button><button type="button" onclick='loadScenarioForEdit(${JSON.stringify(scenario.code)})' class="rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-200"><i class="fa-solid fa-pen mr-1"></i>상세수정</button><button type="button" onclick='deleteScenarioEditor(${JSON.stringify(scenario.code)})' class="rounded bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"><i class="fa-solid fa-trash-can mr-1"></i>삭제</button></div></div>`;
+                return `<div class="flex items-center justify-between gap-2 rounded border ${editingScenarioCode === scenario.code ? 'border-amber-400 bg-white' : 'border-amber-100 bg-white/70'} px-2 py-1.5"><div class="min-w-0"><p class="font-mono text-[10px] font-black text-indigo-700">${escapeHtml(scenario.code)}</p><p class="truncate text-[10px] text-slate-600">${escapeHtml(scenario.title)}</p><p class="mt-1 text-[9px] text-slate-400">${blockCount} reference cards · ${phraseCount} phrase cues · ${questionCount} prompts</p></div><div class="flex shrink-0 flex-col gap-1"><button type="button" onclick='openScenarioQuickEdit(${JSON.stringify(scenario.code)})' class="rounded bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fa-solid fa-window-restore mr-1"></i>빠른편집</button><button type="button" onclick='loadScenarioForEdit(${JSON.stringify(scenario.code)})' class="rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-200"><i class="fa-solid fa-pen mr-1"></i>상세수정</button><button type="button" onclick='deleteScenarioEditor(${JSON.stringify(scenario.code)})' class="rounded bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"><i class="fa-solid fa-trash-can mr-1"></i>삭제</button></div></div>`;
             }).join('');
         }
 
@@ -2649,7 +2813,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                                 <div class="min-w-0 flex items-start gap-3">
                                     <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 font-mono text-xs font-black text-indigo-700">${escapeHtml(scenarioCode)}</span>
                                     <div class="min-w-0">
-                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4><span class="activity-type-badge rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
+                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4></div>
                                         <p class="mt-1 text-[10px] leading-relaxed text-slate-500">활동별로 생도 package를 열어 제출 문단과 피드백 현황을 확인합니다.</p>
                                     </div>
                                 </div>
@@ -3443,7 +3607,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                                 <div class="min-w-0 flex items-start gap-3">
                                     <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 font-mono text-xs font-black text-indigo-700">${escapeHtml(scenarioCode)}</span>
                                     <div class="min-w-0">
-                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4><span class="activity-type-badge rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
+                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4></div>
                                         <p class="mt-1 text-[10px] leading-relaxed text-slate-500">이 활동을 열면 생도별 OPORD package가 최근 제출 순으로 정리됩니다.</p>
                                     </div>
                                 </div>
@@ -3521,7 +3685,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                         <div class="space-y-1 min-w-0">
                             <div class="flex flex-wrap items-center gap-1.5">
                                 <span class="text-[10px] font-mono font-bold ${isPassed ? 'text-emerald-600' : 'text-indigo-600'}">${escapeHtml(sci.code)} · ${statusDetail}</span>
-                                <span class="activity-type-badge rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span>
+                                
                             </div>
                             <h4 class="text-xs font-bold text-slate-800">${escapeHtml(sci.title)}</h4>
                         </div>
@@ -3593,7 +3757,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                                 <div class="min-w-0 flex items-start gap-3">
                                     <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 font-mono text-xs font-black text-indigo-700">${escapeHtml(scenario.code)}</span>
                                     <div class="min-w-0">
-                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4><span class="activity-type-badge rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
+                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4></div>
                                         <p class="mt-1 text-[10px] leading-relaxed text-slate-500">이 활동을 열면 내가 제출한 1–5 paragraph 산출물이 정리됩니다.</p>
                                     </div>
                                 </div>
@@ -3885,7 +4049,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             intro.innerHTML = `
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                        <div class="flex flex-wrap items-center gap-2"><p class="text-[10px] font-black uppercase tracking-widest text-indigo-600">Current paragraph workshop</p><span class="activity-type-badge rounded border px-2 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
+                        <div class="flex flex-wrap items-center gap-2"><p class="text-[10px] font-black uppercase tracking-widest text-indigo-600">Current paragraph workshop</p></div>
                         <h3 class="mt-1 text-base font-black text-slate-800"><span class="mr-1 text-indigo-600">${drill.number}.</span> ${drill.title}</h3>
                         <p class="mt-1 text-[11px] leading-relaxed text-slate-500">${drill.subtitle}</p>
                     </div>
