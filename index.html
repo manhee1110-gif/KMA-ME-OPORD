@@ -63,6 +63,10 @@
             .source-gallery-image { max-height: calc(100dvh - 285px); }
             .source-gallery-arrow { height: 2.35rem; width: 2.35rem; }
         }
+    
+        /* Activity type remains internal for workflow logic and DB compatibility.
+           The former Lecture-In-Class / Code Your Way badges are intentionally hidden from all visible screens. */
+        .activity-type-badge, .activity-type-row { display: none !important; }
     </style>
 </head>
 <body>
@@ -141,7 +145,7 @@
                             <div class="flex flex-wrap items-start justify-between gap-2">
                                 <div>
                                     <p id="scenario-editor-mode" class="text-[11px] font-black text-amber-800">새 시나리오 작성 모드</p>
-                                    <p class="mt-0.5 text-[10px] leading-relaxed text-slate-500">기존 활동을 불러와 다섯 paragraph의 reference cards·phrase bank·Step 2 questions와 활동 유형(Lecture / Code Your Way)을 수정하거나 삭제할 수 있습니다.</p>
+                                    <p class="mt-0.5 text-[10px] leading-relaxed text-slate-500">기존 활동을 불러와 다섯 paragraph의 reference cards·phrase bank·Step 2 questions와 내부 작성 방식을 수정하거나 삭제할 수 있습니다. 내부 작성 방식은 학생 화면의 태그로 표시되지 않습니다.</p>
                                     <p class="mt-1 text-[9px] leading-relaxed text-emerald-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>이제 reference cards·phrase bank는 Supabase 공유 DB에 저장됩니다. 저장 후 전 생도 화면에 동기화됩니다.</p>
                                 </div>
                                 <button type="button" onclick="resetScenarioEditor()" class="rounded border border-amber-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100"><i class="fa-solid fa-file-circle-plus mr-1"></i>새 활동</button>
@@ -163,12 +167,12 @@
                                 <input type="text" id="new-sci-title" class="w-full border rounded p-2" placeholder="예: 화랑고지 야간 기습 작전">
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-600 mb-1">활동 유형</label>
+                                <label class="block font-bold text-slate-600 mb-1">내부 작성 방식 <span class="font-normal text-slate-400">(학생 화면 미표시)</span></label>
                                 <select id="new-sci-activity-type" class="w-full border rounded p-2 text-xs">
-                                    <option value="lecture">Lecture-In-Class Activity — 강의 직후 구조 확인·수정 작성</option>
-                                    <option value="code">Code Your Way Activity — 팀 기반 본격 OPORD 작성</option>
+                                    <option value="lecture">교수 질문·수정문 작성 방식</option>
+                                    <option value="code">Paragraph 작성·Coach 점검 방식</option>
                                 </select>
-                                <p class="mt-1 text-[10px] leading-relaxed text-slate-400">Lecture 모드는 교수 질문에 대한 답변 또는 수정문을 작성합니다. Code Your Way 모드는 paragraph별 조별 초안을 작성하고, 필요한 경우 최대 3회의 Captain Manhee coach check를 활용합니다.</p>
+                                <p class="mt-1 text-[10px] leading-relaxed text-slate-400">이 값은 Step 2 화면 구성과 기존 DB 호환을 위한 내부 설정입니다. 학생 대시보드·워크숍·공유 허브에는 해당 명칭이나 배지가 표시되지 않습니다.</p>
                             </div>
                             <div class="rounded-lg border border-sky-100 bg-sky-50/60 p-3">
                                 <div class="flex items-start gap-2.5">
@@ -199,7 +203,7 @@
                                         <div class="mt-2 border-t border-violet-100 pt-2">
                                             <label class="block text-[10px] font-bold text-violet-700">Step 2 Questions / Guided Prompts <span class="font-normal text-slate-400">(optional · one question per line)</span></label>
                                             <textarea id="new-sci-questions-situation" rows="3" class="mt-1 w-full rounded border border-violet-100 bg-violet-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="What is the terrain/weather effect?&#10;What enemy/friendly detail needs clarification?"></textarea>
-                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문들은 Lecture와 Code Your Way 모두의 Step 2 입력칸에 나타납니다. 비워두면 해당 활동은 기존 Step 2 방식으로 진행됩니다.</p>
+                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문은 내부 작성 방식과 관계없이 Step 2 입력칸에 사용할 수 있습니다. 비워두면 해당 활동의 기본 Step 2 방식으로 진행됩니다.</p>
                                         </div>
                                     </div>
                                 </details>
@@ -212,7 +216,7 @@
                                         <div class="mt-2 border-t border-violet-100 pt-2">
                                             <label class="block text-[10px] font-bold text-violet-700">Step 2 Questions / Guided Prompts <span class="font-normal text-slate-400">(optional · one question per line)</span></label>
                                             <textarea id="new-sci-questions-mission" rows="3" class="mt-1 w-full rounded border border-violet-100 bg-violet-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="What is incomplete in the mission statement?&#10;Which 5W detail must be added?"></textarea>
-                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문들은 Lecture와 Code Your Way 모두의 Step 2 입력칸에 나타납니다. 비워두면 해당 활동은 기존 Step 2 방식으로 진행됩니다.</p>
+                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문은 내부 작성 방식과 관계없이 Step 2 입력칸에 사용할 수 있습니다. 비워두면 해당 활동의 기본 Step 2 방식으로 진행됩니다.</p>
                                         </div>
                                     </div>
                                 </details>
@@ -225,7 +229,7 @@
                                         <div class="mt-2 border-t border-violet-100 pt-2">
                                             <label class="block text-[10px] font-bold text-violet-700">Step 2 Questions / Guided Prompts <span class="font-normal text-slate-400">(optional · one question per line)</span></label>
                                             <textarea id="new-sci-questions-execution" rows="3" class="mt-1 w-full rounded border border-violet-100 bg-violet-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="What is the commander's intent?&#10;Which execution element needs more detail?"></textarea>
-                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문들은 Lecture와 Code Your Way 모두의 Step 2 입력칸에 나타납니다. 비워두면 해당 활동은 기존 Step 2 방식으로 진행됩니다.</p>
+                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문은 내부 작성 방식과 관계없이 Step 2 입력칸에 사용할 수 있습니다. 비워두면 해당 활동의 기본 Step 2 방식으로 진행됩니다.</p>
                                         </div>
                                     </div>
                                 </details>
@@ -238,7 +242,7 @@
                                         <div class="mt-2 border-t border-violet-100 pt-2">
                                             <label class="block text-[10px] font-bold text-violet-700">Step 2 Questions / Guided Prompts <span class="font-normal text-slate-400">(optional · one question per line)</span></label>
                                             <textarea id="new-sci-questions-sustainment" rows="3" class="mt-1 w-full rounded border border-violet-100 bg-violet-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="What support does the unit need?&#10;How will resupply or casualty evacuation work?"></textarea>
-                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문들은 Lecture와 Code Your Way 모두의 Step 2 입력칸에 나타납니다. 비워두면 해당 활동은 기존 Step 2 방식으로 진행됩니다.</p>
+                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문은 내부 작성 방식과 관계없이 Step 2 입력칸에 사용할 수 있습니다. 비워두면 해당 활동의 기본 Step 2 방식으로 진행됩니다.</p>
                                         </div>
                                     </div>
                                 </details>
@@ -251,7 +255,7 @@
                                         <div class="mt-2 border-t border-violet-100 pt-2">
                                             <label class="block text-[10px] font-bold text-violet-700">Step 2 Questions / Guided Prompts <span class="font-normal text-slate-400">(optional · one question per line)</span></label>
                                             <textarea id="new-sci-questions-commandSignal" rows="3" class="mt-1 w-full rounded border border-violet-100 bg-violet-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="What command relationship is clear or unclear?&#10;What signal method or PACE detail should be added?"></textarea>
-                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문들은 Lecture와 Code Your Way 모두의 Step 2 입력칸에 나타납니다. 비워두면 해당 활동은 기존 Step 2 방식으로 진행됩니다.</p>
+                                            <p class="mt-1 text-[9px] leading-relaxed text-slate-400">이 질문은 내부 작성 방식과 관계없이 Step 2 입력칸에 사용할 수 있습니다. 비워두면 해당 활동의 기본 Step 2 방식으로 진행됩니다.</p>
                                         </div>
                                     </div>
                                 </details>
@@ -1840,7 +1844,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
 
         async function deployHwarangCoursePackage() {
             if (!requireTeacherAccess()) return;
-            if (!confirm('OPORD-01은 기존 Video Dictation 강의 활동으로 유지하고, OPORD-02를 Operation Hwarang Shield Code Your Way 활동으로 배포할까요?\n\n기존 제출 artifact는 코드별로 보존됩니다.')) return;
+            if (!confirm('OPORD-01은 기존 Video Dictation 활동으로 유지하고, OPORD-02를 Operation Hwarang Shield paragraph writing 활동으로 배포할까요?\n\n기존 제출 artifact는 코드별로 보존됩니다.')) return;
             const button = document.getElementById('hwarang-package-deploy-btn');
             if (button) {
                 button.disabled = true;
@@ -2334,7 +2338,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 const phraseCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + (scenario.phraseBanks?.[id]?.length || 0), 0);
                 const questionCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + getScenarioStep2Questions(scenario, id).length, 0);
                 const activity = getActivityMeta(getScenarioActivityType(scenario));
-                return `<div class="flex items-center justify-between gap-2 rounded border ${editingScenarioCode === scenario.code ? 'border-amber-400 bg-white' : 'border-amber-100 bg-white/70'} px-2 py-1.5"><div class="min-w-0"><p class="font-mono text-[10px] font-black text-indigo-700">${escapeHtml(scenario.code)}</p><p class="truncate text-[10px] text-slate-600">${escapeHtml(scenario.title)}</p><p class="mt-0.5"><span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></p><p class="mt-1 text-[9px] text-slate-400">${blockCount} reference cards · ${phraseCount} phrase cues · ${questionCount} prompts</p></div><div class="flex shrink-0 flex-col gap-1"><button type="button" onclick='openScenarioQuickEdit(${JSON.stringify(scenario.code)})' class="rounded bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fa-solid fa-window-restore mr-1"></i>빠른편집</button><button type="button" onclick='loadScenarioForEdit(${JSON.stringify(scenario.code)})' class="rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-200"><i class="fa-solid fa-pen mr-1"></i>상세수정</button><button type="button" onclick='deleteScenarioEditor(${JSON.stringify(scenario.code)})' class="rounded bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"><i class="fa-solid fa-trash-can mr-1"></i>삭제</button></div></div>`;
+                return `<div class="flex items-center justify-between gap-2 rounded border ${editingScenarioCode === scenario.code ? 'border-amber-400 bg-white' : 'border-amber-100 bg-white/70'} px-2 py-1.5"><div class="min-w-0"><p class="font-mono text-[10px] font-black text-indigo-700">${escapeHtml(scenario.code)}</p><p class="truncate text-[10px] text-slate-600">${escapeHtml(scenario.title)}</p><p class="activity-type-row mt-0.5"><span class="activity-type-badge rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></p><p class="mt-1 text-[9px] text-slate-400">${blockCount} reference cards · ${phraseCount} phrase cues · ${questionCount} prompts</p></div><div class="flex shrink-0 flex-col gap-1"><button type="button" onclick='openScenarioQuickEdit(${JSON.stringify(scenario.code)})' class="rounded bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fa-solid fa-window-restore mr-1"></i>빠른편집</button><button type="button" onclick='loadScenarioForEdit(${JSON.stringify(scenario.code)})' class="rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-200"><i class="fa-solid fa-pen mr-1"></i>상세수정</button><button type="button" onclick='deleteScenarioEditor(${JSON.stringify(scenario.code)})' class="rounded bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"><i class="fa-solid fa-trash-can mr-1"></i>삭제</button></div></div>`;
             }).join('');
         }
 
@@ -2645,7 +2649,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                                 <div class="min-w-0 flex items-start gap-3">
                                     <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 font-mono text-xs font-black text-indigo-700">${escapeHtml(scenarioCode)}</span>
                                     <div class="min-w-0">
-                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4><span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
+                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4><span class="activity-type-badge rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
                                         <p class="mt-1 text-[10px] leading-relaxed text-slate-500">활동별로 생도 package를 열어 제출 문단과 피드백 현황을 확인합니다.</p>
                                     </div>
                                 </div>
@@ -2739,7 +2743,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const questionField = document.getElementById('quick-edit-questions');
 
             if (title) title.textContent = `${scenario.code} · ${scenario.title}`;
-            if (subtitle) subtitle.textContent = `${getActivityMeta(getScenarioActivityType(scenario)).label} · 학생 화면에 보일 자료를 paragraph별로 바로 고칩니다.`;
+            if (subtitle) subtitle.textContent = '학생 화면에 보일 자료를 paragraph별로 바로 고칩니다.';
             if (label) label.textContent = `${drill.number}. ${drill.title}`;
 
             if (tabs) {
@@ -3439,7 +3443,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                                 <div class="min-w-0 flex items-start gap-3">
                                     <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 font-mono text-xs font-black text-indigo-700">${escapeHtml(scenarioCode)}</span>
                                     <div class="min-w-0">
-                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4><span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
+                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4><span class="activity-type-badge rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
                                         <p class="mt-1 text-[10px] leading-relaxed text-slate-500">이 활동을 열면 생도별 OPORD package가 최근 제출 순으로 정리됩니다.</p>
                                     </div>
                                 </div>
@@ -3517,7 +3521,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                         <div class="space-y-1 min-w-0">
                             <div class="flex flex-wrap items-center gap-1.5">
                                 <span class="text-[10px] font-mono font-bold ${isPassed ? 'text-emerald-600' : 'text-indigo-600'}">${escapeHtml(sci.code)} · ${statusDetail}</span>
-                                <span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span>
+                                <span class="activity-type-badge rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span>
                             </div>
                             <h4 class="text-xs font-bold text-slate-800">${escapeHtml(sci.title)}</h4>
                         </div>
@@ -3589,7 +3593,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                                 <div class="min-w-0 flex items-start gap-3">
                                     <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 font-mono text-xs font-black text-indigo-700">${escapeHtml(scenario.code)}</span>
                                     <div class="min-w-0">
-                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4><span class="rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
+                                        <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4><span class="activity-type-badge rounded border px-1.5 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
                                         <p class="mt-1 text-[10px] leading-relaxed text-slate-500">이 활동을 열면 내가 제출한 1–5 paragraph 산출물이 정리됩니다.</p>
                                     </div>
                                 </div>
@@ -3881,7 +3885,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             intro.innerHTML = `
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                        <div class="flex flex-wrap items-center gap-2"><p class="text-[10px] font-black uppercase tracking-widest text-indigo-600">Current paragraph workshop</p><span class="rounded border px-2 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
+                        <div class="flex flex-wrap items-center gap-2"><p class="text-[10px] font-black uppercase tracking-widest text-indigo-600">Current paragraph workshop</p><span class="activity-type-badge rounded border px-2 py-0.5 text-[9px] font-bold ${activity.badge}"><i class="fa-solid ${activity.icon} mr-1"></i>${activity.label}</span></div>
                         <h3 class="mt-1 text-base font-black text-slate-800"><span class="mr-1 text-indigo-600">${drill.number}.</span> ${drill.title}</h3>
                         <p class="mt-1 text-[11px] leading-relaxed text-slate-500">${drill.subtitle}</p>
                     </div>
@@ -4577,7 +4581,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const existingArtifact = getCurrentStep2Artifact();
             const draftValue = values.lectureDraft || existingArtifact?.text || '';
             return `
-                <div class="rounded-lg border border-violet-100 bg-violet-50/70 px-3 py-2 text-[10px] leading-relaxed text-violet-900"><i class="fa-solid fa-chalkboard-user mr-1"></i><strong>Lecture-in-class workflow:</strong> Read or watch the teacher reference together, complete the Step 1 shell, then write your team’s <strong>revised ${drill.title}</strong> in your own wording. Keep the shell hierarchy visible in your formatting; do not copy the reference sentence verbatim.</div>
+                <div class="rounded-lg border border-violet-100 bg-violet-50/70 px-3 py-2 text-[10px] leading-relaxed text-violet-900"><i class="fa-solid fa-chalkboard-user mr-1"></i><strong>Step 2 workflow:</strong> Read or watch the teacher reference together, complete the Step 1 shell, then write your team’s <strong>revised ${drill.title}</strong> in your own wording. Keep the shell hierarchy visible in your formatting; do not copy the reference sentence verbatim.</div>
                 ${step2TextArea('lectureDraft', `Team revised ${drill.title} paragraph`, draftValue, lectureDraftPlaceholder(activeParagraphId), true, 'Use line breaks and the Step 1 headings where useful. This is the team product that will be shared after the lecture.', 14)}
                 <div class="rounded-lg border border-amber-100 bg-white/70 p-3 text-[10px] leading-relaxed text-slate-500"><strong class="text-amber-800">Quick self-check:</strong> Does your text follow the shell above? Is each line actionable and concise? Did the team revise the teacher model rather than merely copy it?</div>
             `;
@@ -4620,7 +4624,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 ? '<i class="fa-solid fa-comments mr-1"></i>Step 2: Teacher Questions'
                 : (activityType === 'lecture'
                     ? '<i class="fa-solid fa-pen-to-square mr-1"></i>Step 2: Teacher Questions'
-                    : '<i class="fa-solid fa-people-group mr-1"></i>Step 2: Code Your Way · Group Coach Checkpoints');
+                    : '<i class="fa-solid fa-people-group mr-1"></i>Step 2: Paragraph Writing · Group Coach Checkpoints');
             step2Slots.innerHTML = '';
 
             if (!step1Complete) {
@@ -4701,14 +4705,17 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const activityType = getScenarioActivityType(data);
             if (!step2Complete) {
                 activeBuildStep = 2;
-                title.innerHTML = activityType === 'lecture'
-                    ? '<i class="fa-solid fa-chalkboard-user"></i> Lecture Reference & Phrase Bank'
-                    : '<i class="fa-solid fa-map-location-dot"></i> Scenario Reference & Phrase Bank';
+                const hasSourcePackage = hasCompanySource(getScenarioCompanySource(data));
+                title.innerHTML = isOpord01ThinkingPromptActivity(data)
+                    ? '<i class="fa-solid fa-chalkboard-user"></i> Teacher Reference & Phrase Bank'
+                    : (hasSourcePackage
+                        ? '<i class="fa-solid fa-map-location-dot"></i> Scenario Reference & Phrase Bank'
+                        : '<i class="fa-solid fa-book-open"></i> Reference & Phrase Bank');
                 note.innerHTML = isOpord01ThinkingPromptActivity(data)
                     ? '교수 reference와 phrase bank를 참고하여 Step 2의 교수 질문에 답변을 작성하십시오.'
-                    : (activityType === 'lecture'
-                        ? '교수가 제시한 영상 스크립트·예문을 참고하되, Step 2에는 자기 말로 수정문을 작성하십시오.'
-                        : '교수가 제시한 scenario reference를 참고하되, Step 2에서는 조별 own wording으로 작성하십시오.');
+                    : (hasSourcePackage
+                        ? '교수가 제시한 scenario reference를 참고하되, Step 2에서는 조별 own wording으로 작성하십시오.'
+                        : '교수가 제시한 영상 스크립트·예문과 phrase bank를 참고하되, Step 2에는 자기 말로 작성하십시오.');
                 pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
                 return;
             }
@@ -4716,9 +4723,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             title.innerHTML = '<i class="fa-solid fa-circle-check"></i> Paragraph Submitted';
             note.innerHTML = isOpord01ThinkingPromptActivity(data)
                 ? '이 paragraph의 shell과 Step 2 질문 답변이 모두 제출되었습니다.'
-                : (activityType === 'lecture'
-                    ? '이 paragraph의 shell과 lecture revision draft가 모두 제출되었습니다.'
-                    : '이 paragraph의 Step 1 shell과 Step 2 조별 작성이 모두 완료되었습니다.');
+                : '이 paragraph의 Step 1 shell과 Step 2 작성이 모두 완료되었습니다.';
             pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
         }
 
