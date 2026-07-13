@@ -138,34 +138,34 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="bg-white p-5 rounded-xl card-shadow border border-slate-100 lg:col-span-1 space-y-4">
                         <h3 class="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b pb-2">
-                            <i class="fa-solid fa-pen-ruler text-amber-500"></i> 시나리오 편집기 (출제 · 수정)
+                            <i class="fa-solid fa-pen-ruler text-amber-500"></i> 활동 편집기 (출제 · 수정)
                         </h3>
 
                         <div class="rounded-xl border border-amber-100 bg-amber-50/50 p-3 space-y-2">
                             <div class="flex flex-wrap items-start justify-between gap-2">
                                 <div>
-                                    <p id="scenario-editor-mode" class="text-[11px] font-black text-amber-800">새 시나리오 작성 모드</p>
+                                    <p id="scenario-editor-mode" class="text-[11px] font-black text-amber-800">새 활동 작성 모드</p>
                                     <p class="mt-0.5 text-[10px] leading-relaxed text-slate-500">기존 활동을 불러와 다섯 paragraph의 reference cards·phrase bank·Step 2 questions와 내부 작성 방식을 수정하거나 삭제할 수 있습니다. 내부 작성 방식은 학생 화면의 태그로 표시되지 않습니다.</p>
                                     <p class="mt-1 text-[9px] leading-relaxed text-emerald-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>이제 reference cards·phrase bank는 Supabase 공유 DB에 저장됩니다. 저장 후 전 생도 화면에 동기화됩니다.</p>
                                 </div>
                                 <button type="button" onclick="resetScenarioEditor()" class="rounded border border-amber-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-amber-700 hover:bg-amber-100"><i class="fa-solid fa-file-circle-plus mr-1"></i>새 활동</button>
                             </div>
-                            <div id="scenario-db-status" class="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[10px] text-slate-500">공유 시나리오 DB 상태를 확인 중입니다…</div>
+                            <div id="scenario-db-status" class="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[10px] text-slate-500">공유 활동 DB 상태를 확인 중입니다…</div>
                             <button id="scenario-db-seed-btn" type="button" onclick="seedScenarioDatabaseFromLocal()" class="hidden w-full rounded bg-emerald-600 px-3 py-2 text-[10px] font-bold text-white shadow hover:bg-emerald-700"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>현재 교수 자료를 공유 DB에 최초 배포</button>
-                            <button id="hwarang-package-deploy-btn" type="button" onclick="deployHwarangCoursePackage()" class="w-full rounded bg-indigo-700 px-3 py-2 text-[10px] font-bold text-white shadow hover:bg-indigo-800"><i class="fa-solid fa-shield-halved mr-1"></i>Operation Hwarang Shield를 OPORD-02로 배포</button>
-                            <button id="company-source-repair-btn" type="button" onclick="repairCompanySourceAssignmentsInDatabase()" class="w-full rounded border border-cyan-200 bg-cyan-50 px-3 py-2 text-[10px] font-bold text-cyan-800 shadow-sm hover:bg-cyan-100"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Company OPORD Source·갤러리 연결 자동 정리</button>
                             <div id="teacher-scenario-library" class="max-h-40 space-y-1.5 overflow-y-auto pr-1"></div>
                         </div>
 
                         <div class="space-y-3 text-xs">
+                            <input type="hidden" id="new-sci-code">
                             <div>
-                                <label class="block font-bold text-slate-600 mb-1">활동 코드명 / 짧은 이름</label>
-                                <input type="text" id="new-sci-code" class="w-full border rounded p-2" placeholder="예: Defense basics / 야간 방어 실습 1">
-                                <p id="scenario-code-note" class="mt-1 text-[10px] text-slate-400">새 활동은 자유로운 코드명/짧은 이름을 사용할 수 있고, 기존 활동도 수정 모드에서 코드명을 바꿀 수 있습니다.</p>
+                                <label class="block font-bold text-slate-600 mb-1">활동 제목</label>
+                                <input type="text" id="new-sci-title" class="w-full border rounded p-2" placeholder="예: Platoon Defense Planning / SALUTE Report Practice">
+                                <p class="mt-1 text-[10px] leading-relaxed text-slate-400">내부 연결 ID는 시스템이 자동으로 관리합니다. 제목과 순서를 바꾸어도 제출물·댓글·Peer Review 연결은 유지됩니다.</p>
                             </div>
                             <div>
-                                <label class="block font-bold text-slate-600 mb-1">시나리오 제목 및 상황 설명</label>
-                                <input type="text" id="new-sci-title" class="w-full border rounded p-2" placeholder="예: 화랑고지 야간 기습 작전">
+                                <label class="block font-bold text-slate-600 mb-1">학생 화면 표시 순서</label>
+                                <input type="number" id="new-sci-display-order" min="1" step="1" class="w-full border rounded p-2" placeholder="예: 1">
+                                <p class="mt-1 text-[10px] leading-relaxed text-slate-400">숫자가 작을수록 먼저 표시됩니다. 학생 화면의 1·2·3 번호는 이 순서에 따라 자동으로 붙습니다.</p>
                             </div>
                             <div>
                                 <label class="block font-bold text-slate-600 mb-1">내부 작성 방식 <span class="font-normal text-slate-400">(학생 화면 미표시)</span></label>
@@ -180,14 +180,14 @@
                                     <input id="new-sci-company-source-enabled" type="checkbox" onchange="updateCompanySourceToggleUi()" class="mt-0.5 h-4 w-4 rounded border-sky-300 text-indigo-600 focus:ring-indigo-500">
                                     <div class="min-w-0 flex-1">
                                         <label for="new-sci-company-source-enabled" class="cursor-pointer text-[11px] font-black text-sky-900">학생 화면에 Company OPORD Source 팝업 표시</label>
-                                        <p id="company-source-toggle-status" class="mt-1 text-[9px] leading-relaxed text-slate-500">원문 세트가 저장된 활동에서만 켜거나 끌 수 있습니다. 숨겨도 원문 데이터는 삭제되지 않습니다.</p>
+                                        <p id="company-source-toggle-status" class="mt-1 text-[9px] leading-relaxed text-slate-500">이 설정은 현재 편집 중인 활동에만 적용됩니다. 제목이나 표시 순서를 바꾸어도 다른 활동으로 이동하지 않습니다.</p>
                                     </div>
                                 </div>
                             </div>
                             <div class="rounded-lg border border-cyan-100 bg-cyan-50/50 p-3">
                                 <label for="new-sci-company-source-images" class="block text-[11px] font-black text-cyan-900"><i class="fa-solid fa-images mr-1"></i>Company OPORD 이미지 갤러리</label>
                                 <textarea id="new-sci-company-source-images" rows="4" oninput="updateCompanySourceImageEditorUi()" class="mt-2 w-full rounded border border-cyan-200 bg-white p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-cyan-500" placeholder="map_final.png | 1. 작전지역 기본도&#10;phase1.png | 2. Phase I 도하·고립&#10;phase2.png | 3. Phase II UAS 타격"></textarea>
-                                <p class="mt-1 text-[9px] leading-relaxed text-slate-500">한 줄에 이미지 하나: <strong>파일명 또는 URL | 표시 제목 | 설명(선택)</strong>. GitHub에서는 이미지 파일을 index.html과 같은 폴더에 올리면 됩니다.</p>
+                                <p class="mt-1 text-[9px] leading-relaxed text-slate-500">현재 활동 전용 갤러리입니다. 한 줄에 이미지 하나: <strong>파일명 또는 URL | 표시 제목 | 설명(선택)</strong>. GitHub에서는 이미지 파일을 index.html과 같은 폴더에 올리면 됩니다.</p>
                             </div>
                             <div class="rounded-lg border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
                                 <div>
@@ -263,7 +263,7 @@
                             </div>
                             <div class="flex gap-2">
                                 <button id="scenario-save-btn" onclick="saveScenarioEditor()" class="flex-1 bg-amber-600 text-white font-bold py-2 rounded shadow hover:bg-amber-700">
-                                    <i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB에 시나리오 저장
+                                    <i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB에 활동 저장
                                 </button>
                                 <button type="button" onclick="resetScenarioEditor()" class="border border-slate-200 bg-white px-3 py-2 rounded text-xs font-bold text-slate-600 hover:bg-slate-50">초기화</button>
                             </div>
@@ -364,7 +364,7 @@
             <div id="screen-workshop" class="space-y-6 hidden">
                 <div class="bg-indigo-900 text-white p-4 rounded-xl shadow-lg flex justify-between items-center">
                     <div>
-                        <span class="bg-indigo-700 text-emerald-300 font-mono text-[10px] font-bold px-2 py-0.5 rounded" id="work-active-code">OPORD-01</span>
+                        <span class="bg-indigo-700 text-emerald-300 text-[10px] font-bold px-2 py-0.5 rounded" id="work-active-code">활동</span>
                         <h2 class="text-base font-bold mt-1" id="work-active-title">시나리오 로딩 중</h2>
                     </div>
                     <button onclick="showScreen('dashboard')" class="bg-indigo-800 text-xs px-3 py-1 rounded font-bold hover:bg-indigo-700">내 대시보드로 복귀</button>
@@ -454,6 +454,7 @@
         const defaultScenarios = {
             "OPORD-01": {
                 code: "OPORD-01",
+                displayOrder: 1,
                 createdAt: 1,
                 updatedAt: 1,
                 title: "강의 동시 활동: OPORD Video Dictation Workshop",
@@ -463,6 +464,7 @@
             },
             "OPORD-02": {
                 code: "OPORD-02",
+                displayOrder: 2,
                 createdAt: 2,
                 updatedAt: 2,
                 title: "Operation Hwarang Shield · Platoon OPORD Writing Lab",
@@ -799,7 +801,8 @@
             const step2Blocks = cloneCourseMaterialObject(row.step2_blocks, {});
             return {
                 code: String(row.code || '').trim(),
-                title: row.title || `${row.code} 훈련 시나리오`,
+                title: row.title || 'Untitled Activity',
+                displayOrder: normalizeScenarioDisplayOrder(step2Blocks[DISPLAY_ORDER_KEY]),
                 activityType: normalizeActivityType(row.activity_type),
                 step2Blocks,
                 step2Questions: normalizeStep2QuestionMap(step2Blocks[STEP2_QUESTIONS_KEY] || {}),
@@ -884,7 +887,7 @@
 
             if (!sharedScenariosLoaded) {
                 status.className = 'rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[10px] text-slate-500';
-                status.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>공유 시나리오 DB 상태를 확인 중입니다…';
+                status.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>공유 활동 DB 상태를 확인 중입니다…';
                 seedButton.classList.add('hidden');
                 return;
             }
@@ -946,7 +949,7 @@
             const warning = submissionCount
                 ? `\n\n참고: 이 활동에 연결된 학생 제출물 ${submissionCount}개는 artifact DB에 보존됩니다. 활동 카드와 교수 자료만 삭제되어 학생 화면/리뷰 허브에서는 더 이상 기본 표시되지 않습니다.`
                 : '';
-            if (!confirm(`[${scenarioCode}] 활동을 삭제할까요?\n\n제목: ${scenario?.title || scenarioCode}${warning}`)) return;
+            if (!confirm(`"${scenario?.title || '선택한 활동'}"을 삭제할까요?${warning}`)) return;
 
             try {
                 if (!supabaseClient || !currentSupabaseUserId) {
@@ -973,7 +976,7 @@
                 renderTeacherDashboard();
                 if (!document.getElementById('screen-dashboard').classList.contains('hidden')) renderStudentDashboard();
                 if (!document.getElementById('screen-hub').classList.contains('hidden')) renderSharedHub();
-                alert(`✅ [${scenarioCode}] 활동이 삭제되었습니다. 기존 학생 제출물은 보존됩니다.`);
+                alert(`✅ "${scenario?.title || '활동'}"이 삭제되었습니다. 기존 학생 제출물은 보존됩니다.`);
             } catch (error) {
                 console.error('Scenario delete failed:', error);
                 alert(`활동을 삭제하지 못했습니다.\n${error.message || '잠시 뒤 다시 시도하십시오.'}`);
@@ -995,7 +998,7 @@
 
             // If the teacher typed changes into the editor before the first DB publish,
             // include that visible editor draft in the initial seed payload as well.
-            const editorCode = editingScenarioCode || normalizeScenarioCodeInput(document.getElementById('new-sci-code')?.value || '');
+            const editorCode = editingScenarioCode || normalizeScenarioCodeInput(document.getElementById('new-sci-code')?.value || '') || (document.getElementById('new-sci-title')?.value.trim() ? generateScenarioInternalCode() : '');
             const editorTitle = (document.getElementById('new-sci-title')?.value || '').trim();
             const editorActivityType = normalizeActivityType(document.getElementById('new-sci-activity-type')?.value);
             const editorHasAnyMaterial = TEACHER_PARAGRAPH_IDS.some(paragraphId => {
@@ -1050,6 +1053,7 @@
                     code: editorCode,
                     title: editorTitle,
                     activityType: editorActivityType,
+                    displayOrder: normalizeScenarioDisplayOrder(document.getElementById('new-sci-display-order')?.value, getNextScenarioDisplayOrder()),
                     step2Blocks,
                     step2Questions,
                     phraseBanks,
@@ -1363,6 +1367,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         // One array item becomes one card in the student-facing reference panel.
         // Sustainment uses a clearly labeled sample script because this lesson contains no video clip for that paragraph.
         const COMPANY_SOURCE_KEY = '__companyOpordSource';
+        const DISPLAY_ORDER_KEY = '__displayOrder';
 
         const BUILT_IN_COMPANY_SOURCE = {
             "OPORD-02": {
@@ -1833,91 +1838,6 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             return merged;
         }
 
-        let lastCompanySourceRepairPlan = { targetCode: '', donorCodes: [], changedCodes: [] };
-
-        function repairMisassignedCompanySourceStore(store) {
-            const values = Object.values(store || {});
-            const target = values.find(isHwarangShieldScenario);
-            if (!target) {
-                lastCompanySourceRepairPlan = { targetCode: '', donorCodes: [], changedCodes: [] };
-                return store;
-            }
-
-            const targetBefore = JSON.stringify(getRawScenarioCompanySource(target));
-            let mergedSource = getRawScenarioCompanySource(target);
-            const donorCodes = [];
-
-            values.forEach(scenario => {
-                if (!scenario || scenario.code === target.code) return;
-                const candidate = getRawScenarioCompanySource(scenario);
-                if (!companySourceHasContent(candidate) || !sourceLooksLikeHwarangShield(candidate)) return;
-                mergedSource = mergeCompanySourceRecords(mergedSource, candidate);
-                donorCodes.push(scenario.code);
-                if (scenario.step2Blocks && typeof scenario.step2Blocks === 'object') {
-                    delete scenario.step2Blocks[COMPANY_SOURCE_KEY];
-                }
-                delete scenario.companySource;
-            });
-
-            // Always merge the built-in Hwarang package as a safe fallback, regardless of activity code.
-            Object.values(BUILT_IN_COMPANY_SOURCE || {}).forEach(source => {
-                if (sourceLooksLikeHwarangShield(source)) mergedSource = mergeCompanySourceRecords(mergedSource, source);
-            });
-
-            if (companySourceHasContent(mergedSource)) {
-                mergedSource.enabled = true;
-                target.companySource = mergedSource;
-                if (!target.step2Blocks || typeof target.step2Blocks !== 'object') target.step2Blocks = {};
-                target.step2Blocks[COMPANY_SOURCE_KEY] = mergedSource;
-            }
-
-            const changedCodes = [];
-            if (targetBefore !== JSON.stringify(getRawScenarioCompanySource(target))) changedCodes.push(target.code);
-            donorCodes.forEach(code => { if (!changedCodes.includes(code)) changedCodes.push(code); });
-            lastCompanySourceRepairPlan = { targetCode: target.code, donorCodes, changedCodes };
-            return store;
-        }
-
-        async function repairCompanySourceAssignmentsInDatabase() {
-            if (!requireTeacherAccess()) return;
-            const repairedStore = getScenarioStore();
-            const plan = lastCompanySourceRepairPlan || { targetCode: '', donorCodes: [], changedCodes: [] };
-            const codes = [...new Set(plan.changedCodes || [])].filter(code => repairedStore[code]);
-            if (!codes.length) {
-                alert('현재 Company OPORD Source와 이미지 갤러리 연결은 이미 정상입니다.');
-                return;
-            }
-            const targetTitle = repairedStore[plan.targetCode]?.title || plan.targetCode;
-            if (!confirm(`Company OPORD Source와 이미지 갤러리를 "${targetTitle}" 활동으로 이동하고, 다른 활동에서는 제거할까요?`)) return;
-            const button = document.getElementById('company-source-repair-btn');
-            const originalHtml = button?.innerHTML || '';
-            try {
-                if (button) {
-                    button.disabled = true;
-                    button.classList.add('opacity-60', 'cursor-wait');
-                    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Source·갤러리 연결 정리 중…';
-                }
-                for (const code of codes) {
-                    await writeScenarioToDatabase(repairedStore[code]);
-                }
-                await refreshSharedScenarios();
-                renderScenarioEditorLibrary();
-                if (editingScenarioCode && getScenarioStore()[editingScenarioCode]) loadScenarioForEdit(editingScenarioCode);
-                renderStudentDashboard();
-                alert(`✅ Company OPORD Source와 이미지 갤러리를 ${plan.targetCode} 활동에 연결했습니다.
-다른 활동의 잘못 연결된 Source 데이터도 제거했습니다.`);
-            } catch (error) {
-                console.error('Company source assignment repair failed:', error);
-                alert(`연결 정리 중 오류가 발생했습니다: ${error.message || error}`);
-            } finally {
-                if (button) {
-                    button.disabled = false;
-                    button.classList.remove('opacity-60', 'cursor-wait');
-                    button.innerHTML = originalHtml || '<i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Company OPORD Source·갤러리 연결 자동 정리';
-                }
-            }
-        }
-
         function getScenarioCompanySource(scenario) {
             if (!scenario || typeof scenario !== 'object') return normalizeCompanySource({}, false);
             const blocks = scenario.step2Blocks && typeof scenario.step2Blocks === 'object' ? scenario.step2Blocks : {};
@@ -1925,12 +1845,11 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const hasBlockSource = Object.prototype.hasOwnProperty.call(blocks, COMPANY_SOURCE_KEY);
             if (!hasDirectSource && !hasBlockSource) return normalizeCompanySource({}, false);
             const stored = hasDirectSource ? scenario.companySource : blocks[COMPANY_SOURCE_KEY];
-            const hasExplicitEnabled = stored && typeof stored === 'object'
-                && Object.prototype.hasOwnProperty.call(stored, 'enabled');
-            // Legacy migration: a source attached to a Code Your Way activity remains visible;
-            // a source accidentally carried into a Lecture/Homework activity is hidden.
-            const legacyEnabled = hasExplicitEnabled ? null : getScenarioActivityType(scenario) === 'code';
-            return normalizeCompanySource(stored, legacyEnabled);
+            const normalized = normalizeCompanySource(stored, true);
+            if (companySourceHasContent(normalized) && !(stored && typeof stored === 'object' && Object.prototype.hasOwnProperty.call(stored, 'enabled'))) {
+                normalized.enabled = true;
+            }
+            return normalized;
         }
 
         function setCompanySourceToggleState(source) {
@@ -1979,66 +1898,6 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 }
             }
         }
-
-        function materializeBuiltInScenario(code) {
-            const base = JSON.parse(JSON.stringify(defaultScenarios[code] || {}));
-            const builtInBlocks = BUILT_IN_SCENARIO_STEP2_BLOCKS[code] || {};
-            const step2Blocks = {};
-            TEACHER_PARAGRAPH_IDS.forEach(id => { step2Blocks[id] = cloneBlockList(builtInBlocks[id]).filter(Boolean); });
-            const questionMap = normalizeStep2QuestionMap(builtInBlocks[STEP2_QUESTIONS_KEY] || {});
-            step2Blocks[STEP2_QUESTIONS_KEY] = questionMap;
-            const companySource = normalizeCompanySource(BUILT_IN_COMPANY_SOURCE[code] || {}, code === 'OPORD-02');
-            if (companySourceHasContent(companySource)) {
-                companySource.enabled = true;
-                step2Blocks[COMPANY_SOURCE_KEY] = companySource;
-            }
-            return {
-                ...base,
-                step2Blocks,
-                step2Questions: questionMap,
-                phraseBanks: cloneCourseMaterialObject(BUILT_IN_SCENARIO_PHRASE_BANKS[code] || DEFAULT_PHRASE_BANKS, {}),
-                companySource,
-                isActive: true,
-                createdAt: base.createdAt || Date.now(),
-                updatedAt: Date.now(),
-                scenarioVersion: 'hwarang-opord02-gallery-v1'
-            };
-        }
-
-        async function deployHwarangCoursePackage() {
-            if (!requireTeacherAccess()) return;
-            if (!confirm('OPORD-01은 기존 Video Dictation 활동으로 유지하고, OPORD-02를 Operation Hwarang Shield paragraph writing 활동으로 배포할까요?\n\n기존 제출 artifact는 코드별로 보존됩니다.')) return;
-            const button = document.getElementById('hwarang-package-deploy-btn');
-            if (button) {
-                button.disabled = true;
-                button.classList.add('opacity-60', 'cursor-wait');
-                button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>화랑방패 OPORD-02 자료 배포 중…';
-            }
-            try {
-                await writeScenarioToDatabase(materializeBuiltInScenario('OPORD-01'));
-                await writeScenarioToDatabase(materializeBuiltInScenario('OPORD-02'));
-                await refreshSharedScenarios();
-                selectedScenarioCode = 'OPORD-02';
-                resetScenarioStep2Progress('OPORD-01');
-                resetScenarioStep2Progress('OPORD-02');
-                renderTeacherDashboard();
-                renderStudentDashboard();
-                renderSharedHub();
-                alert('✅ Operation Hwarang Shield course package가 공유 DB에 배포되었습니다.\n\nOPORD-01: Video Dictation lecture activity\nOPORD-02: Hwarang Shield writing lab');
-            } catch (error) {
-                console.error('Hwarang course package deploy failed:', error);
-                alert(`화랑방패 자료를 배포하지 못했습니다.\n${error.message || '잠시 뒤 다시 시도하십시오.'}`);
-            } finally {
-                if (button) {
-                    button.disabled = false;
-                    button.classList.remove('opacity-60', 'cursor-wait');
-                    button.innerHTML = '<i class="fa-solid fa-shield-halved mr-1"></i>Operation Hwarang Shield를 OPORD-02로 배포';
-                }
-            }
-        }
-
-        let companySourceActiveTab = 'situation';
-        let companySourceActiveImageIndex = 0;
 
         function openCompanyOpordSource(tabId = activeParagraphId) {
             const scenario = getScenarioStore()[selectedScenarioCode];
@@ -2275,6 +2134,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const companySource = getScenarioCompanySource(scenario);
             if (companySourceHasContent(companySource)) blocks[COMPANY_SOURCE_KEY] = companySource;
             else delete blocks[COMPANY_SOURCE_KEY];
+            blocks[DISPLAY_ORDER_KEY] = getScenarioDisplayOrder(scenario);
             return blocks;
         }
 
@@ -2295,30 +2155,63 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         }
 
         function getScenarioCodeValidationError(code) {
-            if (!code) return '활동 코드명/짧은 이름을 입력하십시오.';
-            if (code.length > 80) return '활동 코드명은 80자 이내로 입력하십시오.';
-            if (/[<>\r\n]/.test(code)) return '활동 코드명에는 줄바꿈, <, > 문자를 사용할 수 없습니다.';
-            if (code.includes('::')) return '활동 코드명에는 :: 기호 조합을 사용할 수 없습니다.';
+            if (!code) return '내부 활동 ID를 생성하지 못했습니다.';
+            if (code.length > 80) return '내부 활동 ID가 너무 깁니다.';
+            if (/[<>\r\n]/.test(code) || code.includes('::')) return '내부 활동 ID 형식이 올바르지 않습니다.';
             return '';
         }
 
-        function scenarioSortValue(scenario) {
-            const code = String(scenario?.code || '').trim();
-            if (code === 'OPORD-01') return 1;
-            if (code === 'OPORD-02') return 2;
-            const created = Number(scenario?.createdAt || scenario?.created_at || 0);
-            const updated = Number(scenario?.updatedAt || scenario?.updated_at || 0);
-            return created || updated || 9999999999999;
+        function normalizeScenarioDisplayOrder(value, fallback = Number.MAX_SAFE_INTEGER) {
+            const parsed = Number.parseInt(value, 10);
+            return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+        }
+
+        function getScenarioDisplayOrder(scenario) {
+            const direct = normalizeScenarioDisplayOrder(scenario?.displayOrder);
+            if (direct !== Number.MAX_SAFE_INTEGER) return direct;
+            const stored = normalizeScenarioDisplayOrder(scenario?.step2Blocks?.[DISPLAY_ORDER_KEY]);
+            if (stored !== Number.MAX_SAFE_INTEGER) return stored;
+            const created = Number(scenario?.createdAt || scenario?.created_at || scenario?.updatedAt || scenario?.updated_at || 0);
+            return created > 0 ? created : Number.MAX_SAFE_INTEGER;
         }
 
         function sortScenarioEntries(entries) {
             return [...(entries || [])].sort((a, b) => {
-                const rankCompare = scenarioSortValue(a) - scenarioSortValue(b);
-                if (rankCompare !== 0) return rankCompare;
-                return String(a?.code || '').localeCompare(String(b?.code || ''), 'ko');
+                const orderCompare = getScenarioDisplayOrder(a) - getScenarioDisplayOrder(b);
+                if (orderCompare !== 0) return orderCompare;
+                const createdCompare = Number(a?.createdAt || a?.created_at || 0) - Number(b?.createdAt || b?.created_at || 0);
+                if (createdCompare !== 0) return createdCompare;
+                return String(a?.title || a?.code || '').localeCompare(String(b?.title || b?.code || ''), 'ko');
             });
         }
 
+        function getScenarioDisplaySequence(code) {
+            const entries = sortScenarioEntries(Object.values(getScenarioStore()));
+            const index = entries.findIndex(item => item.code === code);
+            return index >= 0 ? index + 1 : entries.length + 1;
+        }
+
+        function getNextScenarioDisplayOrder() {
+            const entries = sortScenarioEntries(Object.values(getScenarioStore()));
+            if (!entries.length) return 1;
+            const explicit = entries
+                .map(item => normalizeScenarioDisplayOrder(item.displayOrder, 0))
+                .filter(value => value > 0 && value < Number.MAX_SAFE_INTEGER);
+            return explicit.length ? Math.max(...explicit) + 1 : entries.length + 1;
+        }
+
+        function generateScenarioInternalCode() {
+            const existing = getScenarioStore();
+            const now = new Date();
+            const pad = value => String(value).padStart(2, '0');
+            const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+            let code = '';
+            do {
+                const random = Math.random().toString(36).slice(2, 6).toUpperCase();
+                code = `ACT-${stamp}-${random}`;
+            } while (existing[code]);
+            return code;
+        }
 
         function parseTeacherBlocks(value) {
             return String(value || '')
@@ -2347,6 +2240,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             Object.keys(rawStore).forEach(code => {
                 const raw = rawStore[code] || {};
                 const existingBlocks = raw.step2Blocks && typeof raw.step2Blocks === 'object' ? raw.step2Blocks : {};
+                const displayOrder = normalizeScenarioDisplayOrder(raw.displayOrder ?? existingBlocks[DISPLAY_ORDER_KEY], Number.MAX_SAFE_INTEGER);
                 const existingPhraseBanks = raw.phraseBanks && typeof raw.phraseBanks === 'object' ? raw.phraseBanks : {};
                 const existingQuestionMap = normalizeStep2QuestionMap(raw.step2Questions || existingBlocks[STEP2_QUESTIONS_KEY] || {});
                 const resolvedActivityType = normalizeActivityType(raw.activityType || defaultScenarios[code]?.activityType || 'lecture');
@@ -2355,8 +2249,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 const builtInQuestionMap = normalizeStep2QuestionMap(builtIn[STEP2_QUESTIONS_KEY] || {});
                 const builtInPhraseBanks = builtInMatchesActivity ? (BUILT_IN_SCENARIO_PHRASE_BANKS[code] || {}) : {};
                 const builtInCompanySource = normalizeCompanySource(
-                    builtInMatchesActivity ? (BUILT_IN_COMPANY_SOURCE[code] || {}) : {},
-                    builtInMatchesActivity && resolvedActivityType === 'code'
+                    !hasSharedScenarioSource && builtInMatchesActivity ? (BUILT_IN_COMPANY_SOURCE[code] || {}) : {},
+                    true
                 );
                 const step2Blocks = {};
                 const phraseBanks = {};
@@ -2397,7 +2291,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                     && Object.prototype.hasOwnProperty.call(storedCompanySourceRaw, 'enabled');
                 const storedCompanySource = normalizeCompanySource(
                     storedCompanySourceRaw || {},
-                    storedHasExplicitEnabled ? null : resolvedActivityType === 'code'
+                    storedHasExplicitEnabled ? null : true
                 );
                 const companySource = hasStoredCompanySource ? storedCompanySource : builtInCompanySource;
                 if (hasStoredCompanySource || companySourceHasContent(companySource)) {
@@ -2407,7 +2301,10 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 normalized[code] = {
                     ...raw,
                     code: raw.code || code,
-                    title: raw.title || `${code} 훈련 시나리오`,
+                    title: raw.title || 'Untitled Activity',
+                    displayOrder: displayOrder !== Number.MAX_SAFE_INTEGER
+                        ? displayOrder
+                        : (Number(raw.createdAt || raw.created_at || 0) || Object.keys(normalized).length + 1),
                     step2Blocks,
                     step2Questions,
                     phraseBanks,
@@ -2419,7 +2316,6 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 };
             });
 
-            repairMisassignedCompanySourceStore(normalized);
             const serialized = JSON.stringify(normalized);
             if (localStorage.getItem('OPORD_SCENARIOS') !== serialized) {
                 localStorage.setItem('OPORD_SCENARIOS', serialized);
@@ -2487,7 +2383,6 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         function getActivityMeta(activityType) {
             return ACTIVITY_META[normalizeActivityType(activityType)];
         }
-
         function renderScenarioEditorLibrary() {
             const library = document.getElementById('teacher-scenario-library');
             if (!library) return;
@@ -2497,24 +2392,24 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 library.innerHTML = '<div class="rounded border border-dashed border-amber-200 bg-white/70 px-2 py-2 text-[10px] italic text-slate-400">저장된 활동이 없습니다.</div>';
                 return;
             }
-            library.innerHTML = entries.map(scenario => {
+            library.innerHTML = entries.map((scenario, index) => {
                 const blockCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + (scenario.step2Blocks?.[id]?.length || 0), 0);
                 const phraseCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + (scenario.phraseBanks?.[id]?.length || 0), 0);
                 const questionCount = TEACHER_PARAGRAPH_IDS.reduce((sum, id) => sum + getScenarioStep2Questions(scenario, id).length, 0);
-                const activity = getActivityMeta(getScenarioActivityType(scenario));
-                return `<div class="flex items-center justify-between gap-2 rounded border ${editingScenarioCode === scenario.code ? 'border-amber-400 bg-white' : 'border-amber-100 bg-white/70'} px-2 py-1.5"><div class="min-w-0"><p class="font-mono text-[10px] font-black text-indigo-700">${escapeHtml(scenario.code)}</p><p class="truncate text-[10px] text-slate-600">${escapeHtml(scenario.title)}</p><p class="mt-1 text-[9px] text-slate-400">${blockCount} reference cards · ${phraseCount} phrase cues · ${questionCount} prompts</p></div><div class="flex shrink-0 flex-col gap-1"><button type="button" onclick='openScenarioQuickEdit(${JSON.stringify(scenario.code)})' class="rounded bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fa-solid fa-window-restore mr-1"></i>빠른편집</button><button type="button" onclick='loadScenarioForEdit(${JSON.stringify(scenario.code)})' class="rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-200"><i class="fa-solid fa-pen mr-1"></i>상세수정</button><button type="button" onclick='deleteScenarioEditor(${JSON.stringify(scenario.code)})' class="rounded bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"><i class="fa-solid fa-trash-can mr-1"></i>삭제</button></div></div>`;
+                const source = getScenarioCompanySource(scenario);
+                const sourceLabel = hasCompanySource(source) ? 'Source ON' : 'Source OFF';
+                return `<div class="flex items-center justify-between gap-2 rounded border ${editingScenarioCode === scenario.code ? 'border-amber-400 bg-white' : 'border-amber-100 bg-white/70'} px-2 py-1.5"><div class="min-w-0"><div class="flex items-center gap-1.5"><span class="rounded bg-indigo-50 px-2 py-0.5 text-[9px] font-black text-indigo-700">순서 ${index + 1}</span><span class="rounded ${hasCompanySource(source) ? 'bg-sky-50 text-sky-700' : 'bg-slate-100 text-slate-400'} px-1.5 py-0.5 text-[9px] font-bold">${sourceLabel}</span></div><p class="mt-1 truncate text-[10px] font-bold text-slate-700">${escapeHtml(scenario.title)}</p><p class="mt-1 text-[9px] text-slate-400">${blockCount} reference cards · ${phraseCount} phrase cues · ${questionCount} prompts</p></div><div class="flex shrink-0 flex-col gap-1"><button type="button" onclick='openScenarioQuickEdit(${JSON.stringify(scenario.code)})' class="rounded bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700 hover:bg-indigo-100"><i class="fa-solid fa-window-restore mr-1"></i>빠른편집</button><button type="button" onclick='loadScenarioForEdit(${JSON.stringify(scenario.code)})' class="rounded bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 hover:bg-amber-200"><i class="fa-solid fa-pen mr-1"></i>상세수정</button><button type="button" onclick='deleteScenarioEditor(${JSON.stringify(scenario.code)})' class="rounded bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700 hover:bg-rose-100"><i class="fa-solid fa-trash-can mr-1"></i>삭제</button></div></div>`;
             }).join('');
         }
-
         function resetScenarioEditor() {
             editingScenarioCode = null;
             const codeInput = document.getElementById('new-sci-code');
             const titleInput = document.getElementById('new-sci-title');
+            const orderInput = document.getElementById('new-sci-display-order');
             if (!codeInput || !titleInput) return;
             codeInput.value = '';
-            codeInput.readOnly = false;
-            codeInput.classList.remove('bg-slate-100', 'text-slate-500');
             titleInput.value = '';
+            if (orderInput) orderInput.value = getNextScenarioDisplayOrder();
             const activityTypeInput = document.getElementById('new-sci-activity-type');
             if (activityTypeInput) activityTypeInput.value = 'lecture';
             setCompanySourceToggleState({ enabled: false, images: [] });
@@ -2527,33 +2422,32 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 if (questionField) questionField.value = '';
             });
             const mode = document.getElementById('scenario-editor-mode');
-            const note = document.getElementById('scenario-code-note');
             const saveBtn = document.getElementById('scenario-save-btn');
-            if (mode) mode.innerText = '새 시나리오 작성 모드';
-            if (note) note.innerText = '새 활동은 자유로운 코드명/짧은 이름을 사용할 수 있고, 기존 활동도 수정 모드에서 코드명을 바꿀 수 있습니다.';
-            if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB에 시나리오 저장';
+            if (mode) mode.innerText = '새 활동 작성 모드';
+            if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB에 활동 저장';
             renderScenarioEditorLibrary();
         }
-
         function loadScenarioForEdit(code) {
             if (!requireTeacherAccess()) return;
             const scenarios = getScenarioStore();
             const scenario = scenarios[code];
             if (!scenario) {
-                alert('선택한 시나리오를 찾을 수 없습니다.');
+                alert('선택한 활동을 찾을 수 없습니다.');
                 return;
             }
             editingScenarioCode = code;
             const codeInput = document.getElementById('new-sci-code');
             const titleInput = document.getElementById('new-sci-title');
-            codeInput.value = scenario.code;
-            codeInput.readOnly = false;
-            codeInput.classList.remove('bg-slate-100', 'text-slate-500');
-            titleInput.value = scenarioTitleForEditor(scenario.title);
+            const orderInput = document.getElementById('new-sci-display-order');
+            if (codeInput) codeInput.value = scenario.code;
+            if (titleInput) titleInput.value = scenarioTitleForEditor(scenario.title);
+            if (orderInput) {
+                const storedOrder = normalizeScenarioDisplayOrder(scenario.displayOrder ?? scenario.step2Blocks?.[DISPLAY_ORDER_KEY], 0);
+                orderInput.value = storedOrder || getScenarioDisplaySequence(scenario.code);
+            }
             const activityTypeInput = document.getElementById('new-sci-activity-type');
             if (activityTypeInput) activityTypeInput.value = getScenarioActivityType(scenario);
             setCompanySourceToggleState(getScenarioCompanySource(scenario));
-            const questionMap = getScenarioStep2QuestionMap(scenario);
             TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
                 const field = document.getElementById(`new-sci-${paragraphId}`);
                 const phraseField = document.getElementById(`new-sci-phrases-${paragraphId}`);
@@ -2563,28 +2457,25 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 if (questionField) questionField.value = getScenarioStep2Questions(scenario, paragraphId).join('\n');
             });
             const mode = document.getElementById('scenario-editor-mode');
-            const note = document.getElementById('scenario-code-note');
             const saveBtn = document.getElementById('scenario-save-btn');
-            if (mode) mode.innerText = `[${scenario.code}] 기존 시나리오 수정 모드`;
-            if (note) note.innerText = '기존 활동도 코드명/짧은 이름을 바꿀 수 있습니다. 단, 이미 제출된 artifact는 이전 코드명으로 보존됩니다.';
-            if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB의 시나리오 변경 저장';
+            if (mode) mode.innerText = `기존 활동 수정 · ${scenario.title}`;
+            if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB의 활동 변경 저장';
             renderScenarioEditorLibrary();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-
         async function saveScenarioEditor() {
             if (!requireTeacherAccess()) return;
             const codeInput = document.getElementById('new-sci-code');
             const titleInput = document.getElementById('new-sci-title');
-            const requestedCode = normalizeScenarioCodeInput(codeInput.value);
-            const title = titleInput.value.trim();
+            const orderInput = document.getElementById('new-sci-display-order');
+            const title = titleInput?.value.trim() || '';
             const activityType = normalizeActivityType(document.getElementById('new-sci-activity-type')?.value);
-            const originalCode = editingScenarioCode;
-            const code = requestedCode;
+            const code = editingScenarioCode || normalizeScenarioCodeInput(codeInput?.value || '') || generateScenarioInternalCode();
+            const displayOrder = normalizeScenarioDisplayOrder(orderInput?.value, getNextScenarioDisplayOrder());
 
             const codeError = getScenarioCodeValidationError(code);
             if (codeError || !title) {
-                alert(codeError || '시나리오 제목을 입력하십시오.');
+                alert(codeError || '활동 제목을 입력하십시오.');
                 return;
             }
 
@@ -2605,7 +2496,11 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 step2Questions[paragraphId] = questions;
             });
             step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
-            const sourceToPreserve = getScenarioCompanySource(getScenarioStore()[editingScenarioCode || code] || {});
+            step2Blocks[DISPLAY_ORDER_KEY] = displayOrder;
+
+            const scenarios = getScenarioStore();
+            const existing = scenarios[code] || {};
+            const sourceToPreserve = getScenarioCompanySource(existing);
             const sourceVisibilityToggle = document.getElementById('new-sci-company-source-enabled');
             const sourceImagesField = document.getElementById('new-sci-company-source-images');
             if (sourceImagesField) {
@@ -2616,24 +2511,18 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 sourceToPreserve.enabled = Boolean(sourceVisibilityToggle?.checked);
                 step2Blocks[COMPANY_SOURCE_KEY] = sourceToPreserve;
             }
-            if (missing.length) {
-                alert(`Full OPORD scenario에는 5개 paragraph의 Step 2 blocks가 모두 필요합니다.
 
-입력이 필요한 문단: ${missing.join(', ')}`);
+            if (missing.length) {
+                alert(`현재 공통 Step 1·Step 2 틀에서는 5개 paragraph의 자료가 모두 필요합니다.\n\n입력이 필요한 문단: ${missing.join(', ')}`);
                 return;
             }
 
-            const scenarios = getScenarioStore();
             const isEditing = Boolean(editingScenarioCode);
-            const isRenaming = isEditing && originalCode && originalCode !== code;
-            const existing = isRenaming ? (scenarios[originalCode] || {}) : (scenarios[code] || {});
-            if (!isEditing && scenarios[code] && !confirm(`[${code}] 시나리오가 이미 있습니다. 기존 자료를 새 활동 자료로 덮어쓰겠습니까?`)) return;
-            if (isRenaming && scenarios[code] && !confirm(`[${code}] 활동이 이미 있습니다. 이 이름의 기존 활동 자료를 덮어쓰고 [${originalCode}] 활동 카드를 이름 변경 처리할까요?`)) return;
-
             const scenarioToSave = {
                 ...existing,
                 code,
                 title,
+                displayOrder,
                 activityType,
                 step2Blocks,
                 step2Questions,
@@ -2644,59 +2533,34 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 createdAt: existing.createdAt || Date.now(),
                 updatedBy: currentSupabaseUserId,
                 updatedAt: Date.now(),
-                scenarioVersion: 'scenario-db-v1'
+                scenarioVersion: 'activity-order-v1'
             };
 
             setScenarioSaveBusy(true);
             try {
                 await writeScenarioToDatabase(scenarioToSave);
-                if (isRenaming) {
-                    const { error: deleteOldError } = await supabaseClient
-                        .from('scenarios')
-                        .delete()
-                        .eq('code', originalCode);
-                    if (deleteOldError) throw deleteOldError;
-                    try {
-                        const local = JSON.parse(localStorage.getItem('OPORD_SCENARIOS')) || {};
-                        delete local[originalCode];
-                        localStorage.setItem('OPORD_SCENARIOS', JSON.stringify(local));
-                    } catch (localError) {
-                        console.warn('Local old scenario cleanup skipped:', localError);
-                    }
-                    if (sharedScenarioStore && typeof sharedScenarioStore === 'object') delete sharedScenarioStore[originalCode];
-                    sharedHubUiState.openScenarioCodes.delete(originalCode);
-                    studentDashboardUiState.openScenarioCodes.delete(originalCode);
-                }
                 await refreshSharedScenarios();
-
-                // Keep a local cache only as a resilient fallback; DB is now the shared source of truth.
-                const refreshed = getScenarioStore();
-                saveScenarioStore(refreshed);
+                saveScenarioStore(getScenarioStore());
                 resetScenarioStep2Progress(code);
 
-                const actionText = isRenaming ? '이름 변경·배포 완료' : (isEditing ? '수정·배포 완료' : '출제·배포 완료');
-                alert(`✅ [${actionText}] [${code}]의 scenario reference cards, phrase bank, Step 2 questions가 공유 DB에 저장되었습니다.
-
-전 생도 화면은 다음 자동 동기화 또는 새로고침 때 최신 자료를 받습니다. 기존 제출 artifact는 보관됩니다.`);
+                alert(`✅ ${isEditing ? '활동 수정·배포' : '새 활동 출제·배포'}가 완료되었습니다.\n\n제목: ${title}\n표시 순서: ${displayOrder}\n\n내부 연결 ID는 유지되며, 제목·순서를 바꾸어도 기존 제출물과 댓글 연결은 보존됩니다.`);
                 editingScenarioCode = code;
                 renderTeacherDashboard();
                 loadScenarioForEdit(code);
             } catch (error) {
-                console.error('Supabase scenario save failed:', error);
-                alert(`공유 DB에 시나리오를 저장하지 못했습니다.
-${error.message || '잠시 뒤 다시 시도하십시오.'}`);
+                console.error('Supabase activity save failed:', error);
+                alert(`공유 DB에 활동을 저장하지 못했습니다.\n${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             } finally {
                 setScenarioSaveBusy(false);
                 const saveBtn = document.getElementById('scenario-save-btn');
                 if (saveBtn) {
                     saveBtn.innerHTML = isEditing
-                        ? '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB의 시나리오 변경 저장'
-                        : '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB에 시나리오 저장';
+                        ? '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB의 활동 변경 저장'
+                        : '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>공유 DB에 활동 저장';
                 }
             }
         }
 
-        // Backward compatibility for earlier buttons or copied versions of the page.
         function getParagraphTitle(paragraphId) {
             return PARAGRAPH_DRILLS[paragraphId]?.title || 'Mission';
         }
@@ -2728,7 +2592,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const scenarioEntries = sortScenarioEntries([...new Set([
                 ...Object.values(scenarios).map(scenario => scenario.code),
                 ...packages.map(bundle => bundle.scenarioCode)
-            ])].filter(Boolean).map(code => scenarios[code] || { code, title: `${code} activity`, activityType: 'lecture' }));
+            ])].filter(Boolean).map(code => scenarios[code] || { code, title: 'Archived Activity', activityType: 'lecture', displayOrder: Number.MAX_SAFE_INTEGER }));
 
             scenarioEntries.forEach(scenario => {
                 const scenarioCode = scenario.code;
@@ -2811,7 +2675,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                         <summary class="cursor-pointer list-none px-5 py-4">
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div class="min-w-0 flex items-start gap-3">
-                                    <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 font-mono text-xs font-black text-indigo-700">${escapeHtml(scenarioCode)}</span>
+                                    <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700">${getScenarioDisplaySequence(scenarioCode)}</span>
                                     <div class="min-w-0">
                                         <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4></div>
                                         <p class="mt-1 text-[10px] leading-relaxed text-slate-500">활동별로 생도 package를 열어 제출 문단과 피드백 현황을 확인합니다.</p>
@@ -2906,7 +2770,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const phraseField = document.getElementById('quick-edit-phrases');
             const questionField = document.getElementById('quick-edit-questions');
 
-            if (title) title.textContent = `${scenario.code} · ${scenario.title}`;
+            if (title) title.textContent = scenario.title;
             if (subtitle) subtitle.textContent = '학생 화면에 보일 자료를 paragraph별로 바로 고칩니다.';
             if (label) label.textContent = `${drill.number}. ${drill.title}`;
 
@@ -3024,7 +2888,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 resetScenarioStep2Progress(scenario.code);
                 renderTeacherDashboard();
                 renderQuickEditModal();
-                alert(`✅ ${scenario.code} · ${PARAGRAPH_DRILLS[quickEditParagraphId].title} 자료가 저장되었습니다.`);
+                alert(`✅ ${scenario.title} · ${PARAGRAPH_DRILLS[quickEditParagraphId].title} 자료가 저장되었습니다.`);
             } catch (error) {
                 console.error('Quick edit save failed:', error);
                 alert(`빠른 편집 내용을 저장하지 못했습니다.\n${error.message || '잠시 뒤 다시 시도하십시오.'}`);
@@ -3454,7 +3318,8 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const cadetName = userDatabase[studentId]?.name || studentId;
             try {
                 await navigator.clipboard.writeText(text);
-                alert(`${scenarioCode} / ${cadetName}의 ${getExportModeLabel(mode)} export를 클립보드에 복사했습니다.`);
+                const activityTitle = getScenarioStore()[scenarioCode]?.title || '선택한 활동';
+                alert(`${activityTitle} / ${cadetName}의 ${getExportModeLabel(mode)} export를 클립보드에 복사했습니다.`);
             } catch (error) {
                 console.error('Cadet clipboard export failed:', error);
                 window.prompt('자동 복사가 막혔습니다. 아래 텍스트를 Ctrl+C로 복사하십시오.', text);
@@ -3465,7 +3330,8 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const text = formatScenarioForSlides(scenarioCode, mode);
             try {
                 await navigator.clipboard.writeText(text);
-                alert(`${scenarioCode} 활동의 ${getExportModeLabel(mode)} export를 클립보드에 복사했습니다. Google Slides 텍스트 박스에 붙여넣으면 됩니다.`);
+                const activityTitle = getScenarioStore()[scenarioCode]?.title || '선택한 활동';
+                alert(`${activityTitle}의 ${getExportModeLabel(mode)} export를 클립보드에 복사했습니다. Google Slides 텍스트 박스에 붙여넣으면 됩니다.`);
             } catch (error) {
                 console.error('Clipboard export failed:', error);
                 const fallback = window.prompt('자동 복사가 막혔습니다. 아래 텍스트를 Ctrl+C로 복사하십시오.', text);
@@ -3474,7 +3340,8 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
         function downloadScenarioForSlides(scenarioCode, mode = 'full') {
             const text = formatScenarioForSlides(scenarioCode, mode);
-            const safeName = String(scenarioCode || 'opord-export').replace(/[^a-zA-Z0-9_-]/g, '_');
+            const activityTitle = getScenarioStore()[scenarioCode]?.title || 'activity-export';
+            const safeName = String(activityTitle).replace(/[^a-zA-Z0-9가-힣_-]/g, '_');
             const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -3511,7 +3378,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const scenarioListForHub = sortScenarioEntries([...new Set([
                 ...Object.values(scenarios).map(scenario => scenario.code),
                 ...packages.map(bundle => bundle.scenarioCode)
-            ])].filter(Boolean).map(code => scenarios[code] || { code, title: `${code} activity`, activityType: 'lecture' }));
+            ])].filter(Boolean).map(code => scenarios[code] || { code, title: 'Archived Activity', activityType: 'lecture', displayOrder: Number.MAX_SAFE_INTEGER }));
             const scenarioCodes = scenarioListForHub.map(scenario => scenario.code);
 
             const firstScenarioWithSubmissions = scenarioCodes.find(code => (packagesByScenario.get(code) || []).length) || scenarioCodes[0] || '';
@@ -3519,8 +3386,9 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             scenarioCodes.forEach(scenarioCode => {
                 const scenario = scenarios[scenarioCode] || {
                     code: scenarioCode,
-                    title: `${scenarioCode} activity`,
-                    activityType: 'lecture'
+                    title: 'Archived Activity',
+                    activityType: 'lecture',
+                    displayOrder: Number.MAX_SAFE_INTEGER
                 };
                 const activity = getActivityMeta(getScenarioActivityType(scenario));
                 const scenarioPackages = (packagesByScenario.get(scenarioCode) || [])
@@ -3605,7 +3473,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                         <summary class="cursor-pointer list-none px-5 py-4">
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div class="min-w-0 flex items-start gap-3">
-                                    <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 font-mono text-xs font-black text-indigo-700">${escapeHtml(scenarioCode)}</span>
+                                    <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700">${getScenarioDisplaySequence(scenarioCode)}</span>
                                     <div class="min-w-0">
                                         <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4></div>
                                         <p class="mt-1 text-[10px] leading-relaxed text-slate-500">이 활동을 열면 생도별 OPORD package가 최근 제출 순으로 정리됩니다.</p>
@@ -3684,7 +3552,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     <div class="p-3 border rounded-lg flex justify-between items-center bg-white hover:border-indigo-300 transition-all gap-3">
                         <div class="space-y-1 min-w-0">
                             <div class="flex flex-wrap items-center gap-1.5">
-                                <span class="text-[10px] font-mono font-bold ${isPassed ? 'text-emerald-600' : 'text-indigo-600'}">${escapeHtml(sci.code)} · ${statusDetail}</span>
+                                <span class="text-[10px] font-bold ${isPassed ? 'text-emerald-600' : 'text-indigo-600'}">활동 ${getScenarioDisplaySequence(sci.code)} · ${statusDetail}</span>
                                 
                             </div>
                             <h4 class="text-xs font-bold text-slate-800">${escapeHtml(sci.title)}</h4>
@@ -3755,7 +3623,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                         <summary class="cursor-pointer list-none px-4 py-3.5">
                             <div class="flex flex-wrap items-center justify-between gap-3">
                                 <div class="min-w-0 flex items-start gap-3">
-                                    <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 font-mono text-xs font-black text-indigo-700">${escapeHtml(scenario.code)}</span>
+                                    <span class="shrink-0 rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700">${getScenarioDisplaySequence(scenario.code)}</span>
                                     <div class="min-w-0">
                                         <div class="flex flex-wrap items-center gap-2"><h4 class="truncate text-sm font-black text-slate-800">${escapeHtml(scenario.title)}</h4></div>
                                         <p class="mt-1 text-[10px] leading-relaxed text-slate-500">이 활동을 열면 내가 제출한 1–5 paragraph 산출물이 정리됩니다.</p>
@@ -3871,7 +3739,8 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const commentWarning = commentCount
                 ? `\n\n이 산출물에 연결된 peer feedback ${commentCount}개도 함께 삭제됩니다.`
                 : '';
-            if (!confirm(`${artifact.scenarioCode} · ${label} 공유본을 삭제할까요?${commentWarning}\n\n브라우저의 작성 초안은 남겨 두므로 다시 열어 수정·재제출할 수 있습니다.`)) return;
+            const activityTitle = getScenarioStore()[artifact.scenarioCode]?.title || '선택한 활동';
+            if (!confirm(`${activityTitle} · ${label} 공유본을 삭제할까요?${commentWarning}\n\n브라우저의 작성 초안은 남겨 두므로 다시 열어 수정·재제출할 수 있습니다.`)) return;
 
             try {
                 if (supabaseClient && currentSupabaseUserId && artifact.id && !String(artifact.id).startsWith('recovered-')) {
@@ -3907,7 +3776,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 renderStudentDashboard();
                 renderSharedHub();
                 if (currentUser?.role === 'teacher') renderTeacherDashboard();
-                alert(`✅ ${artifact.scenarioCode} · ${label} 공유본을 삭제했습니다. 필요하면 활동을 다시 열어 수정 후 재제출하십시오.`);
+                alert(`✅ ${activityTitle} · ${label} 공유본을 삭제했습니다. 필요하면 활동을 다시 열어 수정 후 재제출하십시오.`);
             } catch (error) {
                 console.error('Own artifact delete failed:', error);
                 alert(`산출물을 삭제하지 못했습니다.\n${error.message || '잠시 뒤 다시 시도하십시오.'}`);
@@ -4898,7 +4767,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const step1Complete = isStepComplete(activeParagraphId, 1);
             const step2Complete = isStepComplete(activeParagraphId, 2);
 
-            document.getElementById('work-active-code').innerText = data.code;
+            document.getElementById('work-active-code').innerText = `활동 ${getScenarioDisplaySequence(data.code)}`;
             document.getElementById('work-active-title').innerText = data.title;
             document.getElementById('hint-box').classList.add('hidden');
             document.getElementById('feedback-message').className = 'text-xs font-semibold text-slate-400';
