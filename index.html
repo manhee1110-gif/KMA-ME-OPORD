@@ -2377,6 +2377,18 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                         : cloneBlockList(builtInQuestionMap[paragraphId]).filter(Boolean);
                 });
                 step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
+
+                // Preserve teacher-issued AI Coach reset epochs from Supabase. The scenario
+                // normalizer rebuilds the visible paragraph/reference fields, so metadata stored
+                // under a reserved key must be copied explicitly or the student's browser will
+                // never see the reset after the shared scenario is reloaded.
+                const storedCoachResetMap = normalizeCoachResetEpochMap(
+                    existingBlocks[COACH_RESET_EPOCHS_KEY] || {}
+                );
+                if (Object.keys(storedCoachResetMap).length) {
+                    step2Blocks[COACH_RESET_EPOCHS_KEY] = storedCoachResetMap;
+                }
+
                 const hasDirectCompanySource = Object.prototype.hasOwnProperty.call(raw, 'companySource');
                 const hasBlockCompanySource = Object.prototype.hasOwnProperty.call(existingBlocks, COMPANY_SOURCE_KEY);
                 const hasStoredCompanySource = hasDirectCompanySource || hasBlockCompanySource;
@@ -3068,7 +3080,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
 
             const step2Blocks = cloneCourseMaterialObject(scenario.step2Blocks || {}, {});
             const resetMap = normalizeCoachResetEpochMap(step2Blocks[COACH_RESET_EPOCHS_KEY] || {});
-            resetMap[coachResetEpochKey(studentId, paragraphId, chunkId)] = Date.now();
+            const resetKey = coachResetEpochKey(studentId, paragraphId, chunkId);
+            resetMap[resetKey] = Math.max(Date.now(), Number(resetMap[resetKey] || 0) + 1);
             step2Blocks[COACH_RESET_EPOCHS_KEY] = resetMap;
             const scenarioToSave = {
                 ...scenario,
