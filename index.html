@@ -30,6 +30,44 @@
         .shell-slot { min-height: 42px; }
         .workspace-step-heading { letter-spacing: 0.01em; }
 
+        /* Research-lesson Step 1 compromise: keep the structure builder available,
+           but allow a one-click fold that unlocks Step 2 without drag-and-drop. */
+        .step1-shell-panel { transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease; }
+        .step1-shell-panel.is-folded { border-color: #c7d2fe; background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 100%); box-shadow: inset 0 0 0 1px rgba(99,102,241,.05); }
+        .step1-fold-summary { display: none; }
+        .step1-shell-panel.is-folded .step1-fold-summary { display: flex; }
+        .step1-shell-panel.is-folded #step1-content { display: none; }
+        .step1-fold-button { transition: background-color .15s ease, color .15s ease, transform .15s ease; }
+        .step1-fold-button:hover { transform: translateY(-1px); }
+
+        /* Kakao-style Step 2 coach room.  The activity data and submission logic are unchanged;
+           only the interaction surface is presented as a conversation. */
+        .coach-chat-panel { overflow: hidden; border-color: #dbeafe !important; background: #bacee0 !important; padding: 0 !important; box-shadow: 0 10px 28px rgba(30,64,175,.08); }
+        .coach-chat-topbar { background: rgba(255,255,255,.94); border-bottom: 1px solid #bfdbfe; padding: .85rem 1rem; }
+        .coach-chat-body { padding: 1rem; background-image: radial-gradient(circle at 20% 10%, rgba(255,255,255,.26), transparent 32%); }
+        .coach-avatar { display: inline-flex; width: 2.15rem; height: 2.15rem; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: .8rem; background: #0b132b; color: #facc15; font-size: .68rem; font-weight: 950; box-shadow: 0 4px 12px rgba(15,23,42,.2); }
+        .coach-avatar.student { background: #fee500; color: #3c1e1e; }
+        .coach-thread { border: 0 !important; background: transparent !important; padding: .25rem 0 .75rem !important; }
+        .coach-message-row { display: flex; align-items: flex-start; gap: .55rem; margin: .45rem 0; }
+        .coach-message-row.student-row { justify-content: flex-end; }
+        .coach-bubble { position: relative; max-width: min(88%, 760px); border-radius: 1rem; padding: .72rem .85rem; font-size: .72rem; line-height: 1.55; box-shadow: 0 3px 10px rgba(15,23,42,.08); overflow-wrap: anywhere; }
+        .coach-bubble-left { border-top-left-radius: .25rem; background: #fff; color: #334155; }
+        .coach-bubble-right { border-top-right-radius: .25rem; background: #fee500; color: #3c1e1e; }
+        .coach-bubble-system { background: rgba(255,255,255,.72); color: #475569; border: 1px solid rgba(255,255,255,.72); box-shadow: none; }
+        .coach-draft-bubble { width: min(92%, 860px); max-width: 92%; padding: .55rem; }
+        .coach-draft-bubble label { border: 0 !important; background: transparent !important; padding: .15rem !important; box-shadow: none !important; }
+        .coach-draft-bubble textarea, .coach-draft-bubble input { border-color: rgba(60,30,30,.18) !important; background: rgba(255,255,255,.74) !important; color: #3c1e1e !important; }
+        .coach-response-card { border: 0 !important; background: transparent !important; padding: 0 !important; margin-top: .35rem !important; }
+        .coach-send-button { border-radius: 9999px !important; background: #3c1e1e !important; color: #fff !important; padding: .55rem .85rem !important; font-size: .68rem !important; }
+        .coach-send-button:hover { background: #0b132b !important; }
+        .coach-chat-footer { border-top: 1px solid rgba(255,255,255,.6) !important; background: rgba(255,255,255,.86); padding: .8rem 1rem; }
+        .coach-chat-panel .step2-question-chat { display: grid; gap: .6rem; }
+        .coach-chat-panel .step2-question-chat label { border: 0 !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
+        @media (max-width: 640px) {
+            .coach-bubble, .coach-draft-bubble { max-width: 94%; width: 94%; }
+            .coach-avatar { width: 1.9rem; height: 1.9rem; border-radius: .65rem; }
+        }
+
         .source-doc { color: #334155; font-family: 'Pretendard', system-ui, sans-serif; font-size: 0.93rem; line-height: 1.78; overflow-wrap: anywhere; }
         .source-doc p { margin: 0.62rem 0; }
         .source-doc .source-kicker { margin: 0.2rem 0 0.75rem; border-radius: 0.8rem; background: #f8fafc; padding: 0.75rem 0.9rem; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.05em; color: #475569; }
@@ -385,33 +423,50 @@
                     <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100 lg:col-span-2 space-y-5">
                         <div id="active-paragraph-intro" class="rounded-xl bg-slate-50 border border-slate-100 px-4 py-3"></div>
 
-                        <section class="space-y-3 bg-slate-50/70 p-4 rounded-xl border border-slate-100">
+                        <section id="step1-panel" class="step1-shell-panel space-y-3 bg-slate-50/70 p-4 rounded-xl border border-slate-100">
                             <div class="flex flex-wrap items-center justify-between gap-2">
                                 <div>
                                     <span class="workspace-step-heading text-[11px] font-bold text-indigo-700 block"><i class="fa-solid fa-puzzle-piece mr-1"></i>Step 1: OPORD Format Builder</span>
                                     <p id="step1-instruction" class="text-[11px] text-slate-500 mt-1">OPORD format 순서에 맞게 shell blocks를 끌어다 놓으십시오.</p>
                                 </div>
-                                <span id="step1-status" class="text-[10px] rounded bg-indigo-100 px-2 py-1 font-bold text-indigo-700">OPORD shell drill</span>
+                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                    <span id="step1-status" class="text-[10px] rounded bg-indigo-100 px-2 py-1 font-bold text-indigo-700">OPORD shell drill</span>
+                                    <button id="step1-fold-btn" type="button" onclick="toggleStep1Fold()" class="step1-fold-button rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-[10px] font-black text-indigo-700 shadow-sm hover:bg-indigo-50" title="Step 1을 접고 Step 2로 바로 이동"><i class="fa-solid fa-window-minimize mr-1"></i>접기 · Step 2 바로가기</button>
+                                </div>
                             </div>
-                            <div id="step1-slots" class="space-y-2 max-h-[430px] overflow-y-auto pr-1"></div>
-                            <div class="flex flex-wrap justify-between gap-2 pt-2 border-t border-slate-100">
-                                <button id="step1-reset-btn" onclick="resetActiveParagraphStep(1)" class="hidden border border-slate-200 bg-white text-slate-600 font-bold py-2 px-3 rounded-lg text-xs hover:bg-slate-50">Step 1 다시 조립</button>
-                                <button id="step1-verify-btn" onclick="verifyStep1()" class="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-xs shadow transition-all"><i class="fa-solid fa-circle-check"></i> Step 1 검증</button>
+                            <div id="step1-fold-summary" class="step1-fold-summary items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-white/80 px-3 py-2 text-[10px] text-indigo-800">
+                                <span><i class="fa-solid fa-forward-step mr-1"></i><strong>Step 1을 접었습니다.</strong> 연구강의 진행을 위해 shell 조립 없이 Step 2가 열렸습니다.</span>
+                                <button type="button" onclick="toggleStep1Fold(false)" class="shrink-0 rounded border border-indigo-200 bg-indigo-50 px-2.5 py-1 font-black text-indigo-700 hover:bg-indigo-100"><i class="fa-solid fa-window-maximize mr-1"></i>펼치기</button>
+                            </div>
+                            <div id="step1-content" class="space-y-3">
+                                <div id="step1-slots" class="space-y-2 max-h-[430px] overflow-y-auto pr-1"></div>
+                                <div class="flex flex-wrap justify-between gap-2 pt-2 border-t border-slate-100">
+                                    <button id="step1-reset-btn" onclick="resetActiveParagraphStep(1)" class="hidden border border-slate-200 bg-white text-slate-600 font-bold py-2 px-3 rounded-lg text-xs hover:bg-slate-50">Step 1 다시 조립</button>
+                                    <button id="step1-verify-btn" onclick="verifyStep1()" class="ml-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-xs shadow transition-all"><i class="fa-solid fa-circle-check"></i> Step 1 검증</button>
+                                </div>
                             </div>
                         </section>
 
-                        <section id="step2-panel" class="space-y-3 bg-amber-50/20 p-4 rounded-xl border border-amber-100/60">
-                            <div class="flex flex-wrap items-center justify-between gap-2">
-                                <div>
-                                    <span id="step2-heading" class="workspace-step-heading text-[11px] font-bold text-amber-700 block"><i class="fa-solid fa-pen-to-square mr-1"></i>Step 2: Guided Paragraph Writing</span>
-                                    <p id="step2-instruction" class="text-[11px] text-slate-500 mt-1">Step 1을 통과하면 팀별 guided writing workspace가 열립니다.</p>
+                        <section id="step2-panel" class="coach-chat-panel rounded-xl border">
+                            <div class="coach-chat-topbar flex flex-wrap items-center justify-between gap-3">
+                                <div class="flex items-center gap-2.5">
+                                    <span id="step2-chat-avatar" class="coach-avatar">CM</span>
+                                    <div>
+                                        <span id="step2-heading" class="workspace-step-heading block text-[11px] font-black text-slate-800"><i class="fa-solid fa-comments mr-1 text-indigo-600"></i>Step 2: Captain Manhee Coach Room</span>
+                                        <p id="step2-instruction" class="mt-0.5 text-[10px] text-slate-500">Step 1을 통과하거나 접으면 writing chat이 열립니다.</p>
+                                    </div>
                                 </div>
-                                <span id="step2-status" class="text-[10px] rounded bg-amber-100 px-2 py-1 font-bold text-amber-800">Locked until Step 1</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-black text-emerald-700"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span><span id="step2-chat-presence">AI coach online</span></span>
+                                    <span id="step2-status" class="text-[10px] rounded bg-slate-100 px-2 py-1 font-bold text-slate-600">Locked until Step 1</span>
+                                </div>
                             </div>
-                            <div id="step2-slots" class="space-y-2"></div>
-                            <div class="flex flex-wrap justify-between gap-2 pt-2 border-t border-amber-100/70">
-                                <button id="step2-reset-btn" onclick="resetActiveParagraphStep(2)" class="hidden border border-amber-200 bg-white text-amber-700 font-bold py-2 px-3 rounded-lg text-xs hover:bg-amber-50">Step 2 수정 · 재작성</button>
-                                <button id="step2-verify-btn" onclick="verifyStep2()" class="ml-auto bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 px-4 rounded-lg text-xs shadow transition-all"><i class="fa-solid fa-cloud-arrow-up"></i> 조별 작성안 제출 및 공유</button>
+                            <div class="coach-chat-body">
+                                <div id="step2-slots" class="space-y-2"></div>
+                            </div>
+                            <div class="coach-chat-footer flex flex-wrap justify-between gap-2">
+                                <button id="step2-reset-btn" onclick="resetActiveParagraphStep(2)" class="hidden border border-slate-200 bg-white text-slate-600 font-bold py-2 px-3 rounded-lg text-xs hover:bg-slate-50">Step 2 수정 · 재작성</button>
+                                <button id="step2-verify-btn" onclick="verifyStep2()" class="ml-auto rounded-full bg-indigo-700 hover:bg-indigo-800 text-white font-bold py-2 px-4 text-xs shadow transition-all"><i class="fa-solid fa-paper-plane"></i> 조별 작성안 제출 및 공유</button>
                             </div>
                         </section>
 
@@ -3678,10 +3733,65 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             saveProgressStore(progress);
         }
 
+
+        function getStep1FoldStore() {
+            try {
+                return JSON.parse(localStorage.getItem('OPORD_STEP1_FOLD_STATE')) || {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function step1FoldKey(paragraphId = activeParagraphId) {
+            return `${currentUserId}::${selectedScenarioCode}::${paragraphId}`;
+        }
+
+        function isStep1Folded(paragraphId = activeParagraphId) {
+            return Boolean(getStep1FoldStore()[step1FoldKey(paragraphId)]);
+        }
+
+        function setStep1Folded(folded, paragraphId = activeParagraphId) {
+            const store = getStep1FoldStore();
+            const key = step1FoldKey(paragraphId);
+            if (folded) store[key] = true;
+            else delete store[key];
+            localStorage.setItem('OPORD_STEP1_FOLD_STATE', JSON.stringify(store));
+        }
+
+        function applyStep1FoldUI() {
+            const panel = document.getElementById('step1-panel');
+            const foldBtn = document.getElementById('step1-fold-btn');
+            if (!panel || !foldBtn) return;
+            const folded = isStep1Folded();
+            panel.classList.toggle('is-folded', folded);
+            foldBtn.innerHTML = folded
+                ? '<i class="fa-solid fa-window-maximize mr-1"></i>Step 1 펼치기'
+                : '<i class="fa-solid fa-window-minimize mr-1"></i>접기 · Step 2 바로가기';
+            foldBtn.title = folded ? 'Step 1 shell builder 펼치기' : 'Step 1을 접고 Step 2로 바로 이동';
+        }
+
+        function toggleStep1Fold(forceFold = null) {
+            const nextFolded = typeof forceFold === 'boolean' ? forceFold : !isStep1Folded();
+            if (nextFolded) {
+                // Research-lesson bypass: folding Step 1 counts as permission to continue,
+                // but does not delete the shell builder or its practice option.
+                markStepComplete(activeParagraphId, 1);
+                activeBuildStep = 2;
+            }
+            setStep1Folded(nextFolded);
+            loadWorkshop();
+            if (nextFolded) {
+                window.setTimeout(() => document.getElementById('step2-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+            }
+        }
+
         function resetActiveParagraphStep(step) {
             const progress = getProgressStore();
             delete progress[progressKey(activeParagraphId, step)];
-            if (step === 1) delete progress[progressKey(activeParagraphId, 2)];
+            if (step === 1) {
+                delete progress[progressKey(activeParagraphId, 2)];
+                setStep1Folded(false);
+            }
             saveProgressStore(progress);
             activeBuildStep = step;
             loadWorkshop();
@@ -3937,9 +4047,12 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             step1Slots.innerHTML = '';
 
             if (complete) {
-                instruction.innerText = '검증 완료된 OPORD shell 순서입니다. 필요하면 Step 1 다시 조립을 눌러 연습할 수 있습니다.';
+                const folded = isStep1Folded();
+                instruction.innerText = folded
+                    ? '연구강의 진행을 위해 Step 1을 접고 Step 2로 바로 이동했습니다. 언제든 펼쳐 구조를 확인할 수 있습니다.'
+                    : '검증 완료된 OPORD shell 순서입니다. 필요하면 Step 1 다시 조립을 눌러 연습할 수 있습니다.';
                 status.className = 'text-[10px] rounded bg-emerald-100 px-2 py-1 font-bold text-emerald-700';
-                status.innerText = 'Verified OPORD shell';
+                status.innerText = folded ? 'Folded · Step 2 open' : 'Verified OPORD shell';
                 drill.shellItems.forEach((item) => {
                     const meta = getShellItemMeta(item);
                     step1Slots.innerHTML += `
@@ -3948,6 +4061,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 });
                 verifyBtn.classList.add('hidden');
                 resetBtn.classList.remove('hidden');
+                applyStep1FoldUI();
                 return;
             }
 
@@ -3969,6 +4083,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     level: meta.level
                 });
             });
+            applyStep1FoldUI();
         }
 
         function isCaptainManheeScenario(data) {
@@ -4117,35 +4232,31 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const ready = lastCheck?.status === 'ready';
             const exhausted = checksUsed >= CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK;
             const feedbackHtml = lastCheck
-                ? `<div class="mt-3 rounded-lg border ${ready ? 'border-emerald-200 bg-emerald-50/80' : 'border-amber-200 bg-amber-50/80'} p-2.5"><div class="mb-1 flex flex-wrap items-center justify-between gap-2"><span class="text-[9px] font-black uppercase tracking-wider ${ready ? 'text-emerald-700' : 'text-amber-800'}"><i class="fa-solid ${ready ? 'fa-circle-check' : 'fa-wrench'} mr-1"></i>Captain Manhee · Check ${lastCheck.attempt}</span><span class="rounded px-1.5 py-0.5 text-[9px] font-bold ${ready ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${ready ? 'Ready to move on' : 'Revise together'}</span></div><div class="whitespace-pre-wrap break-words text-[10px] leading-relaxed text-slate-700">${escapeHtml(lastCheck.reply)}</div></div>`
-                : '<div class="mt-3 text-[9px] leading-relaxed text-slate-400">먼저 조별 초안을 작성한 뒤, 짧은 coach check를 통해 가장 중요한 보완점을 확인하십시오.</div>';
+                ? `<div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><div class="mb-1 flex flex-wrap items-center gap-2"><strong class="text-[10px] text-slate-900">Captain Manhee</strong><span class="rounded-full px-1.5 py-0.5 text-[8px] font-black ${ready ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${ready ? 'READY' : 'REVISE'}</span><span class="text-[8px] text-slate-400">Check ${lastCheck.attempt}</span></div><div class="whitespace-pre-wrap break-words text-[10px] leading-relaxed">${escapeHtml(lastCheck.reply)}</div></div></div>`
+                : `<div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><strong class="text-[10px] text-slate-900">Captain Manhee</strong><p class="mt-1 text-[10px] leading-relaxed text-slate-600">조별 초안을 먼저 작성한 뒤 아래 전송 버튼을 누르세요. 완성문을 대신 쓰지 않고, 가장 중요한 보완점만 짧게 알려드립니다.</p></div></div>`;
             const previousChecksHtml = state.checks.length > 1
-                ? `<details class="mt-2"><summary class="cursor-pointer text-[9px] font-bold text-slate-500">Earlier checkpoint feedback (${state.checks.length - 1})</summary><div class="mt-2 space-y-2">${state.checks.slice(0, -1).map(item => `<div class="rounded border border-slate-200 bg-white px-2 py-1.5 text-[9px] leading-relaxed text-slate-500"><span class="font-black">Check ${item.attempt}:</span> ${escapeHtml(item.reply)}</div>`).join('')}</div></details>`
+                ? `<details class="ml-11 mt-1 max-w-[82%]"><summary class="cursor-pointer text-[9px] font-bold text-slate-600">이전 대화 ${state.checks.length - 1}개 보기</summary><div class="mt-2 space-y-2">${state.checks.slice(0, -1).map(item => `<div class="coach-bubble coach-bubble-left text-[9px]"><span class="font-black">Check ${item.attempt}:</span> ${escapeHtml(item.reply)}</div>`).join('')}</div></details>`
                 : '';
             const noticeHtml = state.notice
-                ? `<div class="mt-2 rounded border border-rose-200 bg-rose-50 px-2.5 py-2 text-[9px] leading-relaxed text-rose-700"><i class="fa-solid fa-pen mr-1"></i>${escapeHtml(state.notice)}</div>`
+                ? `<div class="coach-message-row"><span class="coach-avatar">!</span><div class="coach-bubble coach-bubble-left border border-rose-200 text-rose-700">${escapeHtml(state.notice)}</div></div>`
                 : '';
 
             let actionHtml = '';
             if (ready) {
-                actionHtml = '<span class="text-[9px] font-bold text-emerald-700"><i class="fa-solid fa-arrow-right mr-1"></i>Chunk cleared for team progression</span>';
+                actionHtml = '<span class="rounded-full bg-emerald-100 px-3 py-1.5 text-[9px] font-black text-emerald-700"><i class="fa-solid fa-check mr-1"></i>이 항목은 다음 단계로 진행 가능</span>';
             } else if (exhausted) {
-                actionHtml = '<span class="text-[9px] font-bold text-rose-700"><i class="fa-solid fa-person-chalkboard mr-1"></i>3 checks used · ask the instructor next</span>';
+                actionHtml = '<span class="rounded-full bg-rose-100 px-3 py-1.5 text-[9px] font-black text-rose-700"><i class="fa-solid fa-person-chalkboard mr-1"></i>3회 사용 완료 · 교수자에게 질문</span>';
             } else {
                 const nextAttempt = checksUsed + 1;
-                actionHtml = `<button type="button" onclick="requestCaptainManheeChunkCheck('${chunk.id}')" class="rounded bg-rose-600 px-2.5 py-1.5 text-[9px] font-black text-white shadow hover:bg-rose-500"><i class="fa-solid fa-check mr-1"></i>Coach Check ${nextAttempt} / ${CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK}</button>`;
+                actionHtml = `<button type="button" onclick="requestCaptainManheeChunkCheck('${chunk.id}')" class="coach-send-button shadow"><i class="fa-solid fa-paper-plane mr-1"></i>Captain Manhee에게 보내기 ${nextAttempt}/${CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK}</button>`;
             }
 
             return `
-                <div class="mt-3 rounded-lg border border-rose-200 bg-rose-50/40 p-2.5">
-                    <div class="flex flex-wrap items-start justify-between gap-2">
-                        <div><p class="text-[10px] font-black uppercase tracking-wider text-rose-800"><i class="fa-solid fa-people-group mr-1"></i>Group coach checkpoint</p><p class="mt-0.5 text-[9px] leading-relaxed text-rose-700">점검 전 조별로 먼저 토의하고 수정하십시오. Captain Manhee는 힌트만 제공하며, 최종 문장은 조에서 직접 작성합니다.</p></div>
-                        <span class="rounded-full border ${exhausted ? 'border-rose-300 bg-rose-100 text-rose-700' : 'border-rose-200 bg-white text-rose-700'} px-2 py-1 text-[9px] font-black">${checksUsed}/${CAPTAIN_MANHEE_MAX_CHECKS_PER_CHUNK} checks</span>
-                    </div>
+                <div class="coach-response-card">
                     ${feedbackHtml}
                     ${previousChecksHtml}
                     ${noticeHtml}
-                    <div class="mt-3 flex justify-end">${actionHtml}</div>
+                    <div class="mt-2 flex justify-end pr-10">${actionHtml}</div>
                 </div>
             `;
         }
@@ -4154,9 +4265,18 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const chunk = getCaptainManheeChunk(chunkId);
             if (!chunk) return bodyHtml;
             return `
-                <section class="rounded-xl border border-slate-200 bg-white/70 p-3 ${extraClass}">
-                    <div class="mb-2 flex flex-wrap items-center justify-between gap-2"><div><h5 class="text-[10px] font-black uppercase tracking-wider text-slate-700">${escapeHtml(chunk.label)}</h5><p class="mt-0.5 text-[9px] leading-relaxed text-slate-400">${escapeHtml(chunk.note)}</p></div><span class="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">paragraph draft</span></div>
-                    ${bodyHtml}
+                <section class="coach-thread ${extraClass}">
+                    <div class="coach-message-row">
+                        <span class="coach-avatar">CM</span>
+                        <div class="coach-bubble coach-bubble-system">
+                            <strong class="block text-[10px] text-slate-800">${escapeHtml(chunk.label)}</strong>
+                            <span class="mt-0.5 block text-[9px] leading-relaxed text-slate-500">${escapeHtml(chunk.note)}</span>
+                        </div>
+                    </div>
+                    <div class="coach-message-row student-row">
+                        <div class="coach-bubble coach-bubble-right coach-draft-bubble">${bodyHtml}</div>
+                        <span class="coach-avatar student">TEAM</span>
+                    </div>
                     ${renderCaptainManheeCheckpoint(data, drill, chunk)}
                 </section>
             `;
@@ -4397,8 +4517,8 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             return `
                 <label class="block rounded-lg border border-slate-200 bg-white p-2.5">
                     <span class="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-600">${label}${required ? '<span class="ml-1 text-rose-500">*</span>' : ''}</span>
-                    <textarea data-step2-field="${field}" rows="${rows}" placeholder="${escapeHtml(placeholder)}" oninput="saveStep2DraftFromUI()" class="w-full resize-y rounded border border-slate-200 px-2.5 py-2 text-[11px] leading-relaxed text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100">${escapeHtml(value)}</textarea>
-                    ${hint ? `<span class="mt-1 block text-[9px] leading-relaxed text-slate-400">${hint}</span>` : ''}
+                    <textarea data-step2-field="${field}" rows="${rows}" placeholder="${escapeHtml(placeholder)}" oninput="saveStep2DraftFromUI()" class="w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-[11px] leading-relaxed text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100">${escapeHtml(value)}</textarea>
+                    ${hint ? `<span class="mt-1 block text-[9px] leading-relaxed text-slate-500">${hint}</span>` : ''}
                 </label>
             `;
         }
@@ -4587,10 +4707,10 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
         function step2TeacherQuestionArea(field, question, value = '', required = false, rows = 4) {
             return `
-                <label class="block rounded-lg border border-violet-100 bg-white p-3 shadow-sm">
-                    <span class="mb-2 block text-[11px] font-black leading-relaxed text-violet-900">${escapeHtml(question)}${required ? '<span class="ml-1 text-rose-500">*</span>' : ''}</span>
-                    <textarea data-step2-field="${field}" rows="${rows}" placeholder="답변을 작성하십시오." oninput="saveStep2DraftFromUI()" class="w-full resize-y rounded border border-slate-200 px-3 py-2 text-[11px] leading-relaxed text-slate-700 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100">${escapeHtml(value)}</textarea>
-                </label>
+                <div class="step2-question-chat">
+                    <div class="coach-message-row"><span class="coach-avatar">T</span><div class="coach-bubble coach-bubble-left"><strong class="text-[10px] text-slate-900">Teacher Prompt</strong><p class="mt-1 text-[10px] leading-relaxed">${escapeHtml(question)}${required ? '<span class="ml-1 text-rose-500">*</span>' : ''}</p></div></div>
+                    <div class="coach-message-row student-row"><label class="coach-bubble coach-bubble-right coach-draft-bubble"><span class="mb-1 block text-[9px] font-black text-[#3c1e1e]">우리 조 답변</span><textarea data-step2-field="${field}" rows="${rows}" placeholder="답변을 작성하십시오." oninput="saveStep2DraftFromUI()" class="w-full resize-y rounded-xl border border-amber-200 bg-white/75 px-3 py-2 text-[11px] leading-relaxed text-slate-700 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-100">${escapeHtml(value)}</textarea></label><span class="coach-avatar student">TEAM</span></div>
+                </div>
             `;
         }
 
@@ -4653,11 +4773,15 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const heading = document.getElementById('step2-heading');
             const activityType = getScenarioActivityType(data);
             const isThinkingPromptActivity = isOpord01ThinkingPromptActivity(data);
+            const chatAvatar = document.getElementById('step2-chat-avatar');
+            const chatPresence = document.getElementById('step2-chat-presence');
+            if (chatAvatar) chatAvatar.innerText = activityType === 'code' ? 'CM' : 'T';
+            if (chatPresence) chatPresence.innerText = activityType === 'code' ? 'AI coach online' : 'Teacher-guided room';
             if (heading) heading.innerHTML = isThinkingPromptActivity
-                ? '<i class="fa-solid fa-comments mr-1"></i>Step 2: Teacher Questions'
+                ? '<i class="fa-solid fa-comments mr-1 text-indigo-600"></i>Step 2: Teacher Interaction Room'
                 : (activityType === 'lecture'
-                    ? '<i class="fa-solid fa-pen-to-square mr-1"></i>Step 2: Teacher Questions'
-                    : '<i class="fa-solid fa-people-group mr-1"></i>Step 2: Paragraph Writing · Group Coach Checkpoints');
+                    ? '<i class="fa-solid fa-comments mr-1 text-indigo-600"></i>Step 2: Teacher-Guided Writing Room'
+                    : '<i class="fa-solid fa-robot mr-1 text-indigo-600"></i>Step 2: Captain Manhee Coach Room');
             step2Slots.innerHTML = '';
 
             if (!step1Complete) {
@@ -4669,7 +4793,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                         : 'Step 1의 OPORD shell sequence를 통과하면 팀이 paragraph 초안를 작성하고, 각 chunk마다 최대 3회의 coach check를 사용할 수 있습니다.');
                 status.className = 'text-[10px] rounded bg-slate-200 px-2 py-1 font-bold text-slate-500';
                 status.innerText = 'Locked until Step 1';
-                step2Slots.innerHTML = `<div class="rounded-lg border border-dashed border-amber-200 bg-white/60 px-4 py-5 text-center text-[11px] text-slate-400"><i class="fa-solid fa-lock mr-1"></i> 먼저 OPORD shell을 완성하십시오.</div>`;
+                step2Slots.innerHTML = `<div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left text-slate-500"><i class="fa-solid fa-lock mr-1"></i>Step 1을 완료하거나 <strong>접기 · Step 2 바로가기</strong>를 선택하면 대화창이 열립니다.</div></div>`;
                 verifyBtn.classList.add('hidden');
                 resetBtn.classList.add('hidden');
                 return;
@@ -4771,7 +4895,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             document.getElementById('work-active-title').innerText = data.title;
             document.getElementById('hint-box').classList.add('hidden');
             document.getElementById('feedback-message').className = 'text-xs font-semibold text-slate-400';
-            document.getElementById('feedback-message').innerText = `${drill.title} paragraph를 선택했습니다. Step 1 OPORD shell부터 조립하십시오.`;
+            document.getElementById('feedback-message').innerText = `${drill.title} paragraph를 선택했습니다. Step 1을 조립하거나 접고 Step 2로 바로 진행할 수 있습니다.`;
 
             renderParagraphSelector();
             renderActiveParagraphIntro(data, drill, step1Complete, step2Complete);
@@ -4942,6 +5066,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 'OPORD_ARTIFACTS',
                 'OPORD_COMMENTS',
                 'OPORD_WORKSHOP_PROGRESS',
+                'OPORD_STEP1_FOLD_STATE',
                 'OPORD_STEP2_GUIDED_DRAFTS'
             ]);
             if (!syncKeys.has(event.key)) return;
