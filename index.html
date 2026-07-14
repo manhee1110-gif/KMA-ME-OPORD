@@ -44,7 +44,18 @@
            only the interaction surface is presented as a conversation. */
         .coach-chat-panel { overflow: hidden; border-color: #dbeafe !important; background: #bacee0 !important; padding: 0 !important; box-shadow: 0 10px 28px rgba(30,64,175,.08); }
         .coach-chat-topbar { background: rgba(255,255,255,.94); border-bottom: 1px solid #bfdbfe; padding: .85rem 1rem; }
-        .coach-chat-body { padding: 1rem; background-image: radial-gradient(circle at 20% 10%, rgba(255,255,255,.26), transparent 32%); }
+        .coach-chat-body { padding: 1rem; background: #eef2f7; background-image: radial-gradient(circle at 18% 8%, rgba(255,255,255,.78), transparent 28%); }
+        .coach-section-room { margin: .95rem 0; overflow: hidden; border: 1px solid #c7d7e7; border-radius: 1.15rem; background: #bacee0; box-shadow: 0 8px 22px rgba(15,23,42,.10); }
+        .coach-section-room:first-child { margin-top: 0; }
+        .coach-section-room:last-child { margin-bottom: 0; }
+        .coach-room-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; border-bottom: 1px solid #dbe5ee; background: rgba(255,255,255,.96); padding: .72rem .9rem; }
+        .coach-room-heading-main { display: flex; min-width: 0; align-items: center; gap: .65rem; }
+        .coach-room-sequence { display: inline-flex; width: 1.75rem; height: 1.75rem; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: .62rem; background: #4f46e5; color: #fff; font-size: .62rem; font-weight: 950; box-shadow: 0 4px 10px rgba(79,70,229,.22); }
+        .coach-room-title { min-width: 0; font-size: .76rem; font-weight: 950; color: #172554; letter-spacing: -.01em; }
+        .coach-room-subtitle { margin-top: .08rem; font-size: .58rem; line-height: 1.35; color: #64748b; }
+        .coach-room-status { flex: 0 0 auto; border-radius: 9999px; background: #eef2ff; padding: .26rem .55rem; font-size: .55rem; font-weight: 900; color: #4f46e5; }
+        .coach-room-messages { padding: .82rem .88rem .92rem; }
+        .coach-section-room .coach-thread { margin: 0 !important; padding: 0 !important; }
         .coach-avatar { display: inline-flex; width: 2.15rem; height: 2.15rem; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: .8rem; background: #0b132b; color: #facc15; font-size: .68rem; font-weight: 950; box-shadow: 0 4px 12px rgba(15,23,42,.2); }
         .coach-avatar.student { background: #fee500; color: #3c1e1e; }
         .coach-thread { border: 0 !important; background: transparent !important; padding: .25rem 0 .75rem !important; }
@@ -313,6 +324,33 @@
                                 <i class="fa-solid fa-list-check text-indigo-500"></i> 📊 교수용 과제 제출 현황 트래커
                             </h3>
                             <span class="rounded bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-600">Activity-first view</span>
+                        </div>
+                        <div id="coach-reset-manager" class="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/80 to-sky-50/70 p-4">
+                            <div class="flex flex-wrap items-start justify-between gap-2">
+                                <div>
+                                    <h4 class="text-xs font-black text-indigo-900"><i class="fa-solid fa-rotate-left mr-1 text-indigo-600"></i>AI Coach 체크 한도 관리</h4>
+                                    <p class="mt-1 text-[10px] leading-relaxed text-slate-500">교수 계정에서만 특정 생도의 활동·paragraph·tree heading을 선택하여 Captain Manhee 3회 한도를 초기화할 수 있습니다.</p>
+                                </div>
+                                <span class="rounded-full bg-white px-2 py-1 text-[9px] font-black text-indigo-600 shadow-sm">Professor only</span>
+                            </div>
+                            <div class="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-4">
+                                <label class="text-[10px] font-black text-slate-600">생도
+                                    <select id="coach-reset-student" class="mt-1 w-full rounded-lg border border-indigo-100 bg-white px-2.5 py-2 text-[10px] font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"></select>
+                                </label>
+                                <label class="text-[10px] font-black text-slate-600">활동
+                                    <select id="coach-reset-scenario" class="mt-1 w-full rounded-lg border border-indigo-100 bg-white px-2.5 py-2 text-[10px] font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"></select>
+                                </label>
+                                <label class="text-[10px] font-black text-slate-600">Paragraph
+                                    <select id="coach-reset-paragraph" onchange="renderCoachResetChunkOptions()" class="mt-1 w-full rounded-lg border border-indigo-100 bg-white px-2.5 py-2 text-[10px] font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"></select>
+                                </label>
+                                <label class="text-[10px] font-black text-slate-600">Tree heading
+                                    <select id="coach-reset-chunk" class="mt-1 w-full rounded-lg border border-indigo-100 bg-white px-2.5 py-2 text-[10px] font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"></select>
+                                </label>
+                            </div>
+                            <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+                                <p id="coach-reset-status" class="text-[9px] leading-relaxed text-slate-500">초기화 후 생도는 활동을 다시 열거나 새로고침하면 3회의 체크를 다시 사용할 수 있습니다.</p>
+                                <button id="coach-reset-submit" type="button" onclick="resetStudentCoachLimit()" class="rounded-lg bg-indigo-600 px-3 py-2 text-[10px] font-black text-white shadow hover:bg-indigo-700"><i class="fa-solid fa-arrow-rotate-left mr-1"></i>선택한 한도 초기화</button>
+                            </div>
                         </div>
                         <div id="teacher-tracker-grid" class="space-y-3"></div>
                     </div>
@@ -1423,6 +1461,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         // Sustainment uses a clearly labeled sample script because this lesson contains no video clip for that paragraph.
         const COMPANY_SOURCE_KEY = '__companyOpordSource';
         const DISPLAY_ORDER_KEY = '__displayOrder';
+        const COACH_RESET_EPOCHS_KEY = '__captainManheeResetEpochs';
 
         const BUILT_IN_COMPANY_SOURCE = {
             "OPORD-02": {
@@ -2555,6 +2594,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
 
             const scenarios = getScenarioStore();
             const existing = scenarios[code] || {};
+            const existingCoachResetMap = normalizeCoachResetEpochMap(existing?.step2Blocks?.[COACH_RESET_EPOCHS_KEY] || {});
+            if (Object.keys(existingCoachResetMap).length) step2Blocks[COACH_RESET_EPOCHS_KEY] = existingCoachResetMap;
             const sourceToPreserve = getScenarioCompanySource(existing);
             const sourceVisibilityToggle = document.getElementById('new-sci-company-source-enabled');
             const sourceImagesField = document.getElementById('new-sci-company-source-images');
@@ -2956,6 +2997,117 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             }
         }
 
+        function preserveSelectValue(select, optionsHtml, preferredValue = '') {
+            if (!select) return '';
+            const previous = preferredValue || select.value || '';
+            select.innerHTML = optionsHtml;
+            if ([...select.options].some(option => option.value === previous)) select.value = previous;
+            return select.value;
+        }
+
+        function renderCoachResetChunkOptions() {
+            const paragraphSelect = document.getElementById('coach-reset-paragraph');
+            const chunkSelect = document.getElementById('coach-reset-chunk');
+            if (!paragraphSelect || !chunkSelect) return;
+            const previous = chunkSelect.value || '*';
+            const chunks = getCaptainManheeChunkDefinitions(paragraphSelect.value);
+            chunkSelect.innerHTML = [
+                '<option value="*">해당 paragraph 전체 heading</option>',
+                ...chunks.map(chunk => `<option value="${escapeHtml(chunk.id)}">${escapeHtml(chunk.label)}</option>`)
+            ].join('');
+            if ([...chunkSelect.options].some(option => option.value === previous)) chunkSelect.value = previous;
+        }
+
+        function renderCoachResetManager() {
+            if (!requireTeacherAccess(false)) return;
+            const studentSelect = document.getElementById('coach-reset-student');
+            const scenarioSelect = document.getElementById('coach-reset-scenario');
+            const paragraphSelect = document.getElementById('coach-reset-paragraph');
+            const submitButton = document.getElementById('coach-reset-submit');
+            if (!studentSelect || !scenarioSelect || !paragraphSelect || !submitButton) return;
+
+            const students = Object.entries(userDatabase || {})
+                .filter(([, profile]) => profile?.role === 'student')
+                .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+            const coachScenarios = sortScenarioEntries(Object.values(getScenarioStore()))
+                .filter(scenario => getScenarioActivityType(scenario) === 'code');
+
+            preserveSelectValue(studentSelect, students.length
+                ? students.map(([loginId, profile]) => `<option value="${escapeHtml(loginId)}">${escapeHtml(profile.name || loginId)} (${escapeHtml(loginId)})</option>`).join('')
+                : '<option value="">생도 계정 없음</option>');
+            preserveSelectValue(scenarioSelect, coachScenarios.length
+                ? coachScenarios.map(scenario => `<option value="${escapeHtml(scenario.code)}">${escapeHtml(scenario.title)}</option>`).join('')
+                : '<option value="">AI Coach 활동 없음</option>');
+            preserveSelectValue(paragraphSelect, TEACHER_PARAGRAPH_IDS.map(paragraphId => {
+                const drill = PARAGRAPH_DRILLS[paragraphId];
+                return `<option value="${paragraphId}">${drill.number}. ${escapeHtml(drill.title)}</option>`;
+            }).join(''));
+            renderCoachResetChunkOptions();
+            submitButton.disabled = !students.length || !coachScenarios.length;
+            submitButton.classList.toggle('opacity-50', submitButton.disabled);
+            submitButton.classList.toggle('cursor-not-allowed', submitButton.disabled);
+        }
+
+        async function resetStudentCoachLimit() {
+            if (!requireTeacherAccess()) return;
+            const studentId = document.getElementById('coach-reset-student')?.value || '';
+            const scenarioCode = document.getElementById('coach-reset-scenario')?.value || '';
+            const paragraphId = document.getElementById('coach-reset-paragraph')?.value || '';
+            const chunkId = document.getElementById('coach-reset-chunk')?.value || '*';
+            const status = document.getElementById('coach-reset-status');
+            const button = document.getElementById('coach-reset-submit');
+            const scenario = getScenarioStore()[scenarioCode];
+            if (!studentId || !scenario || !paragraphId) {
+                alert('생도, 활동, paragraph를 모두 선택하십시오.');
+                return;
+            }
+            const chunkLabel = chunkId === '*'
+                ? `${PARAGRAPH_DRILLS[paragraphId]?.title || paragraphId} 전체 heading`
+                : (getCaptainManheeChunk(chunkId, paragraphId)?.label || chunkId);
+            if (!confirm(`${studentId} 생도의 “${scenario.title}” · ${chunkLabel} AI Coach 한도를 초기화할까요?`)) return;
+
+            const step2Blocks = cloneCourseMaterialObject(scenario.step2Blocks || {}, {});
+            const resetMap = normalizeCoachResetEpochMap(step2Blocks[COACH_RESET_EPOCHS_KEY] || {});
+            resetMap[coachResetEpochKey(studentId, paragraphId, chunkId)] = Date.now();
+            step2Blocks[COACH_RESET_EPOCHS_KEY] = resetMap;
+            const scenarioToSave = {
+                ...scenario,
+                step2Blocks,
+                updatedBy: currentSupabaseUserId,
+                updatedAt: Date.now(),
+                scenarioVersion: 'coach-reset-v1'
+            };
+
+            if (button) {
+                button.disabled = true;
+                button.classList.add('opacity-60', 'cursor-wait');
+                button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>초기화 중…';
+            }
+            try {
+                await writeScenarioToDatabase(scenarioToSave);
+                await refreshSharedScenarios();
+                saveScenarioStore(getScenarioStore());
+                if (status) {
+                    status.className = 'text-[9px] font-bold leading-relaxed text-emerald-700';
+                    status.textContent = `초기화 완료: ${studentId} · ${scenario.title} · ${chunkLabel}. 생도는 활동을 다시 열거나 새로고침하면 반영됩니다.`;
+                }
+                renderTeacherDashboard();
+            } catch (error) {
+                console.error('Coach limit reset failed:', error);
+                if (status) {
+                    status.className = 'text-[9px] font-bold leading-relaxed text-rose-700';
+                    status.textContent = `초기화 실패: ${error.message || '잠시 뒤 다시 시도하십시오.'}`;
+                }
+                alert(`AI Coach 한도를 초기화하지 못했습니다.\n${error.message || '잠시 뒤 다시 시도하십시오.'}`);
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.classList.remove('opacity-60', 'cursor-wait');
+                    button.innerHTML = '<i class="fa-solid fa-arrow-rotate-left mr-1"></i>선택한 한도 초기화';
+                }
+            }
+        }
+
         function renderTeacherDashboard() {
             recoverCompletedCodeActivityArtifacts();
             if (!requireTeacherAccess(false)) {
@@ -2970,6 +3122,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 renderScenarioEditorLibrary();
             }
 
+            renderCoachResetManager();
             renderTeacherTrackerGrid(getArtifactsStore());
         }
 
@@ -4130,6 +4283,32 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             return getCaptainManheeChunkDefinitions(paragraphId).find(chunk => chunk.id === chunkId) || null;
         }
 
+        function normalizeCoachResetEpochMap(value) {
+            if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+            const normalized = {};
+            Object.entries(value).forEach(([key, rawEpoch]) => {
+                const epoch = Number(rawEpoch || 0);
+                if (key && Number.isFinite(epoch) && epoch > 0) normalized[String(key)] = epoch;
+            });
+            return normalized;
+        }
+
+        function coachResetEpochKey(loginId, paragraphId, chunkId = '*') {
+            return `${String(loginId || '').trim()}::${String(paragraphId || '').trim()}::${String(chunkId || '*').trim() || '*'}`;
+        }
+
+        function getScenarioCoachResetEpochMap(scenario) {
+            return normalizeCoachResetEpochMap(scenario?.step2Blocks?.[COACH_RESET_EPOCHS_KEY] || {});
+        }
+
+        function getCaptainManheeResetEpoch(chunkId, paragraphId = activeParagraphId, loginId = currentUserId, scenario = getScenarioStore()[selectedScenarioCode]) {
+            const resetMap = getScenarioCoachResetEpochMap(scenario);
+            return Math.max(
+                Number(resetMap[coachResetEpochKey(loginId, paragraphId, '*')] || 0),
+                Number(resetMap[coachResetEpochKey(loginId, paragraphId, chunkId)] || 0)
+            );
+        }
+
         function captainManheeCheckpointKey(chunkId, paragraphId = activeParagraphId) {
             return `${currentUserId}::${selectedScenarioCode}::${paragraphId}::${chunkId}`;
         }
@@ -4158,13 +4337,26 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 : [];
             return {
                 checks,
-                notice: String(raw.notice || '')
+                notice: String(raw.notice || ''),
+                resetEpoch: Math.max(0, Number(raw.resetEpoch || 0))
             };
         }
 
         function getCaptainManheeCheckpointState(chunkId, paragraphId = activeParagraphId) {
             const store = getCaptainManheeCheckpointStore();
-            return normalizeCheckpointState(store[captainManheeCheckpointKey(chunkId, paragraphId)] || {});
+            const key = captainManheeCheckpointKey(chunkId, paragraphId);
+            let state = normalizeCheckpointState(store[key] || {});
+            const resetEpoch = getCaptainManheeResetEpoch(chunkId, paragraphId);
+            if (resetEpoch > state.resetEpoch) {
+                state = {
+                    checks: [],
+                    notice: '교수자가 이 AI Coach 체크 한도를 초기화했습니다. 수정한 초안으로 다시 점검할 수 있습니다.',
+                    resetEpoch
+                };
+                store[key] = normalizeCheckpointState(state);
+                saveCaptainManheeCheckpointStore(store);
+            }
+            return state;
         }
 
         function saveCaptainManheeCheckpointState(chunkId, state, paragraphId = activeParagraphId) {
@@ -4264,20 +4456,36 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
         function renderCheckpointChunk(data, drill, chunkId, bodyHtml, extraClass = '') {
             const chunk = getCaptainManheeChunk(chunkId);
             if (!chunk) return bodyHtml;
+            const definitions = getCaptainManheeChunkDefinitions(activeParagraphId);
+            const sequence = Math.max(1, definitions.findIndex(item => item.id === chunkId) + 1);
             return `
-                <section class="coach-thread ${extraClass}">
-                    <div class="coach-message-row">
-                        <span class="coach-avatar">CM</span>
-                        <div class="coach-bubble coach-bubble-system">
-                            <strong class="block text-[10px] text-slate-800">${escapeHtml(chunk.label)}</strong>
-                            <span class="mt-0.5 block text-[9px] leading-relaxed text-slate-500">${escapeHtml(chunk.note)}</span>
+                <section class="coach-section-room ${extraClass}">
+                    <div class="coach-room-heading">
+                        <div class="coach-room-heading-main">
+                            <span class="coach-room-sequence">${String(sequence).padStart(2, '0')}</span>
+                            <div class="min-w-0">
+                                <div class="coach-room-title">${escapeHtml(chunk.label)}</div>
+                                <div class="coach-room-subtitle">${escapeHtml(chunk.note)}</div>
+                            </div>
+                        </div>
+                        <span class="coach-room-status">TREE HEADING</span>
+                    </div>
+                    <div class="coach-room-messages">
+                        <div class="coach-thread">
+                            <div class="coach-message-row">
+                                <span class="coach-avatar">CM</span>
+                                <div class="coach-bubble coach-bubble-system">
+                                    <strong class="block text-[10px] text-slate-800">Captain Manhee Prompt</strong>
+                                    <span class="mt-0.5 block text-[9px] leading-relaxed text-slate-500">위 heading에 해당하는 조별 초안을 작성한 뒤 AI Coach에게 전송하십시오.</span>
+                                </div>
+                            </div>
+                            <div class="coach-message-row student-row">
+                                <div class="coach-bubble coach-bubble-right coach-draft-bubble">${bodyHtml}</div>
+                                <span class="coach-avatar student">TEAM</span>
+                            </div>
+                            ${renderCaptainManheeCheckpoint(data, drill, chunk)}
                         </div>
                     </div>
-                    <div class="coach-message-row student-row">
-                        <div class="coach-bubble coach-bubble-right coach-draft-bubble">${bodyHtml}</div>
-                        <span class="coach-avatar student">TEAM</span>
-                    </div>
-                    ${renderCaptainManheeCheckpoint(data, drill, chunk)}
                 </section>
             `;
         }
