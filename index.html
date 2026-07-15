@@ -40,6 +40,24 @@
         .step1-fold-button { transition: background-color .15s ease, color .15s ease, transform .15s ease; }
         .step1-fold-button:hover { transform: translateY(-1px); }
 
+        /* Research-lesson reference panel: keep the Step 1 block pool available,
+           but allow Step 2 reference cards / phrase bank to be folded out of sight. */
+        .workshop-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+        .reference-panel { transition: width .18s ease, padding .18s ease, border-color .18s ease, background-color .18s ease; }
+        .reference-fold-summary { display: none; }
+        .reference-panel.is-folded { overflow: hidden; border-color: #334155; background: #111827; }
+        .reference-panel.is-folded .reference-full-content { display: none; }
+        .reference-panel.is-folded .reference-fold-summary { display: flex; }
+        .reference-fold-button { transition: background-color .15s ease, color .15s ease, transform .15s ease; }
+        .reference-fold-button:hover { transform: translateY(-1px); }
+        @media (min-width: 1024px) {
+            .workshop-layout { grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr); }
+            .workshop-layout.reference-folded { grid-template-columns: minmax(0, 1fr) 54px; }
+            .workshop-layout.reference-folded .reference-panel { padding: .45rem; }
+            .workshop-layout.reference-folded .reference-fold-summary { min-height: 168px; flex-direction: column; align-items: center; justify-content: flex-start; gap: .65rem; }
+            .workshop-layout.reference-folded .reference-fold-label { writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .08em; }
+        }
+
         /* Kakao-style Step 2 coach room.  The activity data and submission logic are unchanged;
            only the interaction surface is presented as a conversation. */
         .coach-chat-panel { overflow: hidden; border-color: #dbeafe !important; background: #bacee0 !important; padding: 0 !important; box-shadow: 0 10px 28px rgba(30,64,175,.08); }
@@ -277,7 +295,7 @@
                                 </details>
                                 <details class="rounded border border-slate-200 bg-white p-2">
                                     <summary class="cursor-pointer text-[11px] font-bold text-slate-700">2. Mission — one line = one reference card</summary>
-                                    <textarea id="new-sci-mission" rows="3" class="mt-2 w-full rounded border border-slate-200 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Who: ...&#10;What: ...&#10;When: ...&#10;Where: ...&#10;Why: ..."></textarea>
+                                    <textarea id="new-sci-mission" rows="3" class="mt-2 w-full rounded border border-slate-200 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Who: ...&#10;What: ...&#10;Where: ...&#10;When: ...&#10;Why: ..."></textarea>
                                     <div class="mt-2 border-t border-indigo-100 pt-2">
                                         <label class="block text-[10px] font-bold text-indigo-700">Teacher Phrase Bank <span class="font-normal text-slate-400">(optional · one phrase per line)</span></label>
                                         <textarea id="new-sci-phrases-mission" rows="3" class="mt-1 w-full rounded border border-indigo-100 bg-indigo-50/30 p-2 font-mono text-[10px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="at / NLT / on order&#10;seize OBJ&#10;in order to ..."></textarea>
@@ -475,8 +493,8 @@
                     <div id="paragraph-selector" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"></div>
                 </section>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100 lg:col-span-2 space-y-5">
+                <div id="workshop-layout" class="workshop-layout">
+                    <div class="bg-white p-6 rounded-xl card-shadow border border-slate-100 space-y-5">
                         <div id="active-paragraph-intro" class="rounded-xl bg-slate-50 border border-slate-100 px-4 py-3"></div>
 
                         <section id="step1-panel" class="step1-shell-panel space-y-3 bg-slate-50/70 p-4 rounded-xl border border-slate-100">
@@ -530,11 +548,18 @@
                         <div id="feedback-message" class="text-xs font-semibold text-slate-400">Paragraph를 선택한 뒤 Step 1부터 시작하십시오.</div>
                     </div>
 
-                    <aside class="bg-slate-900 text-white p-4 rounded-xl shadow-inner flex flex-col justify-between space-y-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
-                        <div>
-                            <h4 id="pool-title" class="font-bold text-xs tracking-wider text-amber-400 mb-1 flex items-center gap-1"><i class="fa-solid fa-cubes"></i> Block Pool</h4>
+                    <aside id="reference-panel" class="reference-panel bg-slate-900 text-white p-4 rounded-xl shadow-inner flex flex-col justify-between space-y-3 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+                        <div id="reference-full-content" class="reference-full-content">
+                            <div class="mb-1 flex items-start justify-between gap-2">
+                                <h4 id="pool-title" class="font-bold text-xs tracking-wider text-amber-400 flex items-center gap-1"><i class="fa-solid fa-cubes"></i> Block Pool</h4>
+                                <button id="reference-fold-btn" type="button" onclick="toggleReferencePanelFold()" class="reference-fold-button hidden shrink-0 rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1 text-[9px] font-black text-slate-200 hover:bg-slate-700" title="Reference와 Phrase Bank 접기"><i class="fa-solid fa-window-minimize mr-1"></i>접기</button>
+                            </div>
                             <p id="pool-note" class="text-[10px] text-slate-400 mb-3">블록을 드래그해 빈 슬롯에 놓고, 되돌리려면 더블클릭하십시오.</p>
                             <div id="block-pool" class="space-y-2 max-h-[620px] overflow-y-auto pr-1"></div>
+                        </div>
+                        <div id="reference-fold-summary" class="reference-fold-summary rounded-lg border border-slate-700 bg-slate-800/80 p-2 text-slate-200">
+                            <button type="button" onclick="toggleReferencePanelFold(false)" class="rounded-lg border border-slate-600 bg-slate-900 p-2 text-amber-300 hover:bg-slate-700" title="Reference & Phrase Bank 펼치기"><i class="fa-solid fa-window-maximize"></i></button>
+                            <span class="reference-fold-label text-[9px] font-black uppercase text-slate-300">Reference hidden</span>
                         </div>
                     </aside>
                 </div>
@@ -570,8 +595,8 @@
                 updatedAt: 1,
                 title: "강의 동시 활동: OPORD Video Dictation Workshop",
                 activityType: "lecture",
-                slots1: [{ id: "m1", label: "Who & When (수행 부대 및 시간)" }, { id: "m2", label: "What Task (전술 과업 동사)" }, { id: "m3", label: "Where & Why (지역 및 목적)" }],
-                slots2: [{ id: "s1", label: "2nd Platoon, NLT 2000," }, { id: "s2", label: "seizes OBJ HWARANG" }, { id: "s3", label: "in order to support the company's main effort." }]
+                slots1: [{ id: "m1", label: "Who (수행 부대)" }, { id: "m2", label: "What (전술 과업)" }, { id: "m3", label: "Where (장소·목표)" }, { id: "m4", label: "When (시간·조건)" }, { id: "m5", label: "Why (목적)" }],
+                slots2: [{ id: "s1", label: "2nd Platoon" }, { id: "s2", label: "seizes" }, { id: "s3", label: "OBJ HWARANG" }, { id: "s4", label: "NLT 2000" }, { id: "s5", label: "in order to support the company's main effort." }]
             },
             "OPORD-02": {
                 code: "OPORD-02",
@@ -580,8 +605,8 @@
                 updatedAt: 2,
                 title: "Operation Hwarang Shield · Platoon OPORD Writing Lab",
                 activityType: "code",
-                slots1: [{ id: "m1", label: "Who & When (수행 부대 및 시간)" }, { id: "m2", label: "What Task (전술 과업 동사)" }, { id: "m3", label: "Where & Why (지역 및 목적)" }],
-                slots2: [{ id: "s1", label: "C Company, NLT 140600JUL26," }, { id: "s2", label: "attacks to destroy the enemy UAS cell on OBJ HWARANG" }, { id: "s3", label: "in order to restore freedom of maneuver for 2d Brigade." }]
+                slots1: [{ id: "m1", label: "Who (수행 부대)" }, { id: "m2", label: "What (전술 과업)" }, { id: "m3", label: "Where (장소·목표)" }, { id: "m4", label: "When (시간·조건)" }, { id: "m5", label: "Why (목적)" }],
+                slots2: [{ id: "s1", label: "C Company" }, { id: "s2", label: "attacks to destroy the enemy UAS cell" }, { id: "s3", label: "on OBJ HWARANG" }, { id: "s4", label: "NLT 140600JUL26" }, { id: "s5", label: "in order to restore freedom of maneuver for 2d Brigade." }]
             }
         };
 
@@ -627,15 +652,17 @@
                 shellItems: [
                     { label: 'WHO', level: 0 },
                     { label: 'WHAT', level: 0 },
-                    { label: 'WHEN', level: 0 },
                     { label: 'WHERE', level: 0 },
+                    { label: 'WHEN', level: 0 },
                     { label: 'WHY', level: 0 }
                 ],
                 step2Title: 'Guided Mission Statement',
                 step2Prompt: 'Build one concise 5W mission statement and check the live preview.',
                 step2Blocks: [
-                    '2nd Platoon, NLT 2000,',
-                    'seizes OBJ HWARANG',
+                    '2nd Platoon',
+                    'seizes',
+                    'OBJ HWARANG',
+                    'NLT 2000',
                     "in order to support the company’s main effort."
                 ]
             },
@@ -1542,7 +1569,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                                     ],
                                     "mission": [
                                                 "What is wrong or incomplete in this mission message? Check conciseness, tense, and the five Ws.",
-                                                "Which who, what, when, where, and why details must be added before it becomes a clear mission statement?"
+                                                "Which who, what, where, when, and why details must be added before it becomes a clear mission statement?"
                                     ],
                                     "execution": [
                                                 "What is this briefing about?",
@@ -1732,7 +1759,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             ],
             mission: [
                 'What is wrong or incomplete in this mission message? Check conciseness, tense, and the five Ws.',
-                'Which who, what, when, where, and why details must be added before it becomes a clear mission statement?'
+                'Which who, what, where, when, and why details must be added before it becomes a clear mission statement?'
             ],
             execution: [
                 'What is this briefing about?',
@@ -3996,6 +4023,63 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             }
         }
 
+        function getReferenceFoldStore() {
+            try {
+                return JSON.parse(localStorage.getItem('OPORD_REFERENCE_FOLD_STATE')) || {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function referenceFoldKey(paragraphId = activeParagraphId) {
+            return `${currentUserId}::${selectedScenarioCode}::${paragraphId}`;
+        }
+
+        function shouldDefaultReferenceFolded() {
+            const scenarios = getScenarioStore();
+            const data = scenarios[selectedScenarioCode] || defaultScenarios['OPORD-01'];
+            return isStepComplete(activeParagraphId, 1)
+                && getScenarioActivityType(data) === 'code'
+                && getScenarioStep2Mode(data) === STEP2_MODE_IDENTIFY;
+        }
+
+        function isReferencePanelFolded(paragraphId = activeParagraphId) {
+            if (!isStepComplete(paragraphId, 1)) return false;
+            const store = getReferenceFoldStore();
+            const key = referenceFoldKey(paragraphId);
+            return Object.prototype.hasOwnProperty.call(store, key)
+                ? Boolean(store[key])
+                : shouldDefaultReferenceFolded();
+        }
+
+        function setReferencePanelFolded(folded, paragraphId = activeParagraphId) {
+            const store = getReferenceFoldStore();
+            store[referenceFoldKey(paragraphId)] = Boolean(folded);
+            localStorage.setItem('OPORD_REFERENCE_FOLD_STATE', JSON.stringify(store));
+        }
+
+        function applyReferencePanelFoldUI() {
+            const layout = document.getElementById('workshop-layout');
+            const panel = document.getElementById('reference-panel');
+            const foldBtn = document.getElementById('reference-fold-btn');
+            if (!layout || !panel || !foldBtn) return;
+
+            const canFold = isStepComplete(activeParagraphId, 1);
+            const folded = canFold && isReferencePanelFolded();
+            layout.classList.toggle('reference-folded', folded);
+            panel.classList.toggle('is-folded', folded);
+            foldBtn.classList.toggle('hidden', !canFold);
+            foldBtn.innerHTML = '<i class="fa-solid fa-window-minimize mr-1"></i>접기';
+            foldBtn.title = 'Reference 문장과 Phrase Bank를 숨깁니다.';
+        }
+
+        function toggleReferencePanelFold(forceFold = null) {
+            if (!isStepComplete(activeParagraphId, 1)) return;
+            const nextFolded = typeof forceFold === 'boolean' ? forceFold : !isReferencePanelFolded();
+            setReferencePanelFolded(nextFolded);
+            applyReferencePanelFoldUI();
+        }
+
         function resetActiveParagraphStep(step) {
             const progress = getProgressStore();
             delete progress[progressKey(activeParagraphId, step)];
@@ -4888,9 +4972,9 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             if (statement) return /[.!?]$/.test(statement) ? statement : `${statement}.`;
             const legacyParts = [
                 String(values?.missionUnit || '').trim(),
-                String(values?.missionTime || '').trim(),
                 String(values?.missionTask || '').trim(),
                 String(values?.missionObjective || '').trim(),
+                String(values?.missionTime || '').trim(),
                 String(values?.missionPurpose || '').trim()
             ].filter(Boolean);
             return legacyParts.length ? `${legacyParts.join(' ')}${/[.!?]$/.test(legacyParts[legacyParts.length - 1]) ? '' : '.'}` : 'Your mission statement will appear here.';
@@ -5007,11 +5091,11 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             `;
         }
 
-        const OPORD_STRUCTURE_IDENTIFICATION_BANK_VERSION = 'RESEARCH_9_V1';
+        const OPORD_STRUCTURE_IDENTIFICATION_BANK_VERSION = 'RESEARCH_9_V2_MISSION_GAP_REASON';
         const OPORD_STRUCTURE_IDENTIFICATION_STORAGE_KEY = 'OPORD_STRUCTURE_IDENTIFICATION_STATE_V2';
 
         // Research-lecture set: 2 / 2 / 3 / 1 / 1 questions.
-        // Captain Manhee translanguages in Korean, but cadets must recall the English OPORD heading.
+        // Captain Manhee translanguages in Korean, but cadets must answer with the English OPORD heading or missing English 5W element.
         const OPORD_STRUCTURE_IDENTIFICATION_BANK = {
             situation: [
                 {
@@ -5020,7 +5104,9 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     accepted: ['enemy forces'],
                     semanticHint: '이 문장은 아군의 계획이 아니라 적의 규모·구성·장비를 설명합니다. “enemy force,” “UAS cell,” “platoon-minus strength” 같은 단서를 따라가 보세요.',
                     locationHint: '정답은 1. Situation의 후반부에 있습니다. Area of Operations 뒤에 나오고, Friendly Forces 바로 앞에 위치합니다.',
-                    hangman: 'E____ F_____'
+                    hangman: 'E____ F_____',
+                    rationalePrompt: '왜 Enemy Forces라고 판단했나요? 문장 속 단서를 영어로 짧게 설명하세요.',
+                    reasonKeywords: ['enemy', 'uas', 'force', 'strength', 'reconnaissance', 'strike']
                 },
                 {
                     sentence: '1st Battalion stabilizes eastern Hwarang City, protects key routes, and destroys enemy forces that can interfere with 2d Brigade.',
@@ -5028,25 +5114,35 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     accepted: ['friendly forces'],
                     semanticHint: '이 문장은 적이 아니라 상급 아군 부대의 임무와 역할을 설명합니다. “1st Battalion”과 아군의 지원 관계가 핵심 단서입니다.',
                     locationHint: '정답은 1. Situation의 후반부에 있습니다. Enemy Forces 다음에 나오며, Attachments and Detachments보다 앞에 위치합니다.',
-                    hangman: 'F_______ F_____'
+                    hangman: 'F_______ F_____',
+                    rationalePrompt: '왜 Friendly Forces라고 판단했나요? 문장 속 단서를 영어로 짧게 설명하세요.',
+                    reasonKeywords: ['1st battalion', 'friendly', 'stabilizes', 'protects', '2d brigade']
                 }
             ],
             mission: [
                 {
-                    sentence: 'C Company attacks to destroy the enemy UAS cell on OBJ HWARANG NLT 140600JUL26 in order to restore 2d Brigade’s freedom of maneuver.',
-                    answer: 'Mission Statement',
-                    accepted: ['mission statement'],
-                    semanticHint: '한 문장 안에 수행 부대, 과업, 장소, 시간, 목적이 함께 들어 있습니다. 즉, 부대가 무엇을 언제·어디서·왜 해야 하는지를 압축한 문장입니다.',
-                    locationHint: '정답은 OPORD의 두 번째 paragraph인 2. Mission에 있습니다. 이 paragraph는 하나의 간결한 임무 문장으로 제시됩니다.',
-                    hangman: 'M______ S________'
+                    sentence: 'C Company attacks to destroy the enemy UAS cell NLT 140600JUL26 in order to restore 2d Brigade’s freedom of maneuver.',
+                    question: '이 mission statement에는 한 가지 5W element가 빠져 있습니다. 빠진 English 5W element는 무엇입니까?',
+                    answerKind: 'mission-element',
+                    answer: 'WHERE',
+                    accepted: ['where'],
+                    semanticHint: 'WHO(C Company), WHAT(attacks to destroy), WHEN(NLT 140600JUL26), WHY(in order to...)는 보입니다. 하지만 작전이 이루어지는 장소나 objective가 제시되지 않았습니다.',
+                    locationHint: 'Step 1의 mission 순서는 WHO–WHAT–WHERE–WHEN–WHY입니다. 빠진 요소는 WHAT 뒤, WHEN 앞에 들어갑니다.',
+                    hangman: 'W____',
+                    rationalePrompt: '왜 WHERE라고 판단했나요? 문장에 없는 정보를 근거로 영어로 짧게 설명하세요.',
+                    reasonKeywords: ['location', 'objective', 'obj', 'place', 'where', 'missing']
                 },
                 {
-                    sentence: '1st Platoon assaults OBJ HWARANG NLT 140630JUL26 in order to destroy remaining enemy forces and secure the objective.',
-                    answer: 'Mission Statement',
-                    accepted: ['mission statement'],
-                    semanticHint: '제대는 platoon이지만, task와 purpose를 한 문장으로 제시하고 있습니다. Company-level 문장과 같은 5W 기능을 합니다.',
-                    locationHint: '정답은 OPORD의 두 번째 paragraph인 2. Mission입니다. WHO–WHAT–WHEN–WHERE–WHY를 한 문장으로 묶는 부분입니다.',
-                    hangman: 'M______ S________'
+                    sentence: '1st Platoon assaults OBJ HWARANG NLT 140630JUL26.',
+                    question: '이 mission statement에는 한 가지 5W element가 빠져 있습니다. 빠진 English 5W element는 무엇입니까?',
+                    answerKind: 'mission-element',
+                    answer: 'WHY',
+                    accepted: ['why'],
+                    semanticHint: 'WHO(1st Platoon), WHAT(assaults), WHERE(OBJ HWARANG), WHEN(NLT 140630JUL26)은 있습니다. 하지만 이 임무를 수행하는 목적이나 “in order to” 내용이 없습니다.',
+                    locationHint: 'Step 1의 mission 순서는 WHO–WHAT–WHERE–WHEN–WHY입니다. 빠진 요소는 마지막에 위치하며, 보통 “in order to + purpose”로 표현됩니다.',
+                    hangman: 'W__',
+                    rationalePrompt: '왜 WHY라고 판단했나요? 문장에 없는 purpose를 근거로 영어로 짧게 설명하세요.',
+                    reasonKeywords: ['purpose', 'reason', 'why', 'in order to', 'missing']
                 }
             ],
             execution: [
@@ -5056,7 +5152,9 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     accepted: ["commander's intent", 'commanders intent'],
                     semanticHint: '이 문장은 세부 행동 순서보다 작전의 purpose, key tasks, end state를 설명합니다. “왜 수행하는가”와 “마지막에 어떤 상태가 되어야 하는가”를 보세요.',
                     locationHint: '정답은 3. Execution의 처음 부분에 있습니다. Concept of Operations보다 앞에 나오는 첫 번째 주요 heading입니다.',
-                    hangman: 'C________’s I_____'
+                    hangman: 'C________’s I_____',
+                    rationalePrompt: '왜 Commander’s Intent라고 판단했나요? 문장 속 단서를 영어로 짧게 설명하세요.',
+                    reasonKeywords: ['purpose', 'key tasks', 'end state', 'overall result']
                 },
                 {
                     sentence: 'The operation will be conducted in three phases: C Company crosses FORD BLUE and isolates OBJ HWARANG, conducts a coordinated UAS and ground attack, and then secures the objective.',
@@ -5064,7 +5162,9 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     accepted: ['concept of operations', 'conop'],
                     semanticHint: '이 문장은 특정 platoon 하나의 과업이 아니라 전체 작전의 큰 흐름과 phase별 접근 방법을 설명합니다.',
                     locationHint: '정답은 3. Execution에 있습니다. Commander’s Intent 다음에 나오며, 세부 subordinate-unit tasks보다 앞에 위치합니다.',
-                    hangman: 'C______ of O________'
+                    hangman: 'C______ of O________',
+                    rationalePrompt: '왜 Concept of Operations라고 판단했나요? 문장 속 단서를 영어로 짧게 설명하세요.',
+                    reasonKeywords: ['three phases', 'phases', 'overall', 'operation', 'sequence']
                 },
                 {
                     sentence: '1st Platoon assaults OBJ HWARANG, 2d Platoon blocks enemy exfiltration routes, and Weapons Platoon provides supporting fires.',
@@ -5072,7 +5172,9 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     accepted: ['tasks to subordinate units', 'task to subordinate units'],
                     semanticHint: '이 문장은 1st Platoon, 2d Platoon, Weapons Platoon처럼 각 예하부대에 구체적인 행동을 따로 부여합니다.',
                     locationHint: '정답은 3. Execution의 후반부에 있습니다. 전체 작전 개념을 설명한 뒤, Coordinating Instructions보다 앞에서 예하부대별 임무를 제시합니다.',
-                    hangman: 'T____ to S________ U____'
+                    hangman: 'T____ to S________ U____',
+                    rationalePrompt: '왜 Tasks to Subordinate Units라고 판단했나요? 문장 속 단서를 영어로 짧게 설명하세요.',
+                    reasonKeywords: ['1st platoon', '2d platoon', 'weapons platoon', 'each unit', 'tasks']
                 }
             ],
             sustainment: [
@@ -5082,7 +5184,9 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     accepted: ['supply and field services'],
                     semanticHint: '이 문장은 Class I, III, V와 같은 보급품의 준비·분배를 설명합니다. 수업에서 배운 class of supply가 직접적인 단서입니다.',
                     locationHint: '정답은 4. Sustainment 아래 Logistics의 초반부에 있습니다. Distribution and Resupply Operations보다 앞에 위치합니다.',
-                    hangman: 'S_____ and F____ S_______'
+                    hangman: 'S_____ and F____ S_______',
+                    rationalePrompt: '왜 Supply and Field Services라고 판단했나요? 문장 속 단서를 영어로 짧게 설명하세요.',
+                    reasonKeywords: ['class i', 'class iii', 'class v', 'distributed', 'supply']
                 }
             ],
             commandSignal: [
@@ -5092,7 +5196,9 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     accepted: ['pyrotechnic signals', 'pyrotechnic signal', 'visual and pyrotechnic signals'],
                     semanticHint: '이 문장은 GREEN과 RED 색상의 신호로 작전 상태와 전환 명령을 전달합니다. 무전 주파수나 password가 아니라 시각 신호입니다.',
                     locationHint: '정답은 5. Command and Signal → Signal 아래에 있습니다. Step 1 shell의 Passwords / Running Passwords 다음에 나오는 항목입니다.',
-                    hangman: 'P__________ S______'
+                    hangman: 'P__________ S______',
+                    rationalePrompt: '왜 Pyrotechnic Signals라고 판단했나요? 문장 속 단서를 영어로 짧게 설명하세요.',
+                    reasonKeywords: ['green', 'red', 'signal', 'phase', 'color']
                 }
             ]
         };
@@ -5143,8 +5249,18 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 firstTry: Number(seed.firstTry) || 0,
                 completed: Boolean(seed.completed),
                 responses,
-                currentAttempts: Array.isArray(seed.currentAttempts) ? seed.currentAttempts : []
+                currentAttempts: Array.isArray(seed.currentAttempts) ? seed.currentAttempts : [],
+                awaitingRationale: Boolean(seed.awaitingRationale),
+                pendingAnswer: String(seed.pendingAnswer || ''),
+                pendingOutcome: String(seed.pendingOutcome || ''),
+                rationaleAttempts: Math.max(0, Number(seed.rationaleAttempts) || 0)
             };
+            if (state.index >= items.length || !items[state.index]) {
+                state.awaitingRationale = false;
+                state.pendingAnswer = '';
+                state.pendingOutcome = '';
+                state.rationaleAttempts = 0;
+            }
             if (state.index >= items.length && items.length) state.completed = true;
             return state;
         }
@@ -5166,6 +5282,36 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             if (!submitted) return false;
             const aliases = [item.answer, ...(item.accepted || [])].map(normalizeStructureAnswer).filter(Boolean);
             return aliases.some(alias => submitted === alias);
+        }
+
+        function structureQuestionForItem(item) {
+            return item?.question || '이 문장은 OPORD format의 어느 English heading에 들어갈까요?';
+        }
+
+        function structureAnswerTypeLabel(item) {
+            return item?.answerKind === 'mission-element' ? 'English 5W element' : 'English OPORD heading';
+        }
+
+        function structureRoomTitle(drill, item) {
+            return item?.answerKind === 'mission-element'
+                ? `${drill.title} · Missing 5W 찾기`
+                : `${drill.title} · English heading 찾기`;
+        }
+
+        function structureReasonPrompt(item) {
+            return item?.rationalePrompt || '왜 그렇게 판단했나요? 문장 속 단서를 영어로 짧게 설명하세요.';
+        }
+
+        function findReasonKeyword(reason, item) {
+            const normalized = String(reason || '').toLowerCase();
+            return (item?.reasonKeywords || []).find(keyword => normalized.includes(String(keyword).toLowerCase())) || '';
+        }
+
+        function isThinStructureReason(reason, item) {
+            const trimmed = String(reason || '').trim();
+            if (!trimmed) return true;
+            if (normalizeStructureAnswer(trimmed) === normalizeStructureAnswer(item?.answer || '')) return true;
+            return trimmed.replace(/[^A-Za-z0-9]/g, '').length < 4;
         }
 
         function structureHintForAttempt(item, attemptNumber) {
@@ -5205,9 +5351,16 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
 
         function renderCompletedStructureItem(item, response, displayNumber) {
             const attemptLog = Array.isArray(response.attemptLog) ? response.attemptLog : [];
-            const exchanges = attemptLog.map(renderStructureAttemptExchange).join('');
+            const firstCorrectIndex = response.rationale
+                ? attemptLog.findIndex(entry => entry?.tone === 'correct' && entry?.counted === true)
+                : -1;
+            const exchanges = attemptLog.map((entry, index) => {
+                const rendered = renderStructureAttemptExchange(entry);
+                if (index !== firstCorrectIndex) return rendered;
+                return `${rendered}<div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><strong class="text-indigo-700">Why do you think so?</strong><p class="mt-1 text-[10px] leading-relaxed">${escapeHtml(structureReasonPrompt(item))}</p></div></div>`;
+            }).join('');
             return `
-                <div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><span class="text-[9px] font-black text-indigo-700">문장 ${displayNumber}</span><div class="structure-id-sentence">${escapeHtml(item.sentence || response.sentence || '')}</div><p class="mt-2 text-[10px] font-bold text-slate-700">이 문장은 OPORD format의 어느 English heading에 들어갈까요?</p></div></div>
+                <div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><span class="text-[9px] font-black text-indigo-700">문장 ${displayNumber}</span><div class="structure-id-sentence">${escapeHtml(item.sentence || response.sentence || '')}</div><p class="mt-2 text-[10px] font-bold text-slate-700">${escapeHtml(structureQuestionForItem(item))}</p></div></div>
                 ${exchanges}`;
         }
 
@@ -5225,32 +5378,42 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 return `
                     <section class="structure-id-room">
                         <div class="structure-id-header"><div><p class="text-[10px] font-black uppercase tracking-wider text-indigo-700">OPORD Structure Identification</p><h4 class="text-sm font-black text-slate-900">${escapeHtml(drill.title)} · 완료</h4></div><span class="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black text-emerald-700">직접 완성 ${state.correct} / ${items.length}</span></div>
-                        <div class="structure-id-transcript">${history}<div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><strong class="text-emerald-700">Structure drill complete.</strong><p class="mt-1 text-[10px] leading-relaxed">모든 문장을 확인했습니다. 아래 제출 버튼을 눌러 결과를 공유하세요. 힌트를 사용한 과정도 학습 기록으로 함께 저장됩니다.</p></div></div></div>
+                        <div class="structure-id-transcript">${history}<div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><strong class="text-emerald-700">Structure drill complete.</strong><p class="mt-1 text-[10px] leading-relaxed">모든 문장을 확인했습니다. 아래 제출 버튼을 눌러 결과를 공유하세요. 힌트와 판단 근거도 학습 기록으로 함께 저장됩니다.</p></div></div></div>
                     </section>`;
             }
 
             const item = items[state.index];
             const currentExchanges = state.currentAttempts.map(renderStructureAttemptExchange).join('');
-            const checkLabel = state.attempts >= 3 ? 'Complete Answer' : `Check ${state.attempts + 1}/3`;
-            const placeholder = state.attempts >= 3 ? `Complete: ${item.hangman}` : 'Type the English OPORD heading';
+            const answerType = structureAnswerTypeLabel(item);
+            const checkLabel = state.awaitingRationale ? 'Send reason' : (state.attempts >= 3 ? 'Complete Answer' : `Check ${state.attempts + 1}/3`);
+            const placeholder = state.awaitingRationale
+                ? 'Because the sentence shows ...'
+                : (state.attempts >= 3
+                    ? `Complete: ${item.hangman}`
+                    : (item.answerKind === 'mission-element' ? 'Type the missing English 5W element' : 'Type the English OPORD heading'));
+            const rationalePrompt = state.awaitingRationale
+                ? `<div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><strong class="text-indigo-700">Why do you think so?</strong><p class="mt-1 text-[10px] leading-relaxed">${escapeHtml(structureReasonPrompt(item))}</p><p class="mt-1 text-[9px] text-slate-500">한 문장까지 필요하지 않습니다. 문장 속 clue를 영어로 짧게 적으면 됩니다.</p></div></div>`
+                : '';
             return `
                 <section class="structure-id-room">
-                    <div class="structure-id-header"><div><p class="text-[10px] font-black uppercase tracking-wider text-indigo-700">OPORD Structure Identification</p><h4 class="text-sm font-black text-slate-900">${escapeHtml(drill.title)} · English heading 찾기</h4></div><span class="rounded-full bg-indigo-100 px-3 py-1 text-[10px] font-black text-indigo-700">${state.index + 1} / ${items.length}</span></div>
+                    <div class="structure-id-header"><div><p class="text-[10px] font-black uppercase tracking-wider text-indigo-700">OPORD Structure Identification</p><h4 class="text-sm font-black text-slate-900">${escapeHtml(structureRoomTitle(drill, item))}</h4></div><span class="rounded-full bg-indigo-100 px-3 py-1 text-[10px] font-black text-indigo-700">${state.index + 1} / ${items.length}</span></div>
                     <div id="structure-id-transcript" class="structure-id-transcript">
                         ${history}
-                        <div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><span class="text-[9px] font-black text-indigo-700">Captain Manhee</span><div class="structure-id-sentence">${escapeHtml(item.sentence)}</div><p class="mt-2 text-[10px] font-bold text-slate-700">이 문장은 OPORD format의 어느 <strong>English heading</strong>에 들어갈까요?</p><p class="mt-1 text-[9px] text-slate-500">Captain Manhee의 설명은 한국어로 제공되지만, 조별 답변은 영어 heading으로만 입력합니다.</p></div></div>
+                        <div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><span class="text-[9px] font-black text-indigo-700">Captain Manhee</span><div class="structure-id-sentence">${escapeHtml(item.sentence)}</div><p class="mt-2 text-[10px] font-bold text-slate-700">${escapeHtml(structureQuestionForItem(item))}</p><p class="mt-1 text-[9px] text-slate-500">Captain Manhee의 설명은 한국어로 제공되지만, 조별 답변은 ${escapeHtml(answerType)}로 영어 입력합니다.</p></div></div>
                         ${currentExchanges}
+                        ${rationalePrompt}
                     </div>
-                    <div class="border-t border-blue-200 bg-white/85 px-4 py-2 text-[9px] font-bold text-slate-500"><i class="fa-solid fa-language mr-1 text-indigo-500"></i>한국어 답변은 체크 횟수에서 차감하지 않고, 영어로 다시 입력하도록 안내합니다.</div>
+                    <div class="border-t border-blue-200 bg-white/85 px-4 py-2 text-[9px] font-bold text-slate-500"><i class="fa-solid fa-language mr-1 text-indigo-500"></i>정답과 판단 근거는 영어로 입력합니다. 한국어 입력은 체크 횟수에서 차감하지 않습니다.</div>
                     <div class="structure-id-composer"><input id="structure-id-input" type="text" autocomplete="off" spellcheck="false" placeholder="${escapeHtml(placeholder)}" onkeydown="if(event.key==='Enter'){event.preventDefault();submitStructureIdentificationAnswer();}"><button type="button" onclick="submitStructureIdentificationAnswer()" class="rounded-full bg-[#fee500] px-4 py-2 text-[10px] font-black text-[#3c1e1e] shadow hover:brightness-95"><i class="fa-solid fa-paper-plane mr-1"></i>${escapeHtml(checkLabel)}</button></div>
                 </section>`;
         }
 
-        function advanceStructureIdentificationItem(state, item, finalAnswer, correct, outcome) {
+        function advanceStructureIdentificationItem(state, item, finalAnswer, correct, outcome, rationale = '') {
             const itemIndex = state.index;
             state.responses.push({
                 itemIndex,
                 answer: finalAnswer,
+                rationale,
                 correct,
                 outcome,
                 correctAnswer: item.answer,
@@ -5263,6 +5426,10 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             state.index += 1;
             state.attempts = 0;
             state.currentAttempts = [];
+            state.awaitingRationale = false;
+            state.pendingAnswer = '';
+            state.pendingOutcome = '';
+            state.rationaleAttempts = 0;
         }
 
         function submitStructureIdentificationAnswer() {
@@ -5276,23 +5443,57 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const item = items[state.index];
             if (!item) return;
 
-            if (containsKorean(answer)) {
+            if (state.awaitingRationale) {
+                if (containsKorean(answer)) {
+                    state.currentAttempts.push({
+                        answer,
+                        title: 'English reason only',
+                        feedback: '판단 근거도 영어로 짧게 적어주세요. 예: “Because it describes enemy strength.” 이 입력은 체크 횟수에 포함되지 않습니다.',
+                        tone: 'language',
+                        counted: false
+                    });
+                } else if (isThinStructureReason(answer, item) && state.rationaleAttempts < 1) {
+                    state.currentAttempts.push({
+                        answer,
+                        title: 'Add one clue',
+                        feedback: 'heading을 반복하기보다 문장 속 단어 또는 빠진 정보를 한 가지 적어보세요. 길게 쓸 필요는 없습니다.',
+                        tone: 'meaning',
+                        counted: false
+                    });
+                    state.rationaleAttempts += 1;
+                } else {
+                    const matchedKeyword = findReasonKeyword(answer, item);
+                    const praise = matchedKeyword
+                        ? `Good job. “${matchedKeyword}”라는 clue를 근거로 판단했습니다.`
+                        : 'Good job. 문장 속 단서를 근거로 판단을 설명했습니다.';
+                    state.currentAttempts.push({ answer, title: 'Good job · Reason recorded', feedback: praise, tone: 'correct', counted: false });
+                    advanceStructureIdentificationItem(state, item, state.pendingAnswer, true, state.pendingOutcome || 'reasoned', answer);
+                }
+            } else if (containsKorean(answer)) {
                 state.currentAttempts.push({
                     answer,
-                    title: 'English heading only',
-                    feedback: '이번 활동의 목표는 OPORD의 영문 heading을 직접 떠올리는 것입니다. 영어 heading으로 다시 입력하세요. 이 답변은 체크 횟수에 포함되지 않습니다.',
+                    title: 'English answer only',
+                    feedback: `이번 활동의 목표는 ${structureAnswerTypeLabel(item)}를 영어로 직접 떠올리는 것입니다. 영어로 다시 입력하세요. 이 답변은 체크 횟수에 포함되지 않습니다.`,
                     tone: 'language',
                     counted: false
                 });
             } else if (isStructureAnswerCorrect(answer, item)) {
                 const outcome = state.attempts === 0 ? 'first-try' : (state.attempts < 3 ? 'guided' : 'assisted');
-                const feedback = state.attempts === 0
-                    ? `정답입니다. 이 문장은 ${item.answer}에 들어갑니다.`
+                const needsRationale = state.attempts <= 1;
+                const feedback = needsRationale
+                    ? `정답입니다. ${item.answer}를 정확히 찾았습니다. 이제 판단 근거를 영어로 한 번 더 설명해 보세요.`
                     : state.attempts < 3
                         ? `좋습니다. 힌트를 활용해 ${item.answer}를 정확히 찾았습니다.`
                         : `완성했습니다. 정답은 ${item.answer}입니다.`;
                 state.currentAttempts.push({ answer, title: 'Correct', feedback, tone: 'correct', counted: true });
-                advanceStructureIdentificationItem(state, item, answer, true, outcome);
+                if (needsRationale) {
+                    state.awaitingRationale = true;
+                    state.pendingAnswer = answer;
+                    state.pendingOutcome = outcome;
+                    state.rationaleAttempts = 0;
+                } else {
+                    advanceStructureIdentificationItem(state, item, answer, true, outcome);
+                }
             } else if (state.attempts < 3) {
                 const nextAttempt = state.attempts + 1;
                 const hint = structureHintForAttempt(item, nextAttempt);
@@ -5308,7 +5509,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 state.currentAttempts.push({
                     answer,
                     title: 'Answer revealed',
-                    feedback: `정답은 ${item.answer}입니다. 영어 heading을 소리 내어 한 번 읽고 다음 문장으로 이동하세요.`,
+                    feedback: `정답은 ${item.answer}입니다. 영어 답을 소리 내어 한 번 읽고 다음 문장으로 이동하세요.`,
                     tone: 'revealed',
                     counted: false
                 });
@@ -5340,7 +5541,8 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 const item = items[response.itemIndex] || {};
                 lines.push(`${index + 1}. ${item.sentence || response.sentence || ''}`);
                 lines.push(`Team final answer: ${response.answer || ''}`);
-                lines.push(`Correct English heading: ${item.answer || response.correctAnswer || ''}`);
+                lines.push(`Correct English answer: ${item.answer || response.correctAnswer || ''}`);
+                if (response.rationale) lines.push(`Team reasoning: ${response.rationale}`);
                 lines.push(`Outcome: ${response.outcome || (response.correct ? 'correct' : 'revealed')}`);
                 lines.push('');
             });
@@ -5373,14 +5575,14 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     paragraph_title: `${drill.number}. ${drill.title}`,
                     artifact_text: compiledText,
                     form_data: { structureIdentification: state },
-                    artifact_mode: 'opord-structure-identification-chat-research9-v2'
+                    artifact_mode: 'opord-structure-identification-chat-research9-v3-mission-gap-reasoning'
                 }, { onConflict: 'owner_id,scenario_code,paragraph_id' });
                 if (error) throw error;
                 markStepComplete(activeParagraphId, 2);
                 await refreshSharedData();
                 renderStudentDashboard(); renderSharedHub(); if (currentUser?.role === 'teacher') renderTeacherDashboard();
                 feedback.className = 'text-xs font-bold text-emerald-600';
-                feedback.innerText = `🎉 ${drill.title} English heading 연습 결과가 공유 DB에 제출되었습니다.`;
+                feedback.innerText = `🎉 ${drill.title} English structure 연습 결과가 공유 DB에 제출되었습니다.`;
                 loadWorkshop();
             } catch (error) {
                 console.error('Structure identification save failed:', error);
@@ -5429,9 +5631,9 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const chatAvatar = document.getElementById('step2-chat-avatar');
             const chatPresence = document.getElementById('step2-chat-presence');
             if (chatAvatar) chatAvatar.innerText = activityType === 'code' ? 'CM' : 'T';
-            if (chatPresence) chatPresence.innerText = isIdentificationMode ? 'English heading coach online' : (activityType === 'code' ? 'AI coach online' : 'Teacher-guided room');
+            if (chatPresence) chatPresence.innerText = isIdentificationMode ? 'English structure coach online' : (activityType === 'code' ? 'AI coach online' : 'Teacher-guided room');
             if (heading) heading.innerHTML = isIdentificationMode
-                ? '<i class="fa-solid fa-message mr-1 text-indigo-600"></i>Step 2: English Heading Identification Chat'
+                ? '<i class="fa-solid fa-message mr-1 text-indigo-600"></i>Step 2: English OPORD Structure Chat'
                 : isThinkingPromptActivity
                 ? '<i class="fa-solid fa-comments mr-1 text-indigo-600"></i>Step 2: Teacher Interaction Room'
                 : (activityType === 'lecture'
@@ -5479,11 +5681,11 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const values = getStep2SeedValues();
             if (isIdentificationMode) {
                 const identificationState = getStructureIdentificationState(data);
-                instruction.innerText = 'Captain Manhee가 영어 OPORD 문장을 제시합니다. 한국어 scaffolding을 활용하되, 조별 답변은 반드시 English heading으로 입력하십시오.';
+                instruction.innerText = 'Captain Manhee가 영어 OPORD 문장을 제시합니다. 한국어 scaffolding을 활용하되, 조별 답변은 English heading 또는 English 5W element로 입력하십시오.';
                 status.className = 'text-[10px] rounded bg-indigo-100 px-2 py-1 font-bold text-indigo-700';
-                status.innerText = `English Heading ${Math.min(identificationState.index + 1, buildStructureIdentificationItems(data, activeParagraphId).length)} / ${buildStructureIdentificationItems(data, activeParagraphId).length}`;
+                status.innerText = `English Structure ${Math.min(identificationState.index + 1, buildStructureIdentificationItems(data, activeParagraphId).length)} / ${buildStructureIdentificationItems(data, activeParagraphId).length}`;
                 verifyBtn.classList.toggle('hidden', !identificationState.completed);
-                verifyBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Heading 연습 결과 제출 및 공유';
+                verifyBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Structure 연습 결과 제출 및 공유';
                 resetBtn.classList.add('hidden');
                 step2Slots.innerHTML = renderStructureIdentificationChat(data, drill);
                 window.setTimeout(() => document.getElementById('structure-id-input')?.focus(), 20);
@@ -5539,7 +5741,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                         ? '<i class="fa-solid fa-map-location-dot"></i> Scenario Reference & Phrase Bank'
                         : '<i class="fa-solid fa-book-open"></i> Reference & Phrase Bank');
                 note.innerHTML = activityType === 'code' && step2Mode === STEP2_MODE_IDENTIFY
-                    ? 'Step 2 채팅에 제시된 문장이 어느 OPORD heading/subheading에 들어가는지 찾으십시오. 막히면 reference card와 Step 1 shell을 다시 확인하십시오.'
+                    ? 'Step 2 채팅에서 OPORD heading 또는 mission의 빠진 5W element를 찾으십시오. 막히면 Step 1 shell을 다시 확인하십시오.'
                     : (isOpord01ThinkingPromptActivity(data)
                         ? '교수 reference와 phrase bank를 참고하여 Step 2의 교수 질문에 답변을 작성하십시오.'
                         : (hasSourcePackage
@@ -5574,6 +5776,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             renderStep1(data, drill, step1Complete);
             renderStep2(data, drill, step1Complete, step2Complete);
             renderPool(data, drill, step1Complete, step2Complete);
+            applyReferencePanelFoldUI();
         }
 
         function allowDrop(event) {
@@ -5900,7 +6103,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 commandCommand: 'Command', commandControl: 'Control', commandSignal: 'Signal',
                 lectureDraft: 'Team revised paragraph', lectureResponse1: 'Teacher question 1 response', lectureResponse2: 'Teacher question 2 response',
                 situationTerrain: 'Terrain', situationWeather: 'Weather', situationTwoLevelsUp: 'Two Levels Up', situationOneLevelUp: 'One Level Up', situationAdjacent: 'Adjacent Units',
-                missionUnit: 'Who / Unit', missionTime: 'When / Time', missionTask: 'What / Task', missionObjective: 'Where / Objective', missionPurpose: 'Why / Purpose',
+                missionUnit: 'Who / Unit', missionTask: 'What / Task', missionObjective: 'Where / Objective', missionTime: 'When / Time', missionPurpose: 'Why / Purpose',
                 executionPurpose: 'Intent: Purpose', executionKeyTasks: 'Intent: Key Tasks', executionEndState: 'Intent: End State', executionPhase1: 'Phase I', executionPhase2: 'Phase II',
                 sustainSupplyFieldServices: 'Supply and Field Services', sustainDistributionResupply: 'Distribution and Resupply Operations', sustainMaintenance: 'Maintenance', sustainTransportation: 'Transportation', sustainCareUnderFire: 'Care Under Fire', sustainTacticalFieldCare: 'Tactical Field Care', sustainTacticalEvacuation: 'Tactical Evacuation',
                 commandLocation: 'Location of Leaders', commandSuccession: 'Succession of Command', commandPost: 'Command Post Location', signalRadioFrequencies: 'Radio Frequencies', signalPrimary: 'Primary Signal', signalAlternate: 'Alternate Signal', signalContingency: 'Contingency Signal', signalEmergency: 'Emergency Signal', signalPasswords: 'Passwords / Running Passwords', signalPyrotechnic: 'Pyrotechnic Signals'
