@@ -5271,10 +5271,49 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             localStorage.setItem(OPORD_STRUCTURE_IDENTIFICATION_STORAGE_KEY, JSON.stringify(store));
         }
 
+        function createBlankStructureIdentificationState() {
+            return {
+                bankVersion: OPORD_STRUCTURE_IDENTIFICATION_BANK_VERSION,
+                index: 0,
+                attempts: 0,
+                correct: 0,
+                firstTry: 0,
+                completed: false,
+                responses: [],
+                currentAttempts: [],
+                awaitingRationale: false,
+                pendingAnswer: '',
+                pendingOutcome: '',
+                rationaleAttempts: 0,
+                resetAt: Date.now()
+            };
+        }
+
         function resetStructureIdentificationState(paragraphId = activeParagraphId) {
             const store = structureIdentificationStore();
-            delete store[structureIdentificationKey(paragraphId)];
+            // Keep an explicit blank local state instead of deleting the key.  When a
+            // previously submitted Supabase artifact exists, deleting the key would let
+            // that old artifact immediately seed the completed state again.
+            store[structureIdentificationKey(paragraphId)] = createBlankStructureIdentificationState();
             localStorage.setItem(OPORD_STRUCTURE_IDENTIFICATION_STORAGE_KEY, JSON.stringify(store));
+        }
+
+        function restartStructureIdentificationPractice() {
+            const data = getScenarioStore()[selectedScenarioCode] || defaultScenarios['OPORD-01'];
+            const state = getStructureIdentificationState(data);
+            const hasHistory = state.completed || state.responses.length > 0 || state.currentAttempts.length > 0 || state.attempts > 0;
+            if (hasHistory && !window.confirm('현재 Step 2 연습 기록을 지우고 이 paragraph의 문제를 처음부터 다시 풀까요? 이미 제출한 공유 결과는 다음 제출 때 새 결과로 덮어씁니다.')) return;
+
+            resetStructureIdentificationState(activeParagraphId);
+            const progress = getProgressStore();
+            delete progress[progressKey(activeParagraphId, 2)];
+            saveProgressStore(progress);
+            activeBuildStep = 2;
+            loadWorkshop();
+            window.setTimeout(() => {
+                document.getElementById('step2-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                document.getElementById('structure-id-input')?.focus({ preventScroll: true });
+            }, 60);
         }
 
         function isStructureAnswerCorrect(value, item) {
@@ -5674,7 +5713,15 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 `;
                 verifyBtn.classList.add('hidden');
                 resetBtn.classList.remove('hidden');
-                resetBtn.innerText = 'Step 2 수정 · 재작성';
+                if (isIdentificationMode) {
+                    resetBtn.innerHTML = '<i class="fa-solid fa-arrow-rotate-left mr-1"></i>문제 다시 풀기';
+                    resetBtn.onclick = restartStructureIdentificationPractice;
+                    resetBtn.title = '이 paragraph의 Step 2 문제를 처음부터 다시 연습합니다.';
+                } else {
+                    resetBtn.innerText = 'Step 2 수정 · 재작성';
+                    resetBtn.onclick = () => resetActiveParagraphStep(2);
+                    resetBtn.title = '제출한 Step 2를 다시 열어 수정합니다.';
+                }
                 return;
             }
 
@@ -5686,7 +5733,10 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 status.innerText = `English Structure ${Math.min(identificationState.index + 1, buildStructureIdentificationItems(data, activeParagraphId).length)} / ${buildStructureIdentificationItems(data, activeParagraphId).length}`;
                 verifyBtn.classList.toggle('hidden', !identificationState.completed);
                 verifyBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Structure 연습 결과 제출 및 공유';
-                resetBtn.classList.add('hidden');
+                resetBtn.classList.remove('hidden');
+                resetBtn.innerHTML = '<i class="fa-solid fa-arrow-rotate-left mr-1"></i>문제 다시 풀기';
+                resetBtn.onclick = restartStructureIdentificationPractice;
+                resetBtn.title = '현재 진행 기록을 지우고 이 paragraph의 문제를 처음부터 다시 연습합니다.';
                 step2Slots.innerHTML = renderStructureIdentificationChat(data, drill);
                 window.setTimeout(() => document.getElementById('structure-id-input')?.focus(), 20);
                 return;
