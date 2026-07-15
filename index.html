@@ -74,6 +74,16 @@
         .coach-chat-footer { border-top: 1px solid rgba(255,255,255,.6) !important; background: rgba(255,255,255,.86); padding: .8rem 1rem; }
         .coach-chat-panel .step2-question-chat { display: grid; gap: .6rem; }
         .coach-chat-panel .step2-question-chat label { border: 0 !important; background: transparent !important; padding: 0 !important; box-shadow: none !important; }
+        .structure-id-room { border: 1px solid #bfdbfe; border-radius: 1rem; background: linear-gradient(180deg,#dbeafe 0%,#eff6ff 100%); overflow: hidden; box-shadow: 0 12px 26px rgba(30,64,175,.08); }
+        .structure-id-header { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.75rem 1rem; border-bottom:1px solid #bfdbfe; background:rgba(255,255,255,.82); }
+        .structure-id-transcript { display:grid; gap:.75rem; padding:1rem; max-height:34rem; overflow-y:auto; }
+        .structure-id-sentence { margin-top:.45rem; border-left:3px solid #4f46e5; border-radius:.55rem; background:#eef2ff; padding:.65rem .75rem; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:#1e1b4b; line-height:1.55; }
+        .structure-id-composer { display:flex; align-items:center; gap:.5rem; padding:.75rem; border-top:1px solid #bfdbfe; background:rgba(255,255,255,.92); }
+        .structure-id-composer input { min-width:0; flex:1; border:1px solid #cbd5e1; border-radius:999px; background:white; padding:.7rem 1rem; font-size:.75rem; outline:none; }
+        .structure-id-composer input:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(99,102,241,.14); }
+        .structure-id-chip { border:1px solid #c7d2fe; border-radius:999px; background:white; padding:.35rem .65rem; font-size:.62rem; font-weight:800; color:#4338ca; }
+        .structure-id-chip:hover { background:#eef2ff; }
+        .structure-id-result { border-radius:.8rem; padding:.75rem; background:rgba(255,255,255,.82); border:1px solid #dbeafe; }
         @media (max-width: 640px) {
             .coach-bubble, .coach-draft-bubble { max-width: 94%; width: 94%; }
             .coach-avatar { width: 1.9rem; height: 1.9rem; border-radius: .65rem; }
@@ -223,6 +233,14 @@
                                     <option value="code">Paragraph 작성·Coach 점검 방식</option>
                                 </select>
                                 <p class="mt-1 text-[10px] leading-relaxed text-slate-400">이 값은 Step 2 화면 구성과 기존 DB 호환을 위한 내부 설정입니다. 학생 대시보드·워크숍·공유 허브에는 해당 명칭이나 배지가 표시되지 않습니다.</p>
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-600 mb-1">Step 2 학습 방식 <span class="font-normal text-slate-400">(Paragraph 작성형 활동에 적용)</span></label>
+                                <select id="new-sci-step2-mode" class="w-full border rounded p-2 text-xs">
+                                    <option value="identify">문장 → English heading 찾기 채팅 (연구강의 9문제)</option>
+                                    <option value="writing">OPORD 초안 작성 + Captain Manhee Coach (심화)</option>
+                                </select>
+                                <p class="mt-1 text-[10px] leading-relaxed text-slate-400">이번 연구강의에는 첫 번째 방식을 사용합니다. 기존 작성·AI Coach 방식은 삭제하지 않고 Defense/Offense 수업용으로 보존됩니다.</p>
                             </div>
                             <div class="rounded-lg border border-sky-100 bg-sky-50/60 p-3">
                                 <div class="flex items-start gap-2.5">
@@ -897,6 +915,7 @@
                 title: row.title || 'Untitled Activity',
                 displayOrder: normalizeScenarioDisplayOrder(step2Blocks[DISPLAY_ORDER_KEY]),
                 activityType: normalizeActivityType(row.activity_type),
+                step2Mode: normalizeScenarioStep2Mode(step2Blocks[STEP2_MODE_KEY], normalizeActivityType(row.activity_type)),
                 step2Blocks,
                 step2Questions: normalizeStep2QuestionMap(step2Blocks[STEP2_QUESTIONS_KEY] || {}),
                 phraseBanks: cloneCourseMaterialObject(row.phrase_banks, {}),
@@ -1461,6 +1480,9 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
         // Sustainment uses a clearly labeled sample script because this lesson contains no video clip for that paragraph.
         const COMPANY_SOURCE_KEY = '__companyOpordSource';
         const DISPLAY_ORDER_KEY = '__displayOrder';
+        const STEP2_MODE_KEY = '__step2Mode';
+        const STEP2_MODE_IDENTIFY = 'identify';
+        const STEP2_MODE_WRITING = 'writing';
         const COACH_RESET_EPOCHS_KEY = '__captainManheeResetEpochs';
 
         const BUILT_IN_COMPANY_SOURCE = {
@@ -2217,6 +2239,20 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             return [];
         }
 
+        function normalizeScenarioStep2Mode(value, activityType = 'code') {
+            if (normalizeActivityType(activityType) === 'lecture') return 'teacher';
+            return String(value || '').trim().toLowerCase() === STEP2_MODE_WRITING
+                ? STEP2_MODE_WRITING
+                : STEP2_MODE_IDENTIFY;
+        }
+
+        function getScenarioStep2Mode(scenario) {
+            return normalizeScenarioStep2Mode(
+                scenario?.step2Mode ?? scenario?.step2Blocks?.[STEP2_MODE_KEY],
+                getScenarioActivityType(scenario)
+            );
+        }
+
         function buildStep2BlocksForDatabase(scenario) {
             const blocks = cloneCourseMaterialObject(scenario?.step2Blocks || {}, {});
             const questionMap = getScenarioStep2QuestionMap(scenario);
@@ -2229,6 +2265,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             if (companySourceHasContent(companySource)) blocks[COMPANY_SOURCE_KEY] = companySource;
             else delete blocks[COMPANY_SOURCE_KEY];
             blocks[DISPLAY_ORDER_KEY] = getScenarioDisplayOrder(scenario);
+            if (getScenarioActivityType(scenario) === 'code') blocks[STEP2_MODE_KEY] = getScenarioStep2Mode(scenario);
+            else delete blocks[STEP2_MODE_KEY];
             return blocks;
         }
 
@@ -2518,6 +2556,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             if (orderInput) orderInput.value = getNextScenarioDisplayOrder();
             const activityTypeInput = document.getElementById('new-sci-activity-type');
             if (activityTypeInput) activityTypeInput.value = 'lecture';
+            const step2ModeInput = document.getElementById('new-sci-step2-mode');
+            if (step2ModeInput) step2ModeInput.value = STEP2_MODE_IDENTIFY;
             setCompanySourceToggleState({ enabled: false, images: [] });
             TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
                 const field = document.getElementById(`new-sci-${paragraphId}`);
@@ -2553,6 +2593,8 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             }
             const activityTypeInput = document.getElementById('new-sci-activity-type');
             if (activityTypeInput) activityTypeInput.value = getScenarioActivityType(scenario);
+            const step2ModeInput = document.getElementById('new-sci-step2-mode');
+            if (step2ModeInput) step2ModeInput.value = getScenarioStep2Mode(scenario) === STEP2_MODE_WRITING ? STEP2_MODE_WRITING : STEP2_MODE_IDENTIFY;
             setCompanySourceToggleState(getScenarioCompanySource(scenario));
             TEACHER_PARAGRAPH_IDS.forEach(paragraphId => {
                 const field = document.getElementById(`new-sci-${paragraphId}`);
@@ -2576,6 +2618,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             const orderInput = document.getElementById('new-sci-display-order');
             const title = titleInput?.value.trim() || '';
             const activityType = normalizeActivityType(document.getElementById('new-sci-activity-type')?.value);
+            const step2Mode = normalizeScenarioStep2Mode(document.getElementById('new-sci-step2-mode')?.value, activityType);
             const code = editingScenarioCode || normalizeScenarioCodeInput(codeInput?.value || '') || generateScenarioInternalCode();
             const displayOrder = normalizeScenarioDisplayOrder(orderInput?.value, getNextScenarioDisplayOrder());
 
@@ -2603,6 +2646,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
             });
             step2Blocks[STEP2_QUESTIONS_KEY] = step2Questions;
             step2Blocks[DISPLAY_ORDER_KEY] = displayOrder;
+            if (activityType === 'code') step2Blocks[STEP2_MODE_KEY] = step2Mode;
 
             const scenarios = getScenarioStore();
             const existing = scenarios[code] || {};
@@ -2632,6 +2676,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 title,
                 displayOrder,
                 activityType,
+                step2Mode,
                 step2Blocks,
                 step2Questions,
                 phraseBanks,
@@ -2641,7 +2686,7 @@ ${error.message || '잠시 뒤 다시 시도하십시오.'}`);
                 createdAt: existing.createdAt || Date.now(),
                 updatedBy: currentSupabaseUserId,
                 updatedAt: Date.now(),
-                scenarioVersion: 'activity-order-v1'
+                scenarioVersion: 'step2-mode-v1'
             };
 
             setScenarioSaveBusy(true);
@@ -3958,6 +4003,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                 delete progress[progressKey(activeParagraphId, 2)];
                 setStep1Folded(false);
             }
+            if (step === 2) resetStructureIdentificationState();
             saveProgressStore(progress);
             activeBuildStep = step;
             loadWorkshop();
@@ -4961,6 +5007,390 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             `;
         }
 
+        const OPORD_STRUCTURE_IDENTIFICATION_BANK_VERSION = 'RESEARCH_9_V1';
+        const OPORD_STRUCTURE_IDENTIFICATION_STORAGE_KEY = 'OPORD_STRUCTURE_IDENTIFICATION_STATE_V2';
+
+        // Research-lecture set: 2 / 2 / 3 / 1 / 1 questions.
+        // Captain Manhee translanguages in Korean, but cadets must recall the English OPORD heading.
+        const OPORD_STRUCTURE_IDENTIFICATION_BANK = {
+            situation: [
+                {
+                    sentence: 'The enemy force on OBJ HWARANG is assessed as a reinforced UAS cell of platoon-minus strength with reconnaissance and strike UAS teams.',
+                    answer: 'Enemy Forces',
+                    accepted: ['enemy forces'],
+                    semanticHint: '이 문장은 아군의 계획이 아니라 적의 규모·구성·장비를 설명합니다. “enemy force,” “UAS cell,” “platoon-minus strength” 같은 단서를 따라가 보세요.',
+                    locationHint: '정답은 1. Situation의 후반부에 있습니다. Area of Operations 뒤에 나오고, Friendly Forces 바로 앞에 위치합니다.',
+                    hangman: 'E____ F_____'
+                },
+                {
+                    sentence: '1st Battalion stabilizes eastern Hwarang City, protects key routes, and destroys enemy forces that can interfere with 2d Brigade.',
+                    answer: 'Friendly Forces',
+                    accepted: ['friendly forces'],
+                    semanticHint: '이 문장은 적이 아니라 상급 아군 부대의 임무와 역할을 설명합니다. “1st Battalion”과 아군의 지원 관계가 핵심 단서입니다.',
+                    locationHint: '정답은 1. Situation의 후반부에 있습니다. Enemy Forces 다음에 나오며, Attachments and Detachments보다 앞에 위치합니다.',
+                    hangman: 'F_______ F_____'
+                }
+            ],
+            mission: [
+                {
+                    sentence: 'C Company attacks to destroy the enemy UAS cell on OBJ HWARANG NLT 140600JUL26 in order to restore 2d Brigade’s freedom of maneuver.',
+                    answer: 'Mission Statement',
+                    accepted: ['mission statement'],
+                    semanticHint: '한 문장 안에 수행 부대, 과업, 장소, 시간, 목적이 함께 들어 있습니다. 즉, 부대가 무엇을 언제·어디서·왜 해야 하는지를 압축한 문장입니다.',
+                    locationHint: '정답은 OPORD의 두 번째 paragraph인 2. Mission에 있습니다. 이 paragraph는 하나의 간결한 임무 문장으로 제시됩니다.',
+                    hangman: 'M______ S________'
+                },
+                {
+                    sentence: '1st Platoon assaults OBJ HWARANG NLT 140630JUL26 in order to destroy remaining enemy forces and secure the objective.',
+                    answer: 'Mission Statement',
+                    accepted: ['mission statement'],
+                    semanticHint: '제대는 platoon이지만, task와 purpose를 한 문장으로 제시하고 있습니다. Company-level 문장과 같은 5W 기능을 합니다.',
+                    locationHint: '정답은 OPORD의 두 번째 paragraph인 2. Mission입니다. WHO–WHAT–WHEN–WHERE–WHY를 한 문장으로 묶는 부분입니다.',
+                    hangman: 'M______ S________'
+                }
+            ],
+            execution: [
+                {
+                    sentence: 'The purpose is to restore the brigade’s freedom of maneuver; key tasks are to isolate OBJ HWARANG and destroy the enemy UAS cell; the end state is friendly control of the objective.',
+                    answer: 'Commander’s Intent',
+                    accepted: ["commander's intent", 'commanders intent'],
+                    semanticHint: '이 문장은 세부 행동 순서보다 작전의 purpose, key tasks, end state를 설명합니다. “왜 수행하는가”와 “마지막에 어떤 상태가 되어야 하는가”를 보세요.',
+                    locationHint: '정답은 3. Execution의 처음 부분에 있습니다. Concept of Operations보다 앞에 나오는 첫 번째 주요 heading입니다.',
+                    hangman: 'C________’s I_____'
+                },
+                {
+                    sentence: 'The operation will be conducted in three phases: C Company crosses FORD BLUE and isolates OBJ HWARANG, conducts a coordinated UAS and ground attack, and then secures the objective.',
+                    answer: 'Concept of Operations',
+                    accepted: ['concept of operations', 'conop'],
+                    semanticHint: '이 문장은 특정 platoon 하나의 과업이 아니라 전체 작전의 큰 흐름과 phase별 접근 방법을 설명합니다.',
+                    locationHint: '정답은 3. Execution에 있습니다. Commander’s Intent 다음에 나오며, 세부 subordinate-unit tasks보다 앞에 위치합니다.',
+                    hangman: 'C______ of O________'
+                },
+                {
+                    sentence: '1st Platoon assaults OBJ HWARANG, 2d Platoon blocks enemy exfiltration routes, and Weapons Platoon provides supporting fires.',
+                    answer: 'Tasks to Subordinate Units',
+                    accepted: ['tasks to subordinate units', 'task to subordinate units'],
+                    semanticHint: '이 문장은 1st Platoon, 2d Platoon, Weapons Platoon처럼 각 예하부대에 구체적인 행동을 따로 부여합니다.',
+                    locationHint: '정답은 3. Execution의 후반부에 있습니다. 전체 작전 개념을 설명한 뒤, Coordinating Instructions보다 앞에서 예하부대별 임무를 제시합니다.',
+                    hangman: 'T____ to S________ U____'
+                }
+            ],
+            sustainment: [
+                {
+                    sentence: 'Class I will be distributed at the company trains, and each platoon will cross the line of departure with a full basic load of Class III and Class V.',
+                    answer: 'Supply and Field Services',
+                    accepted: ['supply and field services'],
+                    semanticHint: '이 문장은 Class I, III, V와 같은 보급품의 준비·분배를 설명합니다. 수업에서 배운 class of supply가 직접적인 단서입니다.',
+                    locationHint: '정답은 4. Sustainment 아래 Logistics의 초반부에 있습니다. Distribution and Resupply Operations보다 앞에 위치합니다.',
+                    hangman: 'S_____ and F____ S_______'
+                }
+            ],
+            commandSignal: [
+                {
+                    sentence: 'GREEN indicates Phase II success, while RED directs the force to transition to Phase III.',
+                    answer: 'Pyrotechnic Signals',
+                    accepted: ['pyrotechnic signals', 'pyrotechnic signal', 'visual and pyrotechnic signals'],
+                    semanticHint: '이 문장은 GREEN과 RED 색상의 신호로 작전 상태와 전환 명령을 전달합니다. 무전 주파수나 password가 아니라 시각 신호입니다.',
+                    locationHint: '정답은 5. Command and Signal → Signal 아래에 있습니다. Step 1 shell의 Passwords / Running Passwords 다음에 나오는 항목입니다.',
+                    hangman: 'P__________ S______'
+                }
+            ]
+        };
+
+        function structureIdentificationStore() {
+            try { return JSON.parse(localStorage.getItem(OPORD_STRUCTURE_IDENTIFICATION_STORAGE_KEY)) || {}; }
+            catch (error) { return {}; }
+        }
+
+        function structureIdentificationKey(paragraphId = activeParagraphId) {
+            return `${OPORD_STRUCTURE_IDENTIFICATION_BANK_VERSION}::${currentUserId}::${selectedScenarioCode}::${paragraphId}`;
+        }
+
+        function normalizeStructureAnswer(value) {
+            return String(value || '')
+                .toLowerCase()
+                .replace(/[’']/g, '')
+                .replace(/[^a-z0-9]+/g, ' ')
+                .replace(/^the\s+/, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function containsKorean(value) {
+            return /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(String(value || ''));
+        }
+
+        function buildStructureIdentificationItems(data, paragraphId) {
+            const bank = OPORD_STRUCTURE_IDENTIFICATION_BANK[paragraphId] || [];
+            return bank.map((item, index) => ({ ...item, id: `${OPORD_STRUCTURE_IDENTIFICATION_BANK_VERSION}-${paragraphId}-${index + 1}` }));
+        }
+
+        function getStructureIdentificationState(data, paragraphId = activeParagraphId) {
+            const store = structureIdentificationStore();
+            const key = structureIdentificationKey(paragraphId);
+            const artifactState = getCurrentStep2Artifact(paragraphId)?.formData?.structureIdentification;
+            const compatibleArtifactState = artifactState?.bankVersion === OPORD_STRUCTURE_IDENTIFICATION_BANK_VERSION ? artifactState : null;
+            const seed = store[key] || compatibleArtifactState || {};
+            const items = buildStructureIdentificationItems(data, paragraphId);
+            const responses = Array.isArray(seed.responses)
+                ? seed.responses.filter(response => Number(response?.itemIndex) >= 0 && Number(response?.itemIndex) < items.length)
+                : [];
+            const state = {
+                bankVersion: OPORD_STRUCTURE_IDENTIFICATION_BANK_VERSION,
+                index: Math.max(0, Math.min(Number(seed.index) || 0, items.length)),
+                attempts: Math.max(0, Math.min(Number(seed.attempts) || 0, 3)),
+                correct: Number(seed.correct) || 0,
+                firstTry: Number(seed.firstTry) || 0,
+                completed: Boolean(seed.completed),
+                responses,
+                currentAttempts: Array.isArray(seed.currentAttempts) ? seed.currentAttempts : []
+            };
+            if (state.index >= items.length && items.length) state.completed = true;
+            return state;
+        }
+
+        function saveStructureIdentificationState(state, paragraphId = activeParagraphId) {
+            const store = structureIdentificationStore();
+            store[structureIdentificationKey(paragraphId)] = { ...state, bankVersion: OPORD_STRUCTURE_IDENTIFICATION_BANK_VERSION };
+            localStorage.setItem(OPORD_STRUCTURE_IDENTIFICATION_STORAGE_KEY, JSON.stringify(store));
+        }
+
+        function resetStructureIdentificationState(paragraphId = activeParagraphId) {
+            const store = structureIdentificationStore();
+            delete store[structureIdentificationKey(paragraphId)];
+            localStorage.setItem(OPORD_STRUCTURE_IDENTIFICATION_STORAGE_KEY, JSON.stringify(store));
+        }
+
+        function isStructureAnswerCorrect(value, item) {
+            const submitted = normalizeStructureAnswer(value);
+            if (!submitted) return false;
+            const aliases = [item.answer, ...(item.accepted || [])].map(normalizeStructureAnswer).filter(Boolean);
+            return aliases.some(alias => submitted === alias);
+        }
+
+        function structureHintForAttempt(item, attemptNumber) {
+            if (attemptNumber === 1) {
+                return {
+                    title: 'Hint 1 · Meaning',
+                    feedback: item.semanticHint || '문장이 전달하는 기능과 핵심 단서를 먼저 찾아보세요.',
+                    tone: 'meaning'
+                };
+            }
+            if (attemptNumber === 2) {
+                return {
+                    title: 'Hint 2 · Location',
+                    feedback: item.locationHint || 'Step 1 shell에서 이 heading의 상위 paragraph와 앞뒤 위치를 확인해 보세요.',
+                    tone: 'location'
+                };
+            }
+            return {
+                title: 'Hint 3 · Complete the English heading',
+                feedback: `영문 빈칸을 완성하세요: ${item.hangman || item.answer}`,
+                tone: 'hangman'
+            };
+        }
+
+        function renderStructureAttemptExchange(entry) {
+            const toneClass = entry.tone === 'correct'
+                ? 'text-emerald-700'
+                : entry.tone === 'language'
+                    ? 'text-sky-700'
+                    : entry.tone === 'revealed'
+                        ? 'text-rose-700'
+                        : 'text-amber-700';
+            return `
+                <div class="coach-message-row student-row"><div class="coach-bubble coach-bubble-right coach-draft-bubble"><span class="text-[9px] font-black text-[#3c1e1e]">우리 조</span><p class="mt-1 text-[11px]">${escapeHtml(entry.answer || '')}</p></div><span class="coach-avatar student">TEAM</span></div>
+                <div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><strong class="${toneClass}">${escapeHtml(entry.title || 'Captain Manhee')}</strong><p class="mt-1 text-[10px] leading-relaxed">${escapeHtml(entry.feedback || '')}</p></div></div>`;
+        }
+
+        function renderCompletedStructureItem(item, response, displayNumber) {
+            const attemptLog = Array.isArray(response.attemptLog) ? response.attemptLog : [];
+            const exchanges = attemptLog.map(renderStructureAttemptExchange).join('');
+            return `
+                <div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><span class="text-[9px] font-black text-indigo-700">문장 ${displayNumber}</span><div class="structure-id-sentence">${escapeHtml(item.sentence || response.sentence || '')}</div><p class="mt-2 text-[10px] font-bold text-slate-700">이 문장은 OPORD format의 어느 English heading에 들어갈까요?</p></div></div>
+                ${exchanges}`;
+        }
+
+        function renderStructureIdentificationChat(data, drill) {
+            const items = buildStructureIdentificationItems(data, activeParagraphId);
+            const state = getStructureIdentificationState(data);
+            const history = state.responses.map((response, index) => {
+                const item = items[response.itemIndex] || {};
+                return renderCompletedStructureItem(item, response, index + 1);
+            }).join('');
+
+            if (!items.length) return '<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800">이 paragraph에 설정된 분류 문제가 없습니다.</div>';
+
+            if (state.completed) {
+                return `
+                    <section class="structure-id-room">
+                        <div class="structure-id-header"><div><p class="text-[10px] font-black uppercase tracking-wider text-indigo-700">OPORD Structure Identification</p><h4 class="text-sm font-black text-slate-900">${escapeHtml(drill.title)} · 완료</h4></div><span class="rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-black text-emerald-700">직접 완성 ${state.correct} / ${items.length}</span></div>
+                        <div class="structure-id-transcript">${history}<div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><strong class="text-emerald-700">Structure drill complete.</strong><p class="mt-1 text-[10px] leading-relaxed">모든 문장을 확인했습니다. 아래 제출 버튼을 눌러 결과를 공유하세요. 힌트를 사용한 과정도 학습 기록으로 함께 저장됩니다.</p></div></div></div>
+                    </section>`;
+            }
+
+            const item = items[state.index];
+            const currentExchanges = state.currentAttempts.map(renderStructureAttemptExchange).join('');
+            const checkLabel = state.attempts >= 3 ? 'Complete Answer' : `Check ${state.attempts + 1}/3`;
+            const placeholder = state.attempts >= 3 ? `Complete: ${item.hangman}` : 'Type the English OPORD heading';
+            return `
+                <section class="structure-id-room">
+                    <div class="structure-id-header"><div><p class="text-[10px] font-black uppercase tracking-wider text-indigo-700">OPORD Structure Identification</p><h4 class="text-sm font-black text-slate-900">${escapeHtml(drill.title)} · English heading 찾기</h4></div><span class="rounded-full bg-indigo-100 px-3 py-1 text-[10px] font-black text-indigo-700">${state.index + 1} / ${items.length}</span></div>
+                    <div id="structure-id-transcript" class="structure-id-transcript">
+                        ${history}
+                        <div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left"><span class="text-[9px] font-black text-indigo-700">Captain Manhee</span><div class="structure-id-sentence">${escapeHtml(item.sentence)}</div><p class="mt-2 text-[10px] font-bold text-slate-700">이 문장은 OPORD format의 어느 <strong>English heading</strong>에 들어갈까요?</p><p class="mt-1 text-[9px] text-slate-500">Captain Manhee의 설명은 한국어로 제공되지만, 조별 답변은 영어 heading으로만 입력합니다.</p></div></div>
+                        ${currentExchanges}
+                    </div>
+                    <div class="border-t border-blue-200 bg-white/85 px-4 py-2 text-[9px] font-bold text-slate-500"><i class="fa-solid fa-language mr-1 text-indigo-500"></i>한국어 답변은 체크 횟수에서 차감하지 않고, 영어로 다시 입력하도록 안내합니다.</div>
+                    <div class="structure-id-composer"><input id="structure-id-input" type="text" autocomplete="off" spellcheck="false" placeholder="${escapeHtml(placeholder)}" onkeydown="if(event.key==='Enter'){event.preventDefault();submitStructureIdentificationAnswer();}"><button type="button" onclick="submitStructureIdentificationAnswer()" class="rounded-full bg-[#fee500] px-4 py-2 text-[10px] font-black text-[#3c1e1e] shadow hover:brightness-95"><i class="fa-solid fa-paper-plane mr-1"></i>${escapeHtml(checkLabel)}</button></div>
+                </section>`;
+        }
+
+        function advanceStructureIdentificationItem(state, item, finalAnswer, correct, outcome) {
+            const itemIndex = state.index;
+            state.responses.push({
+                itemIndex,
+                answer: finalAnswer,
+                correct,
+                outcome,
+                correctAnswer: item.answer,
+                sentence: item.sentence,
+                timestamp: Date.now(),
+                attemptLog: [...state.currentAttempts]
+            });
+            if (correct) state.correct += 1;
+            if (correct && state.attempts === 0) state.firstTry += 1;
+            state.index += 1;
+            state.attempts = 0;
+            state.currentAttempts = [];
+        }
+
+        function submitStructureIdentificationAnswer() {
+            const input = document.getElementById('structure-id-input');
+            const answer = String(input?.value || '').trim();
+            if (!answer) { input?.focus(); return; }
+            const data = getScenarioStore()[selectedScenarioCode] || defaultScenarios['OPORD-01'];
+            const drill = PARAGRAPH_DRILLS[activeParagraphId];
+            const items = buildStructureIdentificationItems(data, activeParagraphId);
+            const state = getStructureIdentificationState(data);
+            const item = items[state.index];
+            if (!item) return;
+
+            if (containsKorean(answer)) {
+                state.currentAttempts.push({
+                    answer,
+                    title: 'English heading only',
+                    feedback: '이번 활동의 목표는 OPORD의 영문 heading을 직접 떠올리는 것입니다. 영어 heading으로 다시 입력하세요. 이 답변은 체크 횟수에 포함되지 않습니다.',
+                    tone: 'language',
+                    counted: false
+                });
+            } else if (isStructureAnswerCorrect(answer, item)) {
+                const outcome = state.attempts === 0 ? 'first-try' : (state.attempts < 3 ? 'guided' : 'assisted');
+                const feedback = state.attempts === 0
+                    ? `정답입니다. 이 문장은 ${item.answer}에 들어갑니다.`
+                    : state.attempts < 3
+                        ? `좋습니다. 힌트를 활용해 ${item.answer}를 정확히 찾았습니다.`
+                        : `완성했습니다. 정답은 ${item.answer}입니다.`;
+                state.currentAttempts.push({ answer, title: 'Correct', feedback, tone: 'correct', counted: true });
+                advanceStructureIdentificationItem(state, item, answer, true, outcome);
+            } else if (state.attempts < 3) {
+                const nextAttempt = state.attempts + 1;
+                const hint = structureHintForAttempt(item, nextAttempt);
+                state.currentAttempts.push({
+                    answer,
+                    title: hint.title,
+                    feedback: hint.feedback,
+                    tone: hint.tone,
+                    counted: true
+                });
+                state.attempts = nextAttempt;
+            } else {
+                state.currentAttempts.push({
+                    answer,
+                    title: 'Answer revealed',
+                    feedback: `정답은 ${item.answer}입니다. 영어 heading을 소리 내어 한 번 읽고 다음 문장으로 이동하세요.`,
+                    tone: 'revealed',
+                    counted: false
+                });
+                advanceStructureIdentificationItem(state, item, answer, false, 'revealed');
+            }
+
+            if (state.index >= items.length) state.completed = true;
+            saveStructureIdentificationState(state);
+            renderStep2(data, drill, true, false);
+            window.setTimeout(() => {
+                const transcript = document.getElementById('structure-id-transcript');
+                if (transcript) transcript.scrollTop = transcript.scrollHeight;
+                document.getElementById('structure-id-input')?.focus();
+            }, 30);
+        }
+
+        function compileStructureIdentificationOutput(data, paragraphId = activeParagraphId) {
+            const state = getStructureIdentificationState(data, paragraphId);
+            const items = buildStructureIdentificationItems(data, paragraphId);
+            const lines = [
+                `OPORD STRUCTURE IDENTIFICATION — ${PARAGRAPH_DRILLS[paragraphId]?.title || paragraphId}`,
+                `Question set: ${OPORD_STRUCTURE_IDENTIFICATION_BANK_VERSION}`,
+                `Completed: ${state.responses.length}/${items.length}`,
+                `Correctly completed: ${state.correct}/${items.length}`,
+                `First try: ${state.firstTry}/${items.length}`,
+                ''
+            ];
+            state.responses.forEach((response, index) => {
+                const item = items[response.itemIndex] || {};
+                lines.push(`${index + 1}. ${item.sentence || response.sentence || ''}`);
+                lines.push(`Team final answer: ${response.answer || ''}`);
+                lines.push(`Correct English heading: ${item.answer || response.correctAnswer || ''}`);
+                lines.push(`Outcome: ${response.outcome || (response.correct ? 'correct' : 'revealed')}`);
+                lines.push('');
+            });
+            return lines.join('\n').trim();
+        }
+
+        async function verifyStructureIdentificationStep2(data) {
+            const state = getStructureIdentificationState(data);
+            const items = buildStructureIdentificationItems(data, activeParagraphId);
+            const feedback = document.getElementById('feedback-message');
+            const drill = PARAGRAPH_DRILLS[activeParagraphId];
+            if (!state.completed || state.responses.length < items.length) {
+                feedback.className = 'text-xs font-bold text-rose-500';
+                feedback.innerText = '⚠️ 아직 분류하지 않은 문장이 있습니다.';
+                return;
+            }
+            if (!supabaseClient || !currentSupabaseUserId) {
+                feedback.className = 'text-xs font-bold text-rose-500';
+                feedback.innerText = '⚠️ 인증 세션을 찾지 못했습니다. 다시 로그인한 뒤 제출하십시오.';
+                return;
+            }
+            const submitButton = document.getElementById('step2-verify-btn');
+            if (submitButton) { submitButton.disabled = true; submitButton.classList.add('opacity-60','cursor-wait'); submitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>분류 결과 저장 중…'; }
+            try {
+                const compiledText = compileStructureIdentificationOutput(data);
+                const { error } = await supabaseClient.from('artifacts').upsert({
+                    owner_id: currentSupabaseUserId,
+                    scenario_code: selectedScenarioCode,
+                    paragraph_id: activeParagraphId,
+                    paragraph_title: `${drill.number}. ${drill.title}`,
+                    artifact_text: compiledText,
+                    form_data: { structureIdentification: state },
+                    artifact_mode: 'opord-structure-identification-chat-research9-v2'
+                }, { onConflict: 'owner_id,scenario_code,paragraph_id' });
+                if (error) throw error;
+                markStepComplete(activeParagraphId, 2);
+                await refreshSharedData();
+                renderStudentDashboard(); renderSharedHub(); if (currentUser?.role === 'teacher') renderTeacherDashboard();
+                feedback.className = 'text-xs font-bold text-emerald-600';
+                feedback.innerText = `🎉 ${drill.title} English heading 연습 결과가 공유 DB에 제출되었습니다.`;
+                loadWorkshop();
+            } catch (error) {
+                console.error('Structure identification save failed:', error);
+                feedback.className = 'text-xs font-bold text-rose-500';
+                feedback.innerText = `⚠️ 공유 DB에 저장하지 못했습니다. ${error.message || '잠시 뒤 다시 시도하십시오.'}`;
+            } finally {
+                if (submitButton) { submitButton.disabled = false; submitButton.classList.remove('opacity-60','cursor-wait'); submitButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-1"></i>분류 결과 제출 및 공유'; }
+            }
+        }
+
         function renderStep2WritingForm(data, drill, values) {
             const activityType = getScenarioActivityType(data);
             // Teacher-question boxes are only for Lecture-in-Class activities.
@@ -4993,12 +5423,16 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             const instruction = document.getElementById('step2-instruction');
             const heading = document.getElementById('step2-heading');
             const activityType = getScenarioActivityType(data);
+            const step2Mode = getScenarioStep2Mode(data);
+            const isIdentificationMode = activityType === 'code' && step2Mode === STEP2_MODE_IDENTIFY;
             const isThinkingPromptActivity = isOpord01ThinkingPromptActivity(data);
             const chatAvatar = document.getElementById('step2-chat-avatar');
             const chatPresence = document.getElementById('step2-chat-presence');
             if (chatAvatar) chatAvatar.innerText = activityType === 'code' ? 'CM' : 'T';
-            if (chatPresence) chatPresence.innerText = activityType === 'code' ? 'AI coach online' : 'Teacher-guided room';
-            if (heading) heading.innerHTML = isThinkingPromptActivity
+            if (chatPresence) chatPresence.innerText = isIdentificationMode ? 'English heading coach online' : (activityType === 'code' ? 'AI coach online' : 'Teacher-guided room');
+            if (heading) heading.innerHTML = isIdentificationMode
+                ? '<i class="fa-solid fa-message mr-1 text-indigo-600"></i>Step 2: English Heading Identification Chat'
+                : isThinkingPromptActivity
                 ? '<i class="fa-solid fa-comments mr-1 text-indigo-600"></i>Step 2: Teacher Interaction Room'
                 : (activityType === 'lecture'
                     ? '<i class="fa-solid fa-comments mr-1 text-indigo-600"></i>Step 2: Teacher-Guided Writing Room'
@@ -5011,7 +5445,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     ? 'Step 1의 OPORD shell sequence를 통과하면 교수 질문과 답변칸이 열립니다.'
                     : (activityType === 'lecture'
                         ? 'Step 1의 OPORD shell sequence를 통과하면 팀의 open-ended revision workspace가 열립니다.'
-                        : 'Step 1의 OPORD shell sequence를 통과하면 팀이 paragraph 초안를 작성하고, 각 chunk마다 최대 3회의 coach check를 사용할 수 있습니다.');
+                        : (isIdentificationMode ? 'Step 1의 OPORD shell sequence를 통과하면 문장-구조 분류 채팅이 열립니다.' : 'Step 1의 OPORD shell sequence를 통과하면 팀이 paragraph 초안을 작성하고, 각 chunk마다 최대 3회의 coach check를 사용할 수 있습니다.'));
                 status.className = 'text-[10px] rounded bg-slate-200 px-2 py-1 font-bold text-slate-500';
                 status.innerText = 'Locked until Step 1';
                 step2Slots.innerHTML = `<div class="coach-message-row"><span class="coach-avatar">CM</span><div class="coach-bubble coach-bubble-left text-slate-500"><i class="fa-solid fa-lock mr-1"></i>Step 1을 완료하거나 <strong>접기 · Step 2 바로가기</strong>를 선택하면 대화창이 열립니다.</div></div>`;
@@ -5023,11 +5457,13 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             panel.classList.remove('step-locked');
             if (complete) {
                 const artifact = getCurrentStep2Artifact();
-                instruction.innerText = isThinkingPromptActivity
-                    ? '제출된 Step 2 질문 답변입니다. 수정 · 재작성으로 다시 열어 팀의 관찰을 보완할 수 있습니다.'
-                    : '제출된 조별 작성 산출물입니다. 수정 · 재작성으로 다시 열어 내용을 보완할 수 있습니다.';
+                instruction.innerText = isIdentificationMode
+                    ? '제출된 문장-구조 분류 결과입니다. 수정 · 재작성으로 다시 연습할 수 있습니다.'
+                    : (isThinkingPromptActivity
+                        ? '제출된 Step 2 질문 답변입니다. 수정 · 재작성으로 다시 열어 팀의 관찰을 보완할 수 있습니다.'
+                        : '제출된 조별 작성 산출물입니다. 수정 · 재작성으로 다시 열어 내용을 보완할 수 있습니다.');
                 status.className = 'text-[10px] rounded bg-emerald-100 px-2 py-1 font-bold text-emerald-700';
-                status.innerText = isThinkingPromptActivity ? 'Submitted Step 2 responses' : 'Submitted writing artifact';
+                status.innerText = isIdentificationMode ? 'Submitted structure practice' : (isThinkingPromptActivity ? 'Submitted Step 2 responses' : 'Submitted writing artifact');
                 step2Slots.innerHTML = `
                     <div class="rounded-xl border border-emerald-200 bg-white p-3">
                         <div class="mb-2 flex items-center justify-between gap-2"><span class="text-[10px] font-black uppercase tracking-wider text-emerald-700"><i class="fa-solid fa-check-circle mr-1"></i>Submitted paragraph output</span><span class="text-[9px] text-slate-400">Shared to activity board</span></div>
@@ -5041,6 +5477,18 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             }
 
             const values = getStep2SeedValues();
+            if (isIdentificationMode) {
+                const identificationState = getStructureIdentificationState(data);
+                instruction.innerText = 'Captain Manhee가 영어 OPORD 문장을 제시합니다. 한국어 scaffolding을 활용하되, 조별 답변은 반드시 English heading으로 입력하십시오.';
+                status.className = 'text-[10px] rounded bg-indigo-100 px-2 py-1 font-bold text-indigo-700';
+                status.innerText = `English Heading ${Math.min(identificationState.index + 1, buildStructureIdentificationItems(data, activeParagraphId).length)} / ${buildStructureIdentificationItems(data, activeParagraphId).length}`;
+                verifyBtn.classList.toggle('hidden', !identificationState.completed);
+                verifyBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Heading 연습 결과 제출 및 공유';
+                resetBtn.classList.add('hidden');
+                step2Slots.innerHTML = renderStructureIdentificationChat(data, drill);
+                window.setTimeout(() => document.getElementById('structure-id-input')?.focus(), 20);
+                return;
+            }
             instruction.innerText = isThinkingPromptActivity
                 ? '아래 굵게 표시된 교수 질문을 읽고, 각 질문 바로 밑의 칸에 답변을 작성하십시오.'
                 : (isCaptainManheeScenario(data)
@@ -5081,6 +5529,7 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
             }
 
             const activityType = getScenarioActivityType(data);
+            const step2Mode = getScenarioStep2Mode(data);
             if (!step2Complete) {
                 activeBuildStep = 2;
                 const hasSourcePackage = hasCompanySource(getScenarioCompanySource(data));
@@ -5089,11 +5538,13 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
                     : (hasSourcePackage
                         ? '<i class="fa-solid fa-map-location-dot"></i> Scenario Reference & Phrase Bank'
                         : '<i class="fa-solid fa-book-open"></i> Reference & Phrase Bank');
-                note.innerHTML = isOpord01ThinkingPromptActivity(data)
-                    ? '교수 reference와 phrase bank를 참고하여 Step 2의 교수 질문에 답변을 작성하십시오.'
-                    : (hasSourcePackage
-                        ? '교수가 제시한 scenario reference를 참고하되, Step 2에서는 조별 own wording으로 작성하십시오.'
-                        : '교수가 제시한 영상 스크립트·예문과 phrase bank를 참고하되, Step 2에는 자기 말로 작성하십시오.');
+                note.innerHTML = activityType === 'code' && step2Mode === STEP2_MODE_IDENTIFY
+                    ? 'Step 2 채팅에 제시된 문장이 어느 OPORD heading/subheading에 들어가는지 찾으십시오. 막히면 reference card와 Step 1 shell을 다시 확인하십시오.'
+                    : (isOpord01ThinkingPromptActivity(data)
+                        ? '교수 reference와 phrase bank를 참고하여 Step 2의 교수 질문에 답변을 작성하십시오.'
+                        : (hasSourcePackage
+                            ? '교수가 제시한 scenario reference를 참고하되, Step 2에서는 조별 own wording으로 작성하십시오.'
+                            : '교수가 제시한 영상 스크립트·예문과 phrase bank를 참고하되, Step 2에는 자기 말로 작성하십시오.'));
                 pool.innerHTML = renderScenarioReferenceCards(data, activeParagraphId);
                 return;
             }
@@ -5458,9 +5909,13 @@ ${error.message || 'Supabase comments update policy를 확인하십시오.'}`);
         }
 
         async function verifyStep2() {
-            const values = getStep2FormValues();
             const data = getScenarioStore()[selectedScenarioCode] || defaultScenarios['OPORD-01'];
             const activityType = getScenarioActivityType(data);
+            if (activityType === 'code' && getScenarioStep2Mode(data) === STEP2_MODE_IDENTIFY) {
+                await verifyStructureIdentificationStep2(data);
+                return;
+            }
+            const values = getStep2FormValues();
             const missing = validateStep2Writing(activeParagraphId, values, activityType);
             const feedback = document.getElementById('feedback-message');
             const drill = PARAGRAPH_DRILLS[activeParagraphId];
